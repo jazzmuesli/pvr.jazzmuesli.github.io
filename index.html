@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PV-Erlösrechner — Marktprämie & Direktvermarktung</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>PV-Erlösrechner</h1>
+      <p>Direktvermarktung mit Batterie — Simulation von PV-Produktion, Speicher-Verschiebung und Spotmarkt-Erlösen.</p>
+    </header>
+    <main class="layout">
+      <aside id="controls" class="sidebar"></aside>
+      <section class="content">
+        <div id="summary" class="summary"></div>
+        <div class="panel">
+          <h2>PV-Produktion pro Monat</h2>
+          <div id="legend" class="legend"></div>
+          <p class="hint">Klicke auf einen Monat, um die Stundenverteilung zu sehen.</p>
+          <div id="monthly"></div>
+        </div>
+        <div class="panel">
+          <h2 id="month-title">Stundenverteilung</h2>
+          <div id="hourly"></div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
