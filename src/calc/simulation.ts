@@ -16,6 +16,7 @@ import { pvProductionPerStep } from "./solar";
 import { generatePrices } from "./priceModel";
 
 const STEPS_PER_HOUR = STEPS_PER_DAY / 24;
+const STEP_HOURS = STEPS_PER_HOUR > 0 ? 1 / STEPS_PER_HOUR : 0.25;
 
 /** PV-only charging window for the "midday" strategy (solar noon). */
 const MIDDAY_START = 10;
@@ -33,55 +34,63 @@ interface BlockFlags {
 /**
  * Pre-compute which steps discharge / grid-charge, by scanning each day for the
  * best contiguous window (most expensive non-negative block for discharge,
- * every non-positive step for grid charging).
+ * every non-positive step for grid charging). Discharge blocks are aligned to
+ * whole hours so a battery never both charges and discharges within the same
+ * hour.
  */
 export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Array): BlockFlags {
   const discharge = new Uint8Array(TOTAL_STEPS);
   const gridCharge = new Uint8Array(TOTAL_STEPS);
   if (!batteryActive(battery)) return { discharge, gridCharge };
 
-  const findBestBlock = (
+  // Mark the most expensive `blockHours`-long, fully non-negative, hour-aligned
+  // window that fits inside [startHour, endHour) of this day.
+  const markBestHourBlock = (
     dayStart: number,
     startHour: number,
     endHour: number,
     blockHours: number,
-    mode: "max" | "min",
-    requireNonNeg: boolean,
-  ): number[] => {
-    const from = dayStart + Math.round(startHour * STEPS_PER_HOUR);
-    const to = dayStart + Math.round(endHour * STEPS_PER_HOUR);
-    const len = Math.max(1, Math.round(blockHours * STEPS_PER_HOUR));
-    if (to - from < len) return [];
-    let bestSum = mode === "max" ? -Infinity : Infinity;
-    let bestStart = -1;
-    for (let s = from; s + len <= to; s++) {
-      if (requireNonNeg) {
-        let ok = true;
-        for (let k = 0; k < len; k++) if (prices[s + k] < 0) { ok = false; break; }
-        if (!ok) continue;
-      }
+  ): void => {
+    const len = blockHours * STEPS_PER_HOUR;
+    let bestSum = -Infinity;
+    let bestHour = -1;
+    for (let h = startHour; h + blockHours <= endHour; h++) {
+      const from = dayStart + h * STEPS_PER_HOUR;
+      let ok = true;
+      for (let k = 0; k < len; k++) if (prices[from + k] < 0) { ok = false; break; }
+      if (!ok) continue;
       let sum = 0;
-      for (let k = 0; k < len; k++) sum += prices[s + k];
-      if (mode === "max" ? sum > bestSum : sum < bestSum) {
+      for (let k = 0; k < len; k++) sum += prices[from + k];
+      if (sum > bestSum) {
         bestSum = sum;
-        bestStart = s;
+        bestHour = h;
       }
     }
-    if (bestStart < 0) return [];
-    const block: number[] = [];
-    for (let k = 0; k < len; k++) block.push(bestStart + k);
-    return block;
+    if (bestHour < 0) return;
+    const from = dayStart + bestHour * STEPS_PER_HOUR;
+    for (let k = 0; k < len; k++) discharge[from + k] = 1;
   };
+
+  // Hours of discharge needed to empty the battery at its max power. The
+  // evening window is sized to this so the stored energy is actually used
+  // (e.g. 40 kWh / 5 kW ≈ 8 h), instead of a fixed short block.
+  const usableKWh = (battery.maxSOC - battery.minSOC) * battery.capacityKWh;
+  const needHours = Math.max(
+    1,
+    Math.min(12, Math.ceil(usableKWh / Math.max(0.1, battery.maxPowerKW))),
+  );
 
   for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
     const dayStart = d * STEPS_PER_DAY;
     if (battery.dischargeEvening) {
-      for (const s of findBestBlock(dayStart, battery.eveningStart, battery.eveningEnd, 2, "max", true))
-        discharge[s] = 1;
+      // Search a post-sunset window long enough to actually empty the battery
+      // (default evening end may be too short for large batteries).
+      const searchEnd = Math.min(24, Math.max(battery.eveningEnd, battery.eveningStart + needHours));
+      const len = Math.min(needHours, Math.max(1, searchEnd - battery.eveningStart));
+      markBestHourBlock(dayStart, battery.eveningStart, searchEnd, len);
     }
     if (battery.dischargeMorning) {
-      for (const s of findBestBlock(dayStart, battery.morningStart, battery.morningEnd, 1, "max", true))
-        discharge[s] = 1;
+      markBestHourBlock(dayStart, battery.morningStart, battery.morningEnd, 1);
     }
     if (battery.chargeMode === "gridNegative") {
       // Charge from the grid at every non-positive price step.
@@ -135,8 +144,9 @@ export function simulate(config: SimConfig): SimResult {
     // A step is either a charge step or a discharge step, never both — the
     // battery cannot charge and discharge at the same quarter hour.
     const discharging = flags.discharge[i] === 1;
+    const maxStepEnergy = b.maxPowerKW * STEP_HOURS; // kWh the battery can move per 15-min step
 
-    // 1) Charging from PV surplus.
+    // 1) Charging from PV surplus. p is already energy (kWh) for this step.
     const pvChargeAllowed =
       !discharging &&
       (b.chargeMode === "morning" || b.chargeMode === "gridNegative"
@@ -145,32 +155,32 @@ export function simulate(config: SimConfig): SimResult {
           ? hour >= MIDDAY_START && hour < MIDDAY_END
           : false);
     if (pvChargeAllowed && p > 0 && soc < maxSOCkWh) {
-      const room = (maxSOCkWh - soc) / eff;
-      const c = Math.min(b.maxPowerKW, room, p);
-      if (c > 0) {
-        chargeSolar[i] = c;
-        p -= c;
-        soc += c * eff;
+      const room = (maxSOCkWh - soc) / eff; // kWh of stored energy still available
+      const e = Math.min(maxStepEnergy, room, p);
+      if (e > 0) {
+        chargeSolar[i] = e;
+        p -= e;
+        soc += e * eff;
       }
     }
 
     // 2) Grid charging (gridNegative mode) during non-positive prices.
     if (!discharging && flags.gridCharge[i] && soc < maxSOCkWh) {
       const room = (maxSOCkWh - soc) / eff;
-      const c = Math.min(b.maxPowerKW, room);
-      if (c > 0) {
-        chargeGrid[i] = c;
-        soc += c * eff;
+      const e = Math.min(maxStepEnergy, room);
+      if (e > 0) {
+        chargeGrid[i] = e;
+        soc += e * eff;
       }
     }
 
     // 3) Discharge into the expensive non-negative window.
     if (flags.discharge[i] && soc > minSOCkWh) {
       const avail = soc - minSOCkWh;
-      const d = Math.min(b.maxPowerKW, avail);
-      if (d > 0 && pr >= 0) {
-        exportBattery[i] = d;
-        soc -= d;
+      const e = Math.min(maxStepEnergy, avail);
+      if (e > 0 && pr >= 0) {
+        exportBattery[i] = e;
+        soc -= e;
       }
     }
 
