@@ -1,5 +1,7 @@
 import { SimConfig } from "../calc/types";
 import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
+import { ConsumerConfig, totalLoad } from "../calc/consumers";
+import { City, TariffScheme } from "../calc/tariff";
 
 export type Orientation = "south" | "east" | "west" | "east_west";
 
@@ -24,6 +26,14 @@ export interface AppState {
   feedInCt: number; // ct/kWh
   commissioningYear: number;
   priceYear: string;
+  // Verbraucher
+  consumers: ConsumerConfig;
+  // Einspeisung (Export)
+  exportScheme: "fixed" | "market";
+  // Stromtarif (Import)
+  importScheme: TariffScheme;
+  importCity: City;
+  importFixedCt: number; // ct/kWh
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -47,6 +57,16 @@ export const DEFAULT_STATE: AppState = {
   feedInCt: 7.2,
   commissioningYear: 2025,
   priceYear: "2025",
+  consumers: {
+    household: { enabled: true, annualKWh: 4000 },
+    heatpump: { enabled: true, annualKWh: 5000 },
+    bwwp: { enabled: true },
+    ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
+  },
+  exportScheme: "market",
+  importScheme: "dynamic",
+  importCity: "Boizenburg",
+  importFixedCt: 30,
 };
 
 export function toSimConfig(s: AppState): SimConfig {
@@ -77,5 +97,6 @@ export function toSimConfig(s: AppState): SimConfig {
       feedInEUR: s.feedInCt / 100,
       commissioningYear: s.commissioningYear,
     },
+    load: totalLoad(s.consumers),
   };
 }

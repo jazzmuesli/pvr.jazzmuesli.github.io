@@ -243,11 +243,10 @@ describe("dispatch flags", () => {
     }
   });
 
-  it("gridNegative flags exactly the non-positive steps", () => {
+  it("gridNegative dispatch returns only a discharge plan (no gridCharge field)", () => {
     const cfg = baseConfig({ chargeMode: "gridNegative" });
     const flags = computeDispatchFlags(cfg.battery, prices);
-    for (let i = 0; i < TOTAL_STEPS; i++) {
-      expect(flags.gridCharge[i]).toBe(prices[i] <= 0 ? 1 : 0);
-    }
+    expect((flags as unknown as { gridCharge?: unknown }).gridCharge).toBeUndefined();
+    expect(flags.discharge).toBeInstanceOf(Uint8Array);
   });
 });

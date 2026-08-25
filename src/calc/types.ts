@@ -9,6 +9,22 @@ export const SIM_YEAR = 2023;
 /** Total number of steps in the simulated year. */
 export const TOTAL_STEPS = 365 * STEPS_PER_DAY;
 
+/** Number of 15-minute steps per hour. */
+export const STEPS_PER_HOUR = STEPS_PER_DAY / 24;
+
+/** 1-based month (1..12) for a given 15-minute step index. */
+export function monthOfStep(i: number): number {
+  const day = Math.floor(i / STEPS_PER_DAY);
+  const base = new Date(Date.UTC(SIM_YEAR, 0, 1));
+  const dt = new Date(base.getTime() + day * 86400000);
+  return dt.getUTCMonth() + 1;
+}
+
+/** Local hour (0..23) for a given 15-minute step index. */
+export function hourOfStep(i: number): number {
+  return Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR);
+}
+
 export type Orientation = "south" | "east" | "west" | "east_west" | "north";
 
 export interface PVConfig {
@@ -68,6 +84,8 @@ export interface SimConfig {
   tariff: TariffConfig;
   /** Optional external 15-min price series (EUR/MWh), length TOTAL_STEPS. */
   prices?: Float64Array;
+  /** Total household + device load per step (kWh), length TOTAL_STEPS. */
+  load?: Float64Array;
 }
 
 export interface SimResult {
@@ -75,16 +93,24 @@ export interface SimResult {
   pv: Float64Array;
   /** Price per step (EUR/MWh). */
   price: Float64Array;
+  /** Total load per step (kWh). */
+  load: Float64Array;
   /** State of charge per step (kWh). */
   soc: Float64Array;
+  /** PV used directly to cover load per step (kWh). */
+  directUse: Float64Array;
+  /** PV stored in the battery per step (kWh). */
+  chargeSolar: Float64Array;
+  /** Grid energy used to charge the battery per step (kWh). */
+  chargeGrid: Float64Array;
+  /** Battery energy discharged to cover load per step (kWh). */
+  dischargeToLoad: Float64Array;
   /** Energy exported directly from PV per step (kWh). */
   exportSolar: Float64Array;
   /** Energy exported from the battery per step (kWh). */
   exportBattery: Float64Array;
-  /** Energy used to charge the battery from PV surplus per step (kWh). */
-  chargeSolar: Float64Array;
-  /** Energy used to charge the battery from the grid per step (kWh). */
-  chargeGrid: Float64Array;
+  /** Energy drawn from the grid per step (kWh). */
+  gridImport: Float64Array;
   /** Total exported energy (solar + battery) per step (kWh). */
   exportTotal: Float64Array;
 }

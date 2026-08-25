@@ -1,13 +1,22 @@
-// Battery dispatch + full-year simulation.
+// Full-year prosumer dispatch: PV, battery, load and the grid.
 //
-// Mirrors the strategy described in charge_shift.md / discharge_shift.md: the
-// battery stores PV surplus (or grid energy at non-positive prices) and
-// discharges into the most expensive, non-negative windows of the day. No
-// energy is ever exported while the spot price is negative (it is curtailed).
+// Per 15-minute step the energy balance is settled as:
+//   1. PV first covers the local load (direct self-consumption).
+//   2. Surplus PV charges the battery (or, at non-positive prices, the grid
+//      charges the battery for free).
+//   3. Remaining PV is exported (curtailed at negative prices).
+//   4. Any load not covered by PV is served by the battery, then the grid.
+//   5. In the most expensive non-negative windows the battery additionally
+//      discharges into the grid (Direktvermarktung / strategic export).
+//
+// The battery never charges and discharges in the same quarter hour: a step
+// that has PV surplus charges; a step with a load deficit (or a strategic
+// export window) discharges. At negative prices it only charges from the grid.
 
 import {
   STEPS_PER_DAY,
   TOTAL_STEPS,
+  STEPS_PER_HOUR,
   SimConfig,
   SimResult,
   BatteryConfig,
@@ -15,8 +24,7 @@ import {
 import { pvProductionPerStep } from "./solar";
 import { generatePrices } from "./priceModel";
 
-const STEPS_PER_HOUR = STEPS_PER_DAY / 24;
-const STEP_HOURS = STEPS_PER_HOUR > 0 ? 1 / STEPS_PER_HOUR : 0.25;
+const STEP_HOURS = 1 / STEPS_PER_HOUR;
 
 /** PV-only charging window for the "midday" strategy (solar noon). */
 const MIDDAY_START = 10;
@@ -28,23 +36,18 @@ function batteryActive(b: BatteryConfig): boolean {
 
 interface BlockFlags {
   discharge: Uint8Array;
-  gridCharge: Uint8Array;
 }
 
 /**
- * Pre-compute which steps discharge / grid-charge, by scanning each day for the
- * best contiguous window (most expensive non-negative block for discharge,
- * every non-positive step for grid charging). Discharge blocks are aligned to
- * whole hours so a battery never both charges and discharges within the same
- * hour.
+ * Pre-compute which steps discharge to the grid: scan each day for the most
+ * expensive, fully non-negative, hour-aligned window (sized to empty the
+ * battery). Discharge blocks are aligned to whole hours so a battery never
+ * both charges and discharges within the same hour.
  */
 export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Array): BlockFlags {
   const discharge = new Uint8Array(TOTAL_STEPS);
-  const gridCharge = new Uint8Array(TOTAL_STEPS);
-  if (!batteryActive(battery)) return { discharge, gridCharge };
+  if (!batteryActive(battery)) return { discharge };
 
-  // Mark the most expensive `blockHours`-long, fully non-negative, hour-aligned
-  // window that fits inside [startHour, endHour) of this day.
   const markBestHourBlock = (
     dayStart: number,
     startHour: number,
@@ -71,9 +74,6 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
     for (let k = 0; k < len; k++) discharge[from + k] = 1;
   };
 
-  // Hours of discharge needed to empty the battery at its max power. The
-  // evening window is sized to this so the stored energy is actually used
-  // (e.g. 40 kWh / 5 kW ≈ 8 h), instead of a fixed short block.
   const usableKWh = (battery.maxSOC - battery.minSOC) * battery.capacityKWh;
   const needHours = Math.max(
     1,
@@ -83,8 +83,6 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
   for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
     const dayStart = d * STEPS_PER_DAY;
     if (battery.dischargeEvening) {
-      // Search a post-sunset window long enough to actually empty the battery
-      // (default evening end may be too short for large batteries).
       const searchEnd = Math.min(24, Math.max(battery.eveningEnd, battery.eveningStart + needHours));
       const len = Math.min(needHours, Math.max(1, searchEnd - battery.eveningStart));
       markBestHourBlock(dayStart, battery.eveningStart, searchEnd, len);
@@ -92,14 +90,8 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
     if (battery.dischargeMorning) {
       markBestHourBlock(dayStart, battery.morningStart, battery.morningEnd, 1);
     }
-    if (battery.chargeMode === "gridNegative") {
-      // Charge from the grid at every non-positive price step.
-      for (let i = dayStart; i < dayStart + STEPS_PER_DAY; i++) {
-        if (prices[i] <= 0) gridCharge[i] = 1;
-      }
-    }
   }
-  return { discharge, gridCharge };
+  return { discharge };
 }
 
 export function simulate(config: SimConfig): SimResult {
@@ -110,8 +102,8 @@ export function simulate(config: SimConfig): SimResult {
     location: config.pv.location,
   });
   const price = config.prices ?? generatePrices();
+  const load = config.load ?? new Float64Array(TOTAL_STEPS);
   const b = config.battery;
-
   const flags = computeDispatchFlags(b, price);
 
   const active = batteryActive(b);
@@ -121,72 +113,118 @@ export function simulate(config: SimConfig): SimResult {
   const minSOCkWh = b.minSOC * cap;
   let soc = active ? b.startSOC * cap : 0;
 
+  const loadArr = new Float64Array(TOTAL_STEPS);
   const socArr = new Float64Array(TOTAL_STEPS);
-  const exportSolar = new Float64Array(TOTAL_STEPS);
-  const exportBattery = new Float64Array(TOTAL_STEPS);
+  const directUse = new Float64Array(TOTAL_STEPS);
   const chargeSolar = new Float64Array(TOTAL_STEPS);
   const chargeGrid = new Float64Array(TOTAL_STEPS);
+  const dischargeToLoad = new Float64Array(TOTAL_STEPS);
+  const exportSolar = new Float64Array(TOTAL_STEPS);
+  const exportBattery = new Float64Array(TOTAL_STEPS);
+  const gridImport = new Float64Array(TOTAL_STEPS);
   const exportTotal = new Float64Array(TOTAL_STEPS);
+
+  const maxStepEnergy = b.maxPowerKW * STEP_HOURS;
 
   for (let i = 0; i < TOTAL_STEPS; i++) {
     let p = pv[i];
+    let L = load[i];
     const pr = price[i];
-    const hour = Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR);
 
     if (!active) {
-      // No usable battery: export PV directly (curtail at non-positive prices).
+      // No battery: direct use + export; load deficit is grid import.
+      const du = Math.min(p, L);
+      directUse[i] = du;
+      p -= du;
+      L -= du;
       if (p > 0 && pr >= 0) exportSolar[i] = p;
+      if (L > 0) gridImport[i] = L;
+      loadArr[i] = load[i];
       socArr[i] = 0;
       exportTotal[i] = exportSolar[i];
       continue;
     }
 
-    // A step is either a charge step or a discharge step, never both — the
-    // battery cannot charge and discharge at the same quarter hour.
+    // Negative / free price: take from the grid (cheap) and store free energy.
+    if (pr < 0) {
+      directUse[i] = Math.min(p, L);
+      L -= directUse[i];
+      if (L > 0) gridImport[i] = L;
+      if (soc < maxSOCkWh) {
+        const room = (maxSOCkWh - soc) / eff;
+        const e = Math.min(maxStepEnergy, room);
+        if (e > 0) {
+          chargeGrid[i] = e;
+          soc += e * eff;
+        }
+      }
+      loadArr[i] = load[i];
+      socArr[i] = soc;
+      exportTotal[i] = exportSolar[i] + exportBattery[i];
+      continue;
+    }
+
+    // 1) Direct self-consumption: PV covers load first.
+    const du = Math.min(p, L);
+    directUse[i] = du;
+    p -= du;
+    L -= du;
+
+    // 2) Charge battery from PV surplus (no charge while a strategic export
+    //    discharge is scheduled this step — keeps charge/discharge mutually
+    //    exclusive within a quarter hour).
     const discharging = flags.discharge[i] === 1;
-    const maxStepEnergy = b.maxPowerKW * STEP_HOURS; // kWh the battery can move per 15-min step
-
-    // 1) Charging from PV surplus. p is already energy (kWh) for this step.
-    const pvChargeAllowed =
-      !discharging &&
-      (b.chargeMode === "morning" || b.chargeMode === "gridNegative"
-        ? true
-        : b.chargeMode === "midday"
-          ? hour >= MIDDAY_START && hour < MIDDAY_END
-          : false);
-    if (pvChargeAllowed && p > 0 && soc < maxSOCkWh) {
-      const room = (maxSOCkWh - soc) / eff; // kWh of stored energy still available
-      const e = Math.min(maxStepEnergy, room, p);
-      if (e > 0) {
-        chargeSolar[i] = e;
-        p -= e;
-        soc += e * eff;
+    let charged = false;
+    if (p > 0 && !discharging && soc < maxSOCkWh) {
+      const pvChargeAllowed =
+        b.chargeMode === "morning" || b.chargeMode === "gridNegative"
+          ? true
+          : b.chargeMode === "midday"
+            ? Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) >= MIDDAY_START &&
+              Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) < MIDDAY_END
+            : false;
+      if (pvChargeAllowed) {
+        const room = (maxSOCkWh - soc) / eff;
+        const e = Math.min(maxStepEnergy, room, p);
+        if (e > 0) {
+          chargeSolar[i] = e;
+          p -= e;
+          soc += e * eff;
+          charged = true;
+        }
       }
     }
 
-    // 2) Grid charging (gridNegative mode) during non-positive prices.
-    if (!discharging && flags.gridCharge[i] && soc < maxSOCkWh) {
-      const room = (maxSOCkWh - soc) / eff;
-      const e = Math.min(maxStepEnergy, room);
-      if (e > 0) {
-        chargeGrid[i] = e;
-        soc += e * eff;
-      }
-    }
+    // 3) Export remaining PV directly (price >= 0 here).
+    if (p > 0) exportSolar[i] = p;
 
-    // 3) Discharge into the expensive non-negative window.
-    if (flags.discharge[i] && soc > minSOCkWh) {
+    // 4) Cover remaining load from the battery, then the grid.
+    if (L > 0 && soc > minSOCkWh) {
       const avail = soc - minSOCkWh;
-      const e = Math.min(maxStepEnergy, avail);
-      if (e > 0 && pr >= 0) {
-        exportBattery[i] = e;
+      const e = Math.min(maxStepEnergy, avail, L);
+      if (e > 0) {
+        dischargeToLoad[i] = e;
         soc -= e;
+        L -= e;
+      }
+    }
+    if (L > 0) gridImport[i] = L;
+
+    // 5) Strategic export: discharge extra into the expensive window (only if
+    //    we did not just charge this step).
+    if (discharging && !charged && soc > minSOCkWh) {
+      const maxAdd = maxStepEnergy - dischargeToLoad[i];
+      if (maxAdd > 0) {
+        const avail = soc - minSOCkWh;
+        const e = Math.min(maxAdd, avail);
+        if (e > 0) {
+          exportBattery[i] = e;
+          soc -= e;
+        }
       }
     }
 
-    // 4) Export remaining PV directly (curtail at non-positive prices).
-    if (p > 0 && pr >= 0) exportSolar[i] = p;
-
+    loadArr[i] = load[i];
     socArr[i] = soc;
     exportTotal[i] = exportSolar[i] + exportBattery[i];
   }
@@ -194,11 +232,15 @@ export function simulate(config: SimConfig): SimResult {
   return {
     pv,
     price,
+    load: loadArr,
     soc: socArr,
-    exportSolar,
-    exportBattery,
+    directUse,
     chargeSolar,
     chargeGrid,
+    dischargeToLoad,
+    exportSolar,
+    exportBattery,
+    gridImport,
     exportTotal,
   };
 }

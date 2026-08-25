@@ -2,6 +2,7 @@ import { AppState, Orientation } from "./state";
 import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
+import { CITIES, TariffScheme, City } from "../calc/tariff";
 
 interface SliderOpts {
   label: string;
@@ -195,6 +196,24 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     slider({ label: "Morgen-Fenster bis", min: 8, max: 14, step: 1, unit: " Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
   );
 
+  section("Verbraucher");
+  host.appendChild(checkbox("Haushalt (H0)", (s) => s.consumers.household.enabled, (s, v) => (s.consumers.household.enabled = v), state, onChange));
+  host.appendChild(
+    slider({ label: "  Haushalt Verbrauch", min: 1000, max: 6000, step: 100, unit: " kWh", get: (s) => s.consumers.household.annualKWh, set: (s, v) => (s.consumers.household.annualKWh = v) }, state, onChange),
+  );
+  host.appendChild(checkbox("Wärmepumpe", (s) => s.consumers.heatpump.enabled, (s, v) => (s.consumers.heatpump.enabled = v), state, onChange));
+  host.appendChild(
+    slider({ label: "  Wärmepumpe Verbrauch", min: 1000, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.heatpump.annualKWh, set: (s, v) => (s.consumers.heatpump.annualKWh = v) }, state, onChange),
+  );
+  host.appendChild(checkbox("Brauchwasser-Wärmepumpe", (s) => s.consumers.bwwp.enabled, (s, v) => (s.consumers.bwwp.enabled = v), state, onChange));
+  host.appendChild(checkbox("E-Auto", (s) => s.consumers.ev.enabled, (s, v) => (s.consumers.ev.enabled = v), state, onChange));
+  host.appendChild(
+    slider({ label: "  E-Auto Verbrauch", min: 500, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
+  );
+  host.appendChild(
+    slider({ label: "  E-Auto PV-Anteil", min: 0, max: 1, step: 0.05, unit: "", get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+  );
+
   section("Vergütung");
   const feedInSlider = slider({ label: "Einspeisevergütung (Vergleich)", min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange);
   host.appendChild(feedInSlider);
@@ -213,6 +232,50 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       state,
       onChange,
     ),
+  );
+
+  section("Einspeisung (Export)");
+  host.appendChild(
+    selectControl(
+      "Modell",
+      [
+        { value: "market", label: "Direktvermarktung (Spot + Marktprämie)" },
+        { value: "fixed", label: "Feste Einspeisevergütung" },
+      ],
+      (s) => s.exportScheme,
+      (s, v) => (s.exportScheme = v as "fixed" | "market"),
+      state,
+      onChange,
+    ),
+  );
+
+  section("Stromtarif (Import)");
+  host.appendChild(
+    selectControl(
+      "Tarifmodell",
+      [
+        { value: "fixed", label: "Fester Arbeitspreis" },
+        { value: "dynamic", label: "Dynamisch (Tibber)" },
+        { value: "dynamic14a", label: "Dynamisch + §14a/3 (Modul 3)" },
+      ],
+      (s) => s.importScheme,
+      (s, v) => (s.importScheme = v as TariffScheme),
+      state,
+      onChange,
+    ),
+  );
+  host.appendChild(
+    selectControl(
+      "Netzbetreiber / Stadt",
+      CITIES.map((c) => ({ value: c, label: c })),
+      (s) => s.importCity,
+      (s, v) => (s.importCity = v as City),
+      state,
+      onChange,
+    ),
+  );
+  host.appendChild(
+    slider({ label: "Fester Arbeitspreis (Import)", min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
   );
 
   section("Strompreis");
