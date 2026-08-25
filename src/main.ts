@@ -1,6 +1,6 @@
 import { simulate } from "./calc/simulation";
-import { computeRevenue, monthForStep } from "./calc/revenue";
-import { generatePrices } from "./calc/priceModel";
+import { computeRevenue, monthForStep, feedInTariffCt } from "./calc/revenue";
+import { getYearPrices, PRICE_YEARS } from "./calc/priceData";
 import { STEPS_PER_DAY, SimResult } from "./calc/types";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimConfig } from "./ui/state";
@@ -8,14 +8,16 @@ import {
   renderMonthlyChart,
   renderHourlyChart,
   renderLegend,
+  renderComparisonChart,
   MonthlyChartDatum,
   HourlyChartDatum,
+  ComparisonDatum,
 } from "./ui/charts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
 const state = { ...DEFAULT_STATE };
-const prices = generatePrices();
+state.feedInCt = feedInTariffCt(state.commissioningYear, state.peakKWp);
 
 const controlsHost = document.getElementById("controls") as HTMLElement;
 const summaryHost = document.getElementById("summary") as HTMLElement;
@@ -23,6 +25,7 @@ const monthlyHost = document.getElementById("monthly") as HTMLElement;
 const hourlyHost = document.getElementById("hourly") as HTMLElement;
 const legendHost = document.getElementById("legend") as HTMLElement;
 const monthTitle = document.getElementById("month-title") as HTMLElement;
+const comparisonHost = document.getElementById("comparison") as HTMLElement;
 
 let selectedMonth = 6; // July
 let rafPending = false;
@@ -61,9 +64,11 @@ function renderSummary(rev: ReturnType<typeof computeRevenue>, sim: SimResult): 
   const cards: [string, string, string][] = [
     ["PV-Ertrag", `${Math.round(rev.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
     ["Exportiert", `${Math.round(rev.totalExportKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Markt (netto)", fmtEUR(rev.netMarketEUR), "Spot + Prämie − Ladestrom"],
-    ["Einspeisung", fmtEUR(rev.fixedValueEUR), `fixe Vergütung`],
+    ["Markt (netto)", fmtEUR(rev.netMarketEUR), "Spot + Marktprämie − Ladestrom"],
+    ["Einspeisung", fmtEUR(rev.fixedValueEUR), "fixe Vergütung"],
     ["Differenz", `${rev.deltaEUR >= 0 ? "+" : ""}${fmtEUR(rev.deltaEUR)}`, "Markt − Einspeisung"],
+    ["Marktprämie", `${rev.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
+    ["EEG Referenz", `${rev.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
     ["Ø Erlös", `${rev.vwapMarketEURperMWh.toFixed(1)} €/MWh`, "VWAP Export"],
     ["Aus Netz geladen", `${Math.round(rev.totalChargeGridKWh).toLocaleString("de-DE")} kWh`, "Batterie-Ladung"],
     ["Negativpreis-Stunden", `${countNonPositive(sim)}`, "kein Export dabei"],
@@ -85,8 +90,9 @@ function countNonPositive(sim: SimResult): number {
 
 function recompute(): void {
   const cfg = toSimConfig(state);
+  const prices = getYearPrices(state.priceYear);
   const result = simulate({ ...cfg, prices });
-  const rev = computeRevenue(result, cfg.tariff);
+  const rev = computeRevenue(result, cfg.tariff, cfg.pv.peakKWp);
 
   renderSummary(rev, result);
 
@@ -94,7 +100,9 @@ function recompute(): void {
     month: r.month,
     label: MONTH_LABELS[r.month - 1],
     pvKWh: r.pvKWh,
-    exportKWh: r.exportKWh,
+    exportSolarKWh: r.exportSolarKWh,
+    exportBatteryKWh: r.exportBatteryKWh,
+    chargeKWh: r.chargeSolarKWh + r.chargeGridKWh,
     marketValueEUR: r.marketValueEUR + r.premiumEUR - r.gridChargeCostEUR,
   }));
   renderMonthlyChart(monthlyHost, monthly, selectedMonth, (m) => {
@@ -102,6 +110,26 @@ function recompute(): void {
     renderHourly(result);
   });
   renderHourly(result);
+  renderComparison();
+}
+
+function renderComparison(): void {
+  const cfg = toSimConfig(state);
+  const feedInEUR = feedInTariffCt(state.commissioningYear, state.peakKWp) / 100;
+  const data: ComparisonDatum[] = PRICE_YEARS.map((yr) => {
+    const prices = getYearPrices(yr);
+    const result = simulate({ ...cfg, prices });
+    const rev = computeRevenue(result, { feedInEUR, commissioningYear: state.commissioningYear }, cfg.pv.peakKWp);
+    return {
+      year: yr,
+      netMarketEUR: rev.netMarketEUR,
+      fixedValueEUR: rev.fixedValueEUR,
+      vwapEURperMWh: rev.vwapMarketEURperMWh,
+      marktPraemieCt: rev.marktPraemieCt,
+      exportKWh: rev.totalExportKWh,
+    };
+  });
+  renderComparisonChart(comparisonHost, data);
 }
 
 function renderHourly(result: SimResult): void {

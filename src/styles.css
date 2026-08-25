@@ -84,3 +84,20 @@ body {
 .legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .bar { cursor: pointer; transition: opacity 0.1s; }
 .bar:hover { opacity: 0.8; }
+.month-hit { cursor: pointer; }
+.month-hit.selected { fill: rgba(14, 165, 233, 0.08); }
+.chart-tooltip {
+  position: fixed;
+  display: none;
+  z-index: 1000;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  max-width: 240px;
+}
+.chart-tooltip strong { color: #7dd3fc; }

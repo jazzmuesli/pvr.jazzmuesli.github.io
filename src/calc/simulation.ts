@@ -1,9 +1,9 @@
 // Battery dispatch + full-year simulation.
 //
 // Mirrors the strategy described in charge_shift.md / discharge_shift.md: the
-// battery stores PV surplus (or grid energy at low prices) and discharges into
-// the most expensive, non-negative windows of the day. No energy is ever
-// exported while the spot price is negative (it is curtailed / skipped).
+// battery stores PV surplus (or grid energy at non-positive prices) and
+// discharges into the most expensive, non-negative windows of the day. No
+// energy is ever exported while the spot price is negative (it is curtailed).
 
 import {
   STEPS_PER_DAY,
@@ -17,6 +17,14 @@ import { generatePrices } from "./priceModel";
 
 const STEPS_PER_HOUR = STEPS_PER_DAY / 24;
 
+/** PV-only charging window for the "midday" strategy (solar noon). */
+const MIDDAY_START = 10;
+const MIDDAY_END = 15;
+
+function batteryActive(b: BatteryConfig): boolean {
+  return b.capacityKWh > 0 && b.maxSOC > 0 && b.maxSOC > b.minSOC;
+}
+
 interface BlockFlags {
   discharge: Uint8Array;
   gridCharge: Uint8Array;
@@ -25,11 +33,12 @@ interface BlockFlags {
 /**
  * Pre-compute which steps discharge / grid-charge, by scanning each day for the
  * best contiguous window (most expensive non-negative block for discharge,
- * cheapest block for grid charging).
+ * every non-positive step for grid charging).
  */
 export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Array): BlockFlags {
   const discharge = new Uint8Array(TOTAL_STEPS);
   const gridCharge = new Uint8Array(TOTAL_STEPS);
+  if (!batteryActive(battery)) return { discharge, gridCharge };
 
   const findBestBlock = (
     dayStart: number,
@@ -74,8 +83,11 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
       for (const s of findBestBlock(dayStart, battery.morningStart, battery.morningEnd, 1, "max", true))
         discharge[s] = 1;
     }
-    if (battery.chargeMode === "lowPrice") {
-      for (const s of findBestBlock(dayStart, 0, 24, 4, "min", false)) gridCharge[s] = 1;
+    if (battery.chargeMode === "gridNegative") {
+      // Charge from the grid at every non-positive price step.
+      for (let i = dayStart; i < dayStart + STEPS_PER_DAY; i++) {
+        if (prices[i] <= 0) gridCharge[i] = 1;
+      }
     }
   }
   return { discharge, gridCharge };
@@ -93,11 +105,12 @@ export function simulate(config: SimConfig): SimResult {
 
   const flags = computeDispatchFlags(b, price);
 
+  const active = batteryActive(b);
   const eff = b.efficiency;
   const cap = b.capacityKWh;
   const maxSOCkWh = b.maxSOC * cap;
   const minSOCkWh = b.minSOC * cap;
-  let soc = b.startSOC * cap;
+  let soc = active ? b.startSOC * cap : 0;
 
   const socArr = new Float64Array(TOTAL_STEPS);
   const exportSolar = new Float64Array(TOTAL_STEPS);
@@ -109,9 +122,29 @@ export function simulate(config: SimConfig): SimResult {
   for (let i = 0; i < TOTAL_STEPS; i++) {
     let p = pv[i];
     const pr = price[i];
+    const hour = Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR);
 
-    // 1) Charging from PV surplus (solar mode only).
-    if (b.chargeMode === "solar" && p > 0 && soc < maxSOCkWh) {
+    if (!active) {
+      // No usable battery: export PV directly (curtail at non-positive prices).
+      if (p > 0 && pr >= 0) exportSolar[i] = p;
+      socArr[i] = 0;
+      exportTotal[i] = exportSolar[i];
+      continue;
+    }
+
+    // A step is either a charge step or a discharge step, never both — the
+    // battery cannot charge and discharge at the same quarter hour.
+    const discharging = flags.discharge[i] === 1;
+
+    // 1) Charging from PV surplus.
+    const pvChargeAllowed =
+      !discharging &&
+      (b.chargeMode === "morning" || b.chargeMode === "gridNegative"
+        ? true
+        : b.chargeMode === "midday"
+          ? hour >= MIDDAY_START && hour < MIDDAY_END
+          : false);
+    if (pvChargeAllowed && p > 0 && soc < maxSOCkWh) {
       const room = (maxSOCkWh - soc) / eff;
       const c = Math.min(b.maxPowerKW, room, p);
       if (c > 0) {
@@ -121,8 +154,8 @@ export function simulate(config: SimConfig): SimResult {
       }
     }
 
-    // 2) Grid charging (lowPrice mode) during cheapest windows.
-    if (flags.gridCharge[i] && soc < maxSOCkWh) {
+    // 2) Grid charging (gridNegative mode) during non-positive prices.
+    if (!discharging && flags.gridCharge[i] && soc < maxSOCkWh) {
       const room = (maxSOCkWh - soc) / eff;
       const c = Math.min(b.maxPowerKW, room);
       if (c > 0) {
@@ -142,9 +175,7 @@ export function simulate(config: SimConfig): SimResult {
     }
 
     // 4) Export remaining PV directly (curtail at non-positive prices).
-    if (p > 0) {
-      if (pr >= 0) exportSolar[i] = p;
-    }
+    if (p > 0 && pr >= 0) exportSolar[i] = p;
 
     socArr[i] = soc;
     exportTotal[i] = exportSolar[i] + exportBattery[i];

@@ -1,5 +1,7 @@
 import { AppState, Orientation } from "./state";
 import { LOCATIONS } from "../calc/solar";
+import { PRICE_YEARS } from "../calc/priceData";
+import { feedInTariffCt } from "../calc/revenue";
 
 interface SliderOpts {
   label: string;
@@ -22,7 +24,9 @@ function slider(opts: SliderOpts, state: AppState, onChange: () => void): HTMLEl
   const valSpan = document.createElement("span");
   valSpan.className = "val";
   const render = () => {
-    valSpan.textContent = `${fmt(opts.get(state))}${opts.unit ?? ""}`;
+    const v = opts.get(state);
+    input.value = String(v);
+    valSpan.textContent = `${fmt(v)}${opts.unit ?? ""}`;
   };
   const txt = document.createElement("span");
   txt.textContent = opts.label;
@@ -43,6 +47,7 @@ function slider(opts: SliderOpts, state: AppState, onChange: () => void): HTMLEl
   wrap.appendChild(lab);
   wrap.appendChild(input);
   render();
+  (wrap as unknown as { sync: () => void }).sync = render;
   return wrap;
 }
 
@@ -106,6 +111,7 @@ function checkbox(
 
 export function buildControls(host: HTMLElement, state: AppState, onChange: () => void): void {
   host.innerHTML = "";
+  let feedInSync: (() => void) | undefined;
 
   const section = (title: string) => {
     const h = document.createElement("h3");
@@ -115,7 +121,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section("PV-Anlage");
   host.appendChild(
-    slider({ label: "Peak-Leistung", min: 1, max: 50, step: 0.5, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => (s.peakKWp = v) }, state, onChange),
+    slider({ label: "Peak-Leistung", min: 1, max: 50, step: 1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => String(v) }, state, onChange),
   );
   host.appendChild(
     slider({ label: "Neigung", min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
@@ -128,6 +134,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
         { value: "east", label: "Ost" },
         { value: "west", label: "West" },
         { value: "east_west", label: "Ost + West" },
+        { value: "north", label: "Nord" },
       ],
       (s) => s.orientation,
       (s, v) => (s.orientation = v as Orientation),
@@ -163,11 +170,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     selectControl(
       "Ladestrategie",
       [
-        { value: "solar", label: "PV-Überschuss (morgens)" },
-        { value: "lowPrice", label: "Günstigster Strom" },
+        { value: "morning", label: "Morgens (PV-Überschuss)" },
+        { value: "midday", label: "Mittags (nur PV)" },
+        { value: "gridNegative", label: "Billiger Strom (PV + Netz bei Negativpreis)" },
       ],
       (s) => s.chargeMode,
-      (s, v) => (s.chargeMode = v as "solar" | "lowPrice"),
+      (s, v) => (s.chargeMode = v as "morning" | "midday" | "gridNegative"),
       state,
       onChange,
     ),
@@ -188,10 +196,34 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   );
 
   section("Vergütung");
+  const feedInSlider = slider({ label: "Einspeisevergütung (Vergleich)", min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange);
+  host.appendChild(feedInSlider);
+  feedInSync = (feedInSlider as unknown as { sync: () => void }).sync;
   host.appendChild(
-    slider({ label: "Einspeisevergütung", min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    selectControl(
+      "Inbetriebnahme-Jahr (EEG)",
+      [
+        { value: "2023", label: "2023" },
+        { value: "2024", label: "2024" },
+        { value: "2025", label: "2025" },
+        { value: "2026", label: "2026" },
+      ],
+      (s) => String(s.commissioningYear),
+      (s, v) => { s.commissioningYear = parseInt(v, 10); s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); },
+      state,
+      onChange,
+    ),
   );
+
+  section("Strompreis");
   host.appendChild(
-    slider({ label: "Marktprämie", min: 0, max: 10, step: 0.1, unit: " ct/kWh", get: (s) => s.premiumCt, set: (s, v) => (s.premiumCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    selectControl(
+      "Preisjahr (Spotmarkt)",
+      PRICE_YEARS.map((y) => ({ value: y, label: y })),
+      (s) => String(s.priceYear),
+      (s, v) => (s.priceYear = v),
+      state,
+      onChange,
+    ),
   );
 }

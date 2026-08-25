@@ -14,7 +14,7 @@ export interface AppState {
   maxSOC: number;
   efficiency: number;
   startSOC: number;
-  chargeMode: "solar" | "lowPrice";
+  chargeMode: "morning" | "midday" | "gridNegative";
   dischargeEvening: boolean;
   dischargeMorning: boolean;
   eveningStart: number;
@@ -22,7 +22,8 @@ export interface AppState {
   morningStart: number;
   morningEnd: number;
   feedInCt: number; // ct/kWh
-  premiumCt: number; // ct/kWh
+  commissioningYear: number;
+  priceYear: string;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -36,7 +37,7 @@ export const DEFAULT_STATE: AppState = {
   maxSOC: 0.95,
   efficiency: 0.95,
   startSOC: 0.5,
-  chargeMode: "solar",
+  chargeMode: "morning",
   dischargeEvening: true,
   dischargeMorning: true,
   eveningStart: 17,
@@ -44,7 +45,8 @@ export const DEFAULT_STATE: AppState = {
   morningStart: 5,
   morningEnd: 12,
   feedInCt: 7.2,
-  premiumCt: 1.5,
+  commissioningYear: 2025,
+  priceYear: "2025",
 };
 
 export function toSimConfig(s: AppState): SimConfig {
@@ -73,7 +75,7 @@ export function toSimConfig(s: AppState): SimConfig {
     },
     tariff: {
       feedInEUR: s.feedInCt / 100,
-      marketPremiumEUR: s.premiumCt / 100,
+      commissioningYear: s.commissioningYear,
     },
   };
 }

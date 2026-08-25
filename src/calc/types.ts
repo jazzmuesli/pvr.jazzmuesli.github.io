@@ -9,7 +9,7 @@ export const SIM_YEAR = 2023;
 /** Total number of steps in the simulated year. */
 export const TOTAL_STEPS = 365 * STEPS_PER_DAY;
 
-export type Orientation = "south" | "east" | "west" | "east_west";
+export type Orientation = "south" | "east" | "west" | "east_west" | "north";
 
 export interface PVConfig {
   /** Peak power rating in kWp. */
@@ -35,8 +35,12 @@ export interface BatteryConfig {
   efficiency: number;
   /** Start of day SOC as a fraction. */
   startSOC: number;
-  /** Where the battery gets its energy. */
-  chargeMode: "solar" | "lowPrice";
+  /** Where / when the battery gets its energy.
+   *  - "morning": charge from PV surplus as soon as it is available (morning).
+   *  - "midday": charge from PV surplus only around solar noon.
+   *  - "gridNegative": charge from PV surplus AND from the grid whenever the
+   *    spot price is non-positive (free / negative electricity). */
+  chargeMode: "morning" | "midday" | "gridNegative";
   /** Discharge into the expensive evening window. */
   dischargeEvening: boolean;
   /** Discharge into the expensive morning window. */
@@ -52,10 +56,10 @@ export interface BatteryConfig {
 }
 
 export interface TariffConfig {
-  /** Constant feed-in tariff in EUR per kWh (Einspeisevergütung). */
+  /** Constant feed-in tariff in EUR per kWh (Einspeisevergütung) used for comparison. */
   feedInEUR: number;
-  /** Market premium in EUR per kWh added to every exported kWh (Marktprämie). */
-  marketPremiumEUR: number;
+  /** Commissioning year, which sets the EEG reference value (anzulegender Wert). */
+  commissioningYear: number;
 }
 
 export interface SimConfig {
@@ -106,6 +110,10 @@ export interface RevenueSummary {
   marketValueEUR: number;
   gridChargeCostEUR: number;
   premiumEUR: number;
+  /** EEG reference value (anzulegender Wert) in ct/kWh, blended by system size. */
+  referenceValueCt: number;
+  /** Computed market premium (Marktprämie) in ct/kWh. */
+  marktPraemieCt: number;
   netMarketEUR: number;
   fixedValueEUR: number;
   /** netMarketEUR - fixedValueEUR */

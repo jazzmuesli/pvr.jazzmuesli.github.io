@@ -37,6 +37,8 @@ function orientationAzimuth(orientation: Orientation): number {
       return 90;
     case "west":
       return 270;
+    case "north":
+      return 0;
     case "east_west":
       return 180; // unused; handled separately
   }
@@ -117,23 +119,18 @@ function rawStepEnergy(
   return (poa / 1000) * STEP_HOURS;
 }
 
-// Cache the location calibration factor (clear-sky annual / empirical annual).
-const scalingCache = new Map<string, number>();
-
-function scalingFor(location: Location): number {
-  const cached = scalingCache.get(location.name);
-  if (cached !== undefined) return cached;
-  const refTilt = 35;
-  let refAnnual = 0;
-  for (let i = 0; i < TOTAL_STEPS; i++) {
-    const day = Math.floor(i / STEPS_PER_DAY);
-    const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
-    refAnnual += rawStepEnergy(location.latDeg, day + hour / 24, hour, refTilt, 180);
-  }
-  const scaling = location.annualYieldPerKWp / refAnnual;
-  scalingCache.set(location.name, scaling);
-  return scaling;
-}
+// Empirical annual yield of an orientation relative to an optimally tilted
+// south array (fractions of south's kWh/kWp). The *within-year time shape* is
+// taken from the clear-sky geometry below; only the absolute magnitude is set
+// by these ratios so the model matches real PV-planner figures
+// (single east/west ≈ 85 % of south, north ≈ 40 %).
+const ORIENT_RATIO: Record<Orientation, number> = {
+  south: 1.0,
+  east: 0.86,
+  west: 0.86,
+  east_west: 0.86,
+  north: 0.42,
+};
 
 export interface PVInput {
   peakKWp: number;
@@ -145,25 +142,30 @@ export interface PVInput {
 /** Hourly-equivalent production per 15-min step for the full simulated year. */
 export function pvProductionPerStep(input: PVInput): Float64Array {
   const loc = LOCATIONS[input.location] ?? LOCATIONS[DEFAULT_LOCATION];
-  const scaling = scalingFor(loc);
-  const out = new Float64Array(TOTAL_STEPS);
+  const geo = new Float64Array(TOTAL_STEPS);
   if (input.orientation === "east_west") {
     for (let i = 0; i < TOTAL_STEPS; i++) {
       const day = Math.floor(i / STEPS_PER_DAY);
       const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
       const e = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, 90);
       const w = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, 270);
-      out[i] = (0.5 * e + 0.5 * w) * scaling * input.peakKWp;
+      geo[i] = 0.5 * e + 0.5 * w;
     }
   } else {
     const az = orientationAzimuth(input.orientation);
     for (let i = 0; i < TOTAL_STEPS; i++) {
       const day = Math.floor(i / STEPS_PER_DAY);
       const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
-      out[i] = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, az) *
-        scaling * input.peakKWp;
+      geo[i] = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, az);
     }
   }
+  // Normalise the geometric shape to the empirical annual yield for this
+  // orientation and location, then scale by system size.
+  let g = 0;
+  for (let i = 0; i < TOTAL_STEPS; i++) g += geo[i];
+  const factor = (loc.annualYieldPerKWp * (ORIENT_RATIO[input.orientation] ?? 1)) / (g || 1);
+  const out = new Float64Array(TOTAL_STEPS);
+  for (let i = 0; i < TOTAL_STEPS; i++) out[i] = geo[i] * factor * input.peakKWp;
   return out;
 }
 
