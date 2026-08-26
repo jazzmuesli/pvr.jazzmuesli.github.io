@@ -177,7 +177,6 @@ export function initWizard(opts: WizardOptions): void {
   }
 
   function renderSummary(s: Scenario): void {
-    const rep = runScenario(s);
     const m = computeMetrics(s);
     const cards: [string, string, string][] = [
       ["PV-Ertrag", `${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],

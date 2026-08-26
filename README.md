@@ -146,10 +146,31 @@ Wichtige Parameter (alle optional, Defaults siehe `DEFAULT_SIM_PARAMS` in
 | `im` | Bezug `fixed`/`dynamic`/`dynamic14a` | fixed |
 | `ict` | Fester Bezugspreis (ct/kWh) | 24 |
 | `inv` | **Gesamtinvestition (€)** | 32000 |
+| `jaz` | Jahresarbeitszahl (Wärme/Elektr.) der Wärmepumpe | 3 |
+| `wpc` | Wärmepumpen-Strompreis (ct/kWh) | 24 |
 
 Das zurückgegebene `SimReport` enthält: `summary`, `amortisation`,
 `effectivePrice`, `monthly[]` (12 Einträge), `daily[][]` (12 Monate × 24 Stunden)
-und `scenario[]` (4 Varianten).
+und `scenario[]` (4 Varianten) sowie `heating` (Heizkosten-Vergleich, siehe
+unten).
+
+### Heizkosten-Vergleich (`heating`)
+
+Zusätzlich zur Stromwirtschaftlichkeit vergleicht der Report die **Heizkosten**
+der Wärmepumpe mit den fossilen Alternativen **Heizöl** und **Erdgas** – für
+dieselbe Nutzwärmemenge. Die Wärmepumpe liefert `Wärme = Strom × JAZ`
+(Jahresarbeitszahl, Default 3). Für die gleiche Wärmemenge werden Öl- und
+Gaskosten inkl. Kesselwirkungsgrad, Schornsteinfeger (200 €/Jahr) und – bei Gas –
+Gasnetzentgelt (2 ct/kWh) plus Nebenkosten/Grundgebühr (120 €/Jahr) berechnet.
+
+Die reine Funktion `computeHeating(params)` (`src/calc/heating.ts`) ist DOM-frei
+und einzeln testbar (`tests/heating.test.ts`). Die Sektion wird nur angezeigt,
+wenn die Wärmepumpe aktiviert ist.
+
+| Param | Bedeutung | Default |
+|-------|-----------|---------|
+| `jaz` | Jahresarbeitszahl der Wärmepumpe | 3 |
+| `wpc` | WP-Strompreis (ct/kWh) | 24 |
 
 ## Architektur
 

@@ -167,7 +167,7 @@ export function scenarioToQuery(s: Scenario): URLSearchParams {
 }
 
 export function appUrl(s: Scenario): string {
-  return `/?${scenarioToQuery(s).toString()}`;
+  return `/index.html?${scenarioToQuery(s).toString()}`;
 }
 
 export function scenarioFromQuery(qs: string): Scenario {

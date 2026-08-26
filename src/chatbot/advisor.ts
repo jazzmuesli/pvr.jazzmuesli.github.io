@@ -131,7 +131,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   const msg = (message || "").toLowerCase();
 
   // 1) Explicit request for a summary / deeplink.
-  if (/\b(zusammen|zusammenfass|übersicht|summary|bericht|link|index|details)\b/.test(msg)) {
+  if (/\b(zusammen|zusammenfass|übersicht|summary|bericht|link|index|details)/.test(msg)) {
     return summarise(scenario);
   }
 

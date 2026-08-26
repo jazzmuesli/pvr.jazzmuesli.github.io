@@ -43,7 +43,7 @@ function apiPlugin(): Plugin {
         (async () => {
           try {
             const parsed = JSON.parse(body || "{}");
-            const model = process.env.OR_MODEL || "meta-llama/llama-3.2-3b-instruct:free";
+            const model = parsed.model || process.env.OR_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
             const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
               method: "POST",
               headers: {

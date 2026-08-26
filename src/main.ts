@@ -20,6 +20,8 @@ const monthlyHost = document.getElementById("monthly") as HTMLElement;
 const hourlyHost = document.getElementById("hourly") as HTMLElement;
 const monthTitle = document.getElementById("month-title") as HTMLElement;
 const scenarioHost = document.getElementById("scenario") as HTMLElement;
+const heatingHost = document.getElementById("heating") as HTMLElement;
+const heatingBody = document.getElementById("heating-body") as HTMLElement;
 
 let selectedMonth = 6; // July
 let rafPending = false;
@@ -75,6 +77,40 @@ function renderHourly(): void {
   renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
 }
 
+function renderHeating(r: SimReport): void {
+  const h = r.heating;
+  heatingHost.style.display = h.heatpumpElectricKWh > 0 ? "" : "none";
+  if (h.heatpumpElectricKWh <= 0) return;
+
+  const fmt = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  const rows: { a: typeof h.heatpump; highlight: boolean }[] = [
+    { a: h.heatpump, highlight: true },
+    { a: h.oil, highlight: false },
+    { a: h.gas, highlight: false },
+  ];
+  const head = `
+    <div class="heat-head">
+      <span>Wärmepumpe: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh Strom →
+      ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</span>
+    </div>`;
+  const cards = rows
+    .map(({ a, highlight }) => {
+      const delta =
+        a.mode === "heatpump" ? "" :
+        `<div class="card-sub">${a.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(a.deltaVsHeatpumpEUR)} ggü. Wärmepumpe</div>`;
+      return `
+      <div class="card${highlight ? " card-hl" : ""}">
+        <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/Jahr</span></div>
+        <div class="card-key">${a.label}</div>
+        <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · Netz ${fmt(a.gridFeeEUR)}` : ""}</div>
+        <div class="card-sub">Schornsteinfeger ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · Nebenk. ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
+        ${delta}
+      </div>`;
+    })
+    .join("");
+  heatingBody.innerHTML = head + `<div class="summary">${cards}</div>`;
+}
+
 function recompute(): void {
   report = runSimulation(toSimParams(state));
 
@@ -85,6 +121,7 @@ function recompute(): void {
   });
   renderHourly();
   renderScenarioChart(scenarioHost, report.scenario);
+  renderHeating(report);
 }
 
 function scheduleRecompute(): void {

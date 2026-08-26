@@ -20,6 +20,12 @@ import {
 } from "./consumers";
 import { effectiveNetPrice, EffectivePrice } from "./vwap";
 import { computeAmortisation, Amortisation } from "./amortisation";
+import {
+  computeHeating,
+  HeatingParams,
+  HeatingReport,
+  DEFAULT_HEATING_PARAMS,
+} from "./heating";
 
 // ---- Domain types shared with the UI ----------------------------------------
 
@@ -98,6 +104,10 @@ export interface SimParams {
   importFixedCt: number;
   // Cost — a single total, independent of kWp / kWh size.
   investmentEUR: number;
+  // Heating: JAZ of the heat pump and its electricity price (for the
+  // fossil-fuelled alternative cost comparison in `heating`).
+  heatpumpJaz: number;
+  heatpumpElectricCt: number;
 }
 
 export const DEFAULT_SIM_PARAMS: SimParams = {
@@ -131,6 +141,8 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   importScheme: "fixed",
   importFixedCt: 24,
   investmentEUR: 32000,
+  heatpumpJaz: 3,
+  heatpumpElectricCt: 24,
 };
 
 // Parse URL-style query parameters into SimParams. Mirrors the names used by
@@ -179,6 +191,8 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.importScheme = (str("im", p.importScheme) as SimParams["importScheme"]) ?? p.importScheme;
   p.importFixedCt = num("ict", p.importFixedCt);
   p.investmentEUR = num("inv", p.investmentEUR);
+  p.heatpumpJaz = num("jaz", p.heatpumpJaz);
+  p.heatpumpElectricCt = num("wpc", p.heatpumpElectricCt);
   return p;
 }
 
@@ -193,6 +207,8 @@ export interface SimReport {
   /** Daily profile for every month: daily[month-1][hour]. */
   daily: DayChartDatum[][];
   scenario: ScenarioDatum[];
+  /** Heating cost comparison (heat pump vs. oil vs. gas) for the same useful heat. */
+  heating: HeatingReport;
 }
 
 export interface SimSummary {
@@ -410,6 +426,18 @@ export function runSimulation(p: SimParams): SimReport {
   const daily = dailyAll(result, loads);
   const scenario = scenarioVariants(result, p, city, prices);
 
+  // Heating cost comparison (heat pump vs. heating oil vs. gas) for the same
+  // useful heat output. The heat pump's electricity consumption is taken from
+  // the heat-pump consumer (0 when disabled → report shows the fossil options
+  // as the baseline at zero heat-pump cost).
+  const heatingParams: HeatingParams = {
+    ...DEFAULT_HEATING_PARAMS,
+    heatpumpElectricKWh: p.consumers.heatpump.enabled ? p.consumers.heatpump.annualKWh : 0,
+    jaz: p.heatpumpJaz,
+    heatpumpElectricCt: p.heatpumpElectricCt,
+  };
+  const heating = computeHeating(heatingParams);
+
   const summary: SimSummary = {
     totalPVKWh: annualSum(result.pv),
     totalLoadKWh: annualSum(result.load),
@@ -431,6 +459,7 @@ export function runSimulation(p: SimParams): SimReport {
     monthly,
     daily,
     scenario,
+    heating,
   };
 }
 

@@ -36,6 +36,10 @@ export interface AppState {
   importFixedCt: number; // ct/kWh
   // Investition: eine einzige Gesamtinvestition (€), unabhängig von kWp/kWh.
   investmentEUR: number;
+  // Heizung: JAZ der Wärmepumpe und ihr Strompreis (ct/kWh) für den
+  // Kostenvergleich mit Heizöl / Gas.
+  heatpumpJaz: number;
+  heatpumpElectricCt: number;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -71,6 +75,8 @@ export const DEFAULT_STATE: AppState = {
   importScheme: "fixed",
   importFixedCt: 24,
   investmentEUR: 32000,
+  heatpumpJaz: 3,
+  heatpumpElectricCt: 24,
 };
 
 /** Map the UI state onto the pure simulation parameters. */
@@ -101,6 +107,8 @@ export function toSimParams(s: AppState): SimParams {
     importScheme: s.importScheme,
     importFixedCt: s.importFixedCt,
     investmentEUR: s.investmentEUR,
+    heatpumpJaz: s.heatpumpJaz,
+    heatpumpElectricCt: s.heatpumpElectricCt,
   };
 }
 
