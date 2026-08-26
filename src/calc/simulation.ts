@@ -203,9 +203,12 @@ export function simulate(config: SimConfig): SimResult {
     // 3) Export remaining PV directly (price >= 0 here).
     if (p > 0) exportSolar[i] = p;
 
-    // 4) Cover remaining load from the battery (only inside the configured
-    //    discharge windows), then the grid.
-    if (discharging && L > 0 && soc > minSOCkWh) {
+    // 4) Cover remaining load from the battery whenever it has charge, then
+    //    the grid. A self-consumption battery should serve *any* load deficit
+    //    (not just inside fixed windows): exported PV is worth only the feed-in
+    //    rate while grid import costs the full retail rate, so storing PV and
+    //    discharging it against load is always the better arbitrage.
+    if (L > 0 && soc > minSOCkWh) {
       const avail = soc - minSOCkWh;
       const e = Math.min(maxStepEnergy, avail, L);
       if (e > 0) {
