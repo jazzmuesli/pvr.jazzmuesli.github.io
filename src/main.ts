@@ -6,6 +6,7 @@ import { cityForLocation } from "./calc/tariff";
 import { loadByConsumer } from "./calc/consumers";
 import { importPriceArray } from "./calc/tariff";
 import { effectiveNetPrice } from "./calc/vwap";
+import { computeAmortisation } from "./calc/amortisation";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimConfig } from "./ui/state";
 import { writeUrl, deserializeState } from "./ui/url";
@@ -84,6 +85,7 @@ function renderSummary(
   econ: ReturnType<typeof computeEconomics>,
   eff: { overallCt: number; byConsumer: Record<string, number> },
   fixedCt: number,
+  amort: ReturnType<typeof computeAmortisation>,
 ): void {
   const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
   const importEUR = state.importScheme === "fixed" ? econ.importCostFixedEUR
