@@ -124,7 +124,7 @@
       import { defaultScenario, scenarioFromQuery, scenarioToQuery, appUrl } from "/src/scenario.ts";
       import { initWizard } from "/src/wizard/wizard.ts";
       import { initChat } from "/src/chatbot/chat-ui.ts";
-      import { openRouterGenerate, ADVISOR_SYSTEM_PROMPT } from "/src/chatbot/openrouter.ts";
+      import { interpretMessage, ADVISOR_SYSTEM_PROMPT } from "/src/chatbot/openrouter.ts";
 
       const qs = location.search.replace(/^\?/, "");
       const initial = qs ? scenarioFromQuery(qs) : defaultScenario();
@@ -144,7 +144,7 @@
       initChat({
         mount: document.getElementById("chat"),
         store,
-        generate: openRouterGenerate,
+        interpret: interpretMessage,
         systemPrompt: ADVISOR_SYSTEM_PROMPT,
       });
 

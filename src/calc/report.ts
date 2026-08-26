@@ -227,6 +227,21 @@ export interface SimReport {
   /** Opportunity-cost comparison: heating (heat pump vs. oil vs. gas) and
    *  mobility (EV vs. diesel), for the same useful heat / annual distance. */
   opportunityCosts: OpportunityCosts;
+  /** What the annual saving can finance: tied to the PV payback horizon. */
+  opportunityInvestment: OpportunityInvestment;
+}
+
+export interface OpportunityInvestment {
+  /** PV simple payback (years); may be Infinity when there is no PV benefit. */
+  pvPaybackYears: number;
+  /** Heat pump vs. gas: annual saving (€). */
+  heatingSavingEUR: number;
+  /** Investment a heat pump could be financed with over the PV payback (€), or null if N/A. */
+  financeableHeatpumpEUR: number | null;
+  /** EV vs. diesel: annual saving (€). */
+  carSavingEUR: number;
+  /** Investment an EV could be financed with over the PV payback (€), or null if N/A. */
+  financeableEvEUR: number | null;
 }
 
 export interface SimSummary {
@@ -452,21 +467,23 @@ export function runSimulation(p: SimParams): SimReport {
     ...DEFAULT_HEATING_PARAMS,
     heatpumpElectricKWh: p.consumers.heatpump.enabled ? p.consumers.heatpump.annualKWh : 0,
     jaz: p.heatpumpJaz,
-    // The heat pump is a grid consumer, so it pays the household Strompreis
-    // (with an explicit `wpc` override still possible via the query string).
-    heatpumpElectricCt: p.heatpumpElectricCt,
+    // The heat pump is a grid consumer, so it pays the PV-aware *effective*
+    // price of its own imports (the simulation's `byConsumer.heatpump`). This
+    // makes the comparison react to every PV/battery slider: a bigger battery
+    // raises PV self-consumption and lowers the heat pump's effective price.
+    heatpumpElectricCt: p.consumers.heatpump.enabled ? effectivePrice.byConsumer.heatpump : p.heatpumpElectricCt,
   };
 
   // The EV comparison is driven by the *actual* inputs the user sets:
-  //   - the EV charges from the grid at the household Strompreis, and
+  //   - the EV charges at the PV-aware effective price of its own imports
+  //     (`byConsumer.ev`), so a bigger battery / more PV also cheapens driving;
   //   - the annual distance is back-computed from the E-Auto electricity
   //     consumption (kWh) the user entered, using the EV's kWh/100 km.
-  // This keeps the comparison in sync with the "Strompreis" and
-  // "E-Auto Verbrauch" controls.
   const evKWh = p.consumers.ev.enabled ? p.consumers.ev.annualKWh : 0;
+  const evCt = p.consumers.ev.enabled ? effectivePrice.byConsumer.ev : p.importFixedCt;
   const carParams: CarParams = {
     ...p.car,
-    evElectricCtPerKwh: p.importFixedCt,
+    evElectricCtPerKwh: evCt,
     annualKm: evKWh > 0 ? Math.round((evKWh * 100) / p.car.evKwhPer100km) : p.car.annualKm,
   };
 
@@ -476,6 +493,21 @@ export function runSimulation(p: SimParams): SimReport {
     heating: heatingParams,
     car: carParams,
   });
+
+  // Tie the fossil-vs-electric decision to the PV economics: the annual saving
+  // can finance a heat pump / EV over the PV's own payback horizon.
+  const pvPaybackYears = amortisation.paybackYears;
+  const heatingSavingEUR = opportunityCosts.heating.gas.totalEUR - opportunityCosts.heating.heatpump.totalEUR;
+  const carSavingEUR = opportunityCosts.car.diesel.totalEUR - opportunityCosts.car.ev.totalEUR;
+  const financeable = (savingEUR: number): number | null =>
+    Number.isFinite(pvPaybackYears) && savingEUR > 0 ? round2(savingEUR * pvPaybackYears) : null;
+  const opportunityInvestment = {
+    pvPaybackYears,
+    heatingSavingEUR: round2(heatingSavingEUR),
+    financeableHeatpumpEUR: financeable(heatingSavingEUR),
+    carSavingEUR: round2(carSavingEUR),
+    financeableEvEUR: financeable(carSavingEUR),
+  };
 
   const summary: SimSummary = {
     totalPVKWh: annualSum(result.pv),
@@ -499,6 +531,7 @@ export function runSimulation(p: SimParams): SimReport {
     daily,
     scenario,
     opportunityCosts,
+    opportunityInvestment,
   };
 }
 
@@ -509,3 +542,7 @@ const MONTH_LABELS = [
 
 // Re-export so consumers do not need to import the underlying modules.
 export { monthForStep };
+
+function round2(v: number): number {
+  return Math.round(v * 100) / 100;
+}

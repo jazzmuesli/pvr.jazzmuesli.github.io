@@ -103,12 +103,13 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   const changes: string[] = [];
 
   // 1) Explicit request for a summary / deeplink.
-  if (message.trim() !== "" && /\b(zusammen|zusammenfass|übersicht|summary|bericht|link|index|details|zeig)\b/.test(msg)) {
+  if (message.trim() !== "" && /(zusammenfa|zusammen|übersicht|summary|bericht|link|index|details|zeig)/.test(msg)) {
     return summarise(scenario);
   }
 
   // 2) Electricity price — accepts "24c", "24 ct", "Strompreis 35",
-  //    "anderer Stromanbieter 24c", "20 cent", etc.
+  //    "anderer Stromanbieter 24c", "20 cent", etc. Also derives the price from
+  //    a total bill, e.g. "ich zahle 100 € für 3500 kWh" → 100*100/3500 ≈ 2,86 ct/kWh.
   const priceM =
     msg.match(/(?:stom|arbeits|preis|cent|\bct\b|€|anbieter).*?(\d{1,2}(?:[.,]\d+)?)/) ||
     msg.match(/(\d{1,2}(?:[.,]\d+)?)\s*(?:ct|cent|€|c)\b/);
@@ -117,6 +118,18 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     if (Number.isFinite(v) && v >= 10 && v <= 60 && v !== scenario.priceCt) {
       scenario.priceCt = v;
       changes.push(`Strompreis → ${v} ct/kWh`);
+    }
+  }
+  // Derived working price: "<euro> € for <kwh> kWh" (any word order).
+  const euroM = msg.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:€|eur)/i);
+  const kwhM = msg.match(/(\d{3,5})\s*kwh/i);
+  if (euroM && kwhM) {
+    const euro = parseFloat(euroM[1].replace(",", "."));
+    const kwh = Number(kwhM[1]);
+    const ct = (euro * 100) / kwh;
+    if (Number.isFinite(ct) && ct >= 1 && ct <= 60 && Math.abs(ct - scenario.priceCt) > 0.005) {
+      scenario.priceCt = Math.round(ct * 100) / 100;
+      changes.push(`Strompreis → ${ct.toFixed(2)} ct/kWh (aus ${euro} € / ${kwh} kWh)`);
     }
   }
 
@@ -218,12 +231,18 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     return { reply, intent: "welcome", scenario, stage: "ready", metrics: m };
   }
 
-  return summarise(
-    scenario,
-    `Ich habe keine Änderung erkannt. Sag mir z. B., was ich anpassen soll:\n` +
+  return {
+    reply:
+      `Ich habe keine Änderung erkannt. Sag mir z. B., was ich anpassen soll:\n` +
       `• Strompreis („24 ct")\n• Ort („Hamburg")\n• PV („Balkonkraftwerk", „10 kWp", „20 kWp")\n` +
-      `• Speicher („mit/ohne Speicher")\n• Verbraucher („Wärmepumpe 3000", „E-Auto", „Brauchwasser").`,
-  );
+      `• Speicher („mit/ohne Speicher")\n• Verbraucher („Wärmepumpe 3000", „E-Auto", „Brauchwasser").\n\n` +
+      `Aktuell: ${pvLabel(scenario)}, ${scenario.priceCt} ct/kWh, ${scenario.location[0].toUpperCase() + scenario.location.slice(1)}.`,
+    intent: "clarify",
+    scenario,
+    stage: "ready",
+    metrics: computeMetrics(scenario),
+    link: appUrl(scenario),
+  };
 }
 
 export function scenariosEqual(a: Scenario, b: Scenario): boolean {

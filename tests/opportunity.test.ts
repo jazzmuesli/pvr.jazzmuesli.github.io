@@ -53,19 +53,22 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
     expect(r.opportunityCosts.heating).toBeDefined();
     expect(r.opportunityCosts.car).toBeDefined();
     // The report's opportunity costs must be identical to calling the shared
-    // function directly with the same inputs that `runSimulation` derives.
+    // function directly with the same inputs that `runSimulation` derives
+    // (PV-aware effective prices + EV distance from the E-Auto consumption).
     const evKWh = r.inputs.consumers.ev.enabled ? r.inputs.consumers.ev.annualKWh : 0;
     const annualKm = evKWh > 0
       ? Math.round((evKWh * 100) / r.inputs.car.evKwhPer100km)
       : r.inputs.car.annualKm;
+    const evCt = r.inputs.consumers.ev.enabled ? r.effectivePrice.byConsumer.ev : r.inputs.importFixedCt;
+    const hpCt = r.inputs.consumers.heatpump.enabled ? r.effectivePrice.byConsumer.heatpump : r.inputs.heatpumpElectricCt;
     const direct = computeOpportunityCosts({
       heating: {
         ...DEFAULT_HEATING_PARAMS,
         heatpumpElectricKWh: r.inputs.consumers.heatpump.enabled ? r.inputs.consumers.heatpump.annualKWh : 0,
         jaz: r.inputs.heatpumpJaz,
-        heatpumpElectricCt: r.inputs.heatpumpElectricCt,
+        heatpumpElectricCt: hpCt,
       },
-      car: { ...r.inputs.car, evElectricCtPerKwh: r.inputs.importFixedCt, annualKm },
+      car: { ...r.inputs.car, evElectricCtPerKwh: evCt, annualKm },
     });
     expect(r.opportunityCosts.heating.heatpump.totalEUR).toBe(direct.heating.heatpump.totalEUR);
     expect(r.opportunityCosts.car.ev.totalEUR).toBe(direct.car.ev.totalEUR);
@@ -128,5 +131,59 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
       consumers: { ...DEFAULT_SIM_PARAMS.consumers, ev: { enabled: false, annualKWh: 0, pvShare: 0.8 } },
     });
     expect(r.opportunityCosts.car.annualKm).toBe(15000);
+  });
+
+  it("a bigger battery lowers the heat-pump effective price and raises the saving", () => {
+    const noBat = runSimulation({ ...DEFAULT_SIM_PARAMS, capacityKWh: 0, maxPowerKW: 0 });
+    const bigBat = runSimulation({ ...DEFAULT_SIM_PARAMS, capacityKWh: 19, maxPowerKW: 6 });
+    expect(bigBat.opportunityCosts.heating.heatpump.energyCostEUR)
+      .toBeLessThan(noBat.opportunityCosts.heating.heatpump.energyCostEUR);
+    expect(bigBat.opportunityInvestment.heatingSavingEUR)
+      .toBeGreaterThan(noBat.opportunityInvestment.heatingSavingEUR);
+  });
+
+  it("a bigger battery also lowers the EV effective price", () => {
+    const noBat = runSimulation({ ...DEFAULT_SIM_PARAMS, capacityKWh: 0, maxPowerKW: 0 });
+    const bigBat = runSimulation({ ...DEFAULT_SIM_PARAMS, capacityKWh: 19, maxPowerKW: 6 });
+    expect(bigBat.opportunityCosts.car.ev.energyCostEUR)
+      .toBeLessThanOrEqual(noBat.opportunityCosts.car.ev.energyCostEUR);
+  });
+
+  it("ties the financeable investment to the PV payback horizon", () => {
+    // PV payback ~10 years, gas heating 2500 € vs heat pump 1400 € → ~1100 €/yr
+    // saving → financeable heat pump ≈ 11.000 €.
+    const r = runSimulation({
+      ...DEFAULT_SIM_PARAMS,
+      consumers: {
+        household: { enabled: true, annualKWh: 4000 },
+        heatpump: { enabled: true, annualKWh: 5000 },
+        bwwp: { enabled: true },
+        ev: { enabled: true, annualKWh: 2300, pvShare: 1 },
+      },
+    });
+    const inv = r.opportunityInvestment;
+    expect(inv.pvPaybackYears).toBeGreaterThan(0);
+    expect(Number.isFinite(inv.pvPaybackYears)).toBe(true);
+    expect(inv.heatingSavingEUR).toBeGreaterThan(0);
+    expect(inv.financeableHeatpumpEUR).not.toBeNull();
+    // financeable = saving * payback (within rounding).
+    expect(inv.financeableHeatpumpEUR!).toBeCloseTo(
+      inv.heatingSavingEUR * inv.pvPaybackYears,
+      0,
+    );
+    expect(inv.financeableEvEUR).not.toBeNull();
+  });
+
+  it("reports no financeable investment when there is no PV benefit", () => {
+    // No PV, no battery → no system benefit → payback is infinite.
+    const r = runSimulation({
+      ...DEFAULT_SIM_PARAMS,
+      peakKWp: 0,
+      capacityKWh: 0,
+      maxPowerKW: 0,
+      investmentEUR: 0,
+    });
+    expect(Number.isFinite(r.opportunityInvestment.pvPaybackYears)).toBe(false);
+    expect(r.opportunityInvestment.financeableHeatpumpEUR).toBeNull();
   });
 });

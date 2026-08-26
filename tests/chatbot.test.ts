@@ -1,115 +1,110 @@
 import { describe, it, expect } from "vitest";
 import { advisorTurn, scenariosEqual } from "../src/chatbot/advisor";
-import { ChatBot as ChatBotClass } from "../src/chatbot/chatbot";
+import { ChatBot as ChatBotClass, coercePatch, InterpretFn } from "../src/chatbot/chatbot";
 import { createStore } from "../src/store";
 import { defaultScenario, Scenario } from "../src/scenario";
 
-function turn(msg: string, stage: Parameters<typeof advisorTurn>[1]["stage"], scenario?: Scenario) {
-  return advisorTurn(msg, { scenario: scenario ?? defaultScenario(), stage });
+function turn(msg: string, scenario?: Scenario) {
+  return advisorTurn(msg, { scenario: scenario ?? defaultScenario(), stage: "ready" });
 }
 
-describe("advisor — guided PV funnel", () => {
-  it("welcomes and offers the Balkonkraftwerk (300 €)", () => {
-    const o = turn("", "welcome");
-    expect(o.intent).toBe("offer_balkon");
-    expect(o.stage).toBe("offer_balkon");
-    expect(o.reply).toContain("Balkonkraftwerk");
-    expect(o.reply).toContain("300");
-    expect(o.metrics?.investmentEUR).toBe(300);
+describe("advisor — applies user input directly (no confirmation)", () => {
+  it("welcomes without changing the scenario", () => {
+    const o = turn("");
+    expect(o.intent).toBe("welcome");
+    expect(o.scenario).toEqual(defaultScenario());
   });
 
-  it("accepts the Balkonkraftwerk -> moves to 10 kWp offer", () => {
-    const o = turn("ja", "offer_balkon");
-    expect(o.scenario.pv).toBe("balcony");
-    expect(o.stage).toBe("offer_10kw");
-    expect(o.reply).toContain("10 kWp");
+  it("adjusts the electricity price from '24c'", () => {
+    const o = turn("ok, nimm anderen stromanbieter fuer 24c");
+    expect(o.scenario.priceCt).toBe(24);
+    expect(o.intent).toBe("adjust");
   });
 
-  it("accepts 10 kWp -> moves to 10 kWp + battery", () => {
-    const o = turn("ja", "offer_10kw");
-    expect(o.scenario.pv).toBe("10");
-    expect(o.stage).toBe("offer_10kw_battery");
+  it("derives the price from a yearly bill ('100 € for 3500 kWh')", () => {
+    const o = turn("ich zahle 100 euro für 3500 kWh im jahr");
+    expect(o.scenario.priceCt).toBeCloseTo(2.86, 1);
+    expect(o.intent).toBe("adjust");
   });
 
-  it("accepts the battery -> asks about consumers", () => {
-    const o = turn("ja", "offer_10kw_battery");
-    expect(o.scenario.battery).toBe("on");
-    expect(o.stage).toBe("ask_consumers");
-  });
-
-  it("offers heat pump, EV and hot-water heat pump as options", () => {
-    const o = turn("was gibt es noch?", "ask_consumers");
-    expect(o.reply.toLowerCase()).toContain("wärmepumpe");
-    expect(o.reply.toLowerCase()).toContain("e-auto");
-    expect(o.reply.toLowerCase()).toContain("brauchwasser");
+  it("changes the location", () => {
+    const o = turn("anderer ort hamburg");
+    expect(o.scenario.location).toBe("hamburg");
   });
 
   it("adds a heat pump with the requested kWh", () => {
-    const o = turn("Wärmepumpe 3000", "ask_consumers");
+    const o = turn("wärmepumpe 3000");
     expect(o.scenario.heatpump).toBe(true);
     expect(o.scenario.heatpumpKWh).toBe(3000);
-    expect(o.stage).toBe("ask_consumers");
   });
 
   it("adds an EV", () => {
-    const o = turn("E-Auto", "ask_consumers");
+    const o = turn("e-auto");
     expect(o.scenario.ev).toBe(true);
   });
 
-  it("adds a hot-water heat pump", () => {
-    const o = turn("Brauchwasser", "ask_consumers");
-    expect(o.scenario.bwwp).toBe(true);
+  it("selects 10 kWp and a battery", () => {
+    const o1 = turn("10 kwp");
+    expect(o1.scenario.pv).toBe("10");
+    expect(turn("mit speicher").scenario.battery).toBe("on");
   });
 
-  it("finishes with a summary and an /index.html link", () => {
-    const o = turn("weiter", "ask_consumers");
+  it("returns a summary link on explicit request", () => {
+    const o = turn("bitte zusammenfassen");
     expect(o.intent).toBe("summary");
-    expect(o.stage).toBe("ready");
     expect(o.link).toMatch(/^\/index\.html\?/);
-    expect(o.reply).toContain("index.html");
   });
 
-  it("lets the user adjust the electricity price", () => {
-    const o = turn("Strompreis 35", "ready");
-    expect(o.scenario.priceCt).toBe(35);
-  });
-
-  it("responds to an explicit summary request with a link", () => {
-    const o = turn("Bitte zusammenfassen", "ready");
-    expect(o.intent).toBe("summary");
-    expect(o.link).toBeDefined();
+  it("clarifies (without changing) on unrelated input", () => {
+    const o = turn("wie wird das wetter?");
+    expect(o.intent).toBe("clarify");
+    expect(o.scenario).toEqual(defaultScenario());
   });
 });
 
-describe("ChatBot integration (with injected generator)", () => {
-  it("drives the funnel and applies scenario changes to the store", async () => {
-    const fakeGen = async (_system: string, out: { intent: string }) => `LLM:${out.intent}`;
+describe("ChatBot with LLM interpreter", () => {
+  it("applies the interpreter's patch and replies", async () => {
+    const interpret: InterpretFn = async () => ({ reply: "Preis auf 24 ct gesetzt.", patch: { priceCt: 24 } });
     const store = createStore(defaultScenario());
-    const bot = new ChatBotClass({ store, generate: fakeGen });
-
-    const greet = await bot.send("");
-    expect(greet.reply).toBe("LLM:offer_balkon");
-
-    const afterBalkon = await bot.send("ja");
-    expect(afterBalkon.reply).toBe("LLM:accept_balkon");
-    expect(store.getState().pv).toBe("balcony");
-
-    await bot.send("ja"); // 10 kWp
-    await bot.send("ja"); // + battery
-    expect(store.getState().battery).toBe("on");
-
-    const summary = await bot.send("zusammenfassen");
-    expect(summary.link).toMatch(/^\/index\.html\?/);
+    const bot = new ChatBotClass({ store, interpret });
+    const o = await bot.send("anderer stromanbieter 24c");
+    expect(store.getState().priceCt).toBe(24);
+    expect(o.intent).toBe("adjust");
+    expect(o.reply).toContain("24");
   });
 
-  it("falls back to the template reply if the generator throws", async () => {
-    const failingGen = async () => {
+  it("falls back to the advisor when the interpreter throws", async () => {
+    const interpret: InterpretFn = async () => {
       throw new Error("no network");
     };
     const store = createStore(defaultScenario());
-    const bot = new ChatBotClass({ store, generate: failingGen });
-    const o = await bot.send("");
-    expect(o.reply).toContain("Balkonkraftwerk");
+    const bot = new ChatBotClass({ store, interpret });
+    await bot.send("strompreis 35");
+    expect(store.getState().priceCt).toBe(35);
+  });
+});
+
+describe("ChatBot fallback (generate only)", () => {
+  it("uses the deterministic advisor and polishes the text", async () => {
+    const fakeGen = async (_s: string, out: { intent: string }) => `LLM:${out.intent}`;
+    const store = createStore(defaultScenario());
+    const bot = new ChatBotClass({ store, generate: fakeGen });
+    const o = await bot.send("strompreis 35");
+    expect(store.getState().priceCt).toBe(35);
+    expect(o.reply).toBe("LLM:adjust");
+  });
+});
+
+describe("coercePatch", () => {
+  it("drops invalid enum values and clamps numbers", () => {
+    const s = coercePatch(defaultScenario(), {
+      pv: "99" as Scenario["pv"],
+      priceCt: 999,
+      consumptionKWh: 10,
+    } as Partial<Scenario>);
+    expect(s.pv).toBe("10"); // unchanged (invalid enum)
+    expect(s.priceCt).toBe(60); // clamped
+    expect(s.consumptionKWh).toBe(500); // clamped
   });
 });
 

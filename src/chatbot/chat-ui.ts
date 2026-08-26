@@ -4,19 +4,26 @@
 
 import { Store } from "../store";
 import { Scenario } from "../scenario";
-import { ChatBot, GenerateFn } from "./chatbot";
+import { ChatBot, GenerateFn, InterpretFn } from "./chatbot";
 import { createLogger } from "./logger";
 
 export interface ChatUiOptions {
   mount: HTMLElement;
   store: Store<Scenario>;
+  interpret?: InterpretFn;
   generate?: GenerateFn;
   systemPrompt?: string;
 }
 
 export function initChat(opts: ChatUiOptions): ChatBot {
   const logger = createLogger();
-  const bot = new ChatBot({ store: opts.store, generate: opts.generate, systemPrompt: opts.systemPrompt, logger });
+  const bot = new ChatBot({
+    store: opts.store,
+    interpret: opts.interpret,
+    generate: opts.generate,
+    systemPrompt: opts.systemPrompt,
+    logger,
+  });
 
   opts.mount.innerHTML = `
     <div class="chat-log" id="chat-log"></div>

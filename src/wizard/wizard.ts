@@ -68,7 +68,7 @@ export function initWizard(opts: WizardOptions): void {
   hk.addEventListener("input", () => store.setState({ consumptionKWh: Number(hk.value) }));
   const hkVal = el("span", { class: "val" }, ["2500"]);
 
-  const ict = el("input", { type: "range", id: "ict", min: "15", max: "50", step: "0.5" }) as HTMLInputElement;
+  const ict = el("input", { type: "range", id: "ict", min: "1", max: "50", step: "0.1" }) as HTMLInputElement;
   ict.addEventListener("input", () => store.setState({ priceCt: Number(ict.value) }));
   const ictVal = el("span", { class: "val" }, ["30"]);
 
@@ -262,6 +262,7 @@ export function initWizard(opts: WizardOptions): void {
           <div class="card-sub">Schornsteinfeger ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · Nebenk. ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
           ${d ? `<div class="card-sub">${d}</div>` : ""}
         </div>`).join("") + `</div>`;
+      html += opportunityNote(r, "heating");
     }
 
     if (oc.car.annualKm > 0) {
@@ -279,9 +280,20 @@ export function initWizard(opts: WizardOptions): void {
           <div class="card-sub">Wartung ${fmt(a.maintenanceEUR)} · Steuer ${fmt(a.vehicleTaxEUR)}</div>
           ${d ? `<div class="card-sub">${d}</div>` : ""}
         </div>`).join("") + `</div>`;
+      html += opportunityNote(r, "car");
     }
 
     body.innerHTML = html;
+  }
+
+  /** Footer line tying the annual saving to the PV payback horizon. */
+  function opportunityNote(r: SimReport, kind: "heating" | "car"): string {
+    const inv = r.opportunityInvestment;
+    const saving = kind === "heating" ? inv.heatingSavingEUR : inv.carSavingEUR;
+    const financeable = kind === "heating" ? inv.financeableHeatpumpEUR : inv.financeableEvEUR;
+    const label = kind === "heating" ? "Gas" : "Diesel";
+    if (financeable == null) return "";
+    return `<div class="heat-foot">Ersparnis ggü. ${label}: ${fmtEUR(saving)}/Jahr · finanzierbar in ${inv.pvPaybackYears.toFixed(1)} J. (PV-Amortisation): ${fmtEUR(financeable)}</div>`;
   }
 
   function scheduleRecompute(): void {

@@ -83,7 +83,13 @@ function apiPlugin(): Plugin {
                 "HTTP-Referer": "http://localhost:5173",
                 "X-Title": "pv-calc-wizard",
               },
-              body: JSON.stringify({ model, messages: parsed.messages, max_tokens: 400, temperature: 0.6 }),
+              body: JSON.stringify({
+                model,
+                messages: parsed.messages,
+                max_tokens: parsed.max_tokens ?? 700,
+                temperature: parsed.temperature ?? 0.6,
+                ...(parsed.tools ? { tools: parsed.tools, tool_choice: parsed.tool_choice ?? "auto" } : {}),
+              }),
             });
             const text = await upstream.text();
             res.statusCode = upstream.status;

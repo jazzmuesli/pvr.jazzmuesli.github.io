@@ -110,7 +110,18 @@ function renderHeating(r: SimReport): void {
       </div>`;
     })
     .join("");
-  heatingBody.innerHTML = head + `<div class="summary">${cards}</div>`;
+  heatingBody.innerHTML = head + `<div class="summary">${cards}</div>` + opportunityNote(r, "heating");
+}
+
+/** Footer line that ties the annual saving to the PV payback horizon. */
+function opportunityNote(r: SimReport, kind: "heating" | "car"): string {
+  const inv = r.opportunityInvestment;
+  const saving = kind === "heating" ? inv.heatingSavingEUR : inv.carSavingEUR;
+  const financeable = kind === "heating" ? inv.financeableHeatpumpEUR : inv.financeableEvEUR;
+  const label = kind === "heating" ? "Gas" : "Diesel";
+  if (financeable == null) return "";
+  const fmt = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+  return `<div class="heat-foot">Ersparnis ggü. ${label}: ${fmt(saving)}/Jahr · finanzierbar in ${inv.pvPaybackYears.toFixed(1)} J. (PV-Amortisation): ${fmt(financeable)}</div>`;
 }
 
 function renderOpportunityCar(r: SimReport): void {
@@ -143,7 +154,7 @@ function renderOpportunityCar(r: SimReport): void {
       </div>`;
     })
     .join("");
-  carBody.innerHTML = head + `<div class="summary">${cards}</div>`;
+  carBody.innerHTML = head + `<div class="summary">${cards}</div>` + opportunityNote(r, "car");
 }
 
 function recompute(): void {

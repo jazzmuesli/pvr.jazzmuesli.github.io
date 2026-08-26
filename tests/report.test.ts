@@ -88,7 +88,11 @@ describe("heating section", () => {
     expect(r.opportunityCosts).toBeDefined();
     expect(r.opportunityCosts.heating.heatpumpElectricKWh).toBe(5000);
     expect(r.opportunityCosts.heating.usefulHeatKWh).toBe(15000);
-    expect(r.opportunityCosts.heating.heatpump.totalEUR).toBeCloseTo(1200, 2);
+    // The heat pump now pays the PV-aware *effective* price of its own imports
+    // (not a flat 24 ct/kWh), so its cost equals consumption × effective price.
+    const expected = Math.round((5000 * r.effectivePrice.byConsumer.heatpump) / 100 * 100) / 100;
+    expect(r.opportunityCosts.heating.heatpump.energyCostEUR).toBeCloseTo(expected, 2);
+    expect(r.opportunityCosts.heating.heatpump.totalEUR).toBeCloseTo(expected, 2);
     expect(r.opportunityCosts.heating.oil.totalEUR).toBeGreaterThan(r.opportunityCosts.heating.heatpump.totalEUR);
     expect(r.opportunityCosts.heating.gas.totalEUR).toBeGreaterThan(r.opportunityCosts.heating.heatpump.totalEUR);
   });
