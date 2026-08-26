@@ -19,14 +19,30 @@ export type City = "Hamburg" | "Muenchen" | "Berlin" | "Koeln" | "Boizenburg";
 
 export const CITIES: City[] = ["Hamburg", "Muenchen", "Berlin", "Koeln", "Boizenburg"];
 
-// Standard (flat) Netzentgelt per city, ct/kWh.
+// Standard (flat, Modul 1) Netzentgelt per city, ct/kWh.
+// Real 2026 figures (ns Arbeitspreis, netto) from Verivox Verbraucheratlas /
+// Stromvermittlung: Hamburg 11,80; Bayern (München) 8,63; Berlin 8,55;
+// NRW (Köln) 9,73; Mecklenburg-Vorpommern (Boizenburg) 7,23.
+// Boizenburg uses the user's VBE price sheet (Modul 1 = 7,50 ct/kWh).
 export const NET_ENTGELT_CT: Record<City, number> = {
-  Hamburg: 13.84,
-  Muenchen: 14.23,
-  Berlin: 13.02,
-  Koeln: 13.54,
-  Boizenburg: 7.5, // VBE Modul 1 Arbeitspreis NS, ab 01.01.2026
+  Hamburg: 11.8,
+  Muenchen: 8.63,
+  Berlin: 8.55,
+  Koeln: 9.73,
+  Boizenburg: 7.5,
 };
+
+// Map a PV location key (see solar.LOCATIONS) to its Netzentgelt city.
+const LOCATION_TO_CITY: Record<string, City> = {
+  hamburg: "Hamburg",
+  berlin: "Berlin",
+  munich: "Muenchen",
+  cologne: "Koeln",
+  boizenburg: "Boizenburg",
+};
+export function cityForLocation(loc: string): City {
+  return LOCATION_TO_CITY[loc] ?? "Hamburg";
+}
 
 // Fixed, non-spot components of a dynamic tariff (ct/kWh).
 export const STROMSTEUER_CT = 2.05; // electricity tax

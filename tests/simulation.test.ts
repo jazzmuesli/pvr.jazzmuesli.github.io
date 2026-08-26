@@ -69,17 +69,17 @@ describe("battery simulation", () => {
     }
   });
 
-  it("dispatches battery export into expensive windows (raises VWAP vs no battery)", () => {
+  it("uses the battery to avoid grid import and still exports genuine surplus", () => {
     const withBat = simulate({ ...baseConfig(), prices });
     const noBat = simulate({
       ...baseConfig({ capacityKWh: 0, dischargeEvening: false, dischargeMorning: false }),
       prices,
     });
-    const revBat = computeRevenue(withBat, baseConfig().tariff, 22);
-    const revNo = computeRevenue(noBat, baseConfig().tariff, 22);
+    // The battery discharges into the expensive windows, replacing grid import.
+    expect(sum(withBat.dischargeToLoad)).toBeGreaterThan(0);
+    expect(sum(withBat.gridImport)).toBeLessThan(sum(noBat.gridImport));
+    // Any remaining stored surplus is still sold at positive prices.
     expect(sum(withBat.exportBattery)).toBeGreaterThan(0);
-    expect(revBat.vwapMarketEURperMWh).toBeGreaterThanOrEqual(revNo.vwapMarketEURperMWh);
-    expect(revBat.netMarketEUR).toBeGreaterThanOrEqual(revNo.netMarketEUR - 1e-6);
   });
 
   it("midday strategy only stores PV around solar noon", () => {

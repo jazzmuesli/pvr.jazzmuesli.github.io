@@ -24,6 +24,7 @@ export const COLORS = {
   load: "#0f172a",
   import: "#ea580c",
   exportK: "#1d4ed8",
+  soc: "#7c3aed",
 };
 
 // ---- shared tooltip -------------------------------------------------------
@@ -88,7 +89,10 @@ export function renderMonthlyChart(
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
 
   const maxEnergy = Math.max(1, ...data.map((d) => Math.max(d.pvKWh, d.selfConsumptionKWh, d.importKWh, d.exportKWh)));
-  const maxNet = Math.max(1, ...data.map((d) => Math.abs(d.netEUR)));
+  const netMin = Math.min(0, ...data.map((d) => d.netEUR));
+  const netMax = Math.max(0, ...data.map((d) => d.netEUR));
+  const netSpan = Math.max(1e-6, netMax - netMin);
+  const scaleNet = (v: number) => m.top + plotH - ((v - netMin) / netSpan) * plotH;
   const band = plotW / data.length;
   const barW = band * 0.13;
 
@@ -114,9 +118,9 @@ export function renderMonthlyChart(
     bindTip(pvDot, () => `<strong>${d.label}</strong><br>PV-Ertrag: <b>${Math.round(d.pvKWh)} kWh</b>`);
     svg.appendChild(pvDot);
 
-    // net EUR line (right axis)
-    const netY = m.top + plotH - (d.netEUR / maxNet) * plotH;
-    const netDot = el("circle", { cx, cy: netY, r: 3, fill: COLORS.price });
+    // net EUR line (right axis, can be negative)
+    const netY = scaleNet(d.netEUR);
+    const netDot = el("circle", { cx, cy: netY, r: 2.5, fill: COLORS.price });
     bindTip(netDot, () => `<strong>${d.label}</strong><br>Netto (Export−Import): <b>${Math.round(d.netEUR)} €</b>`);
     svg.appendChild(netDot);
 
@@ -146,8 +150,12 @@ export function renderMonthlyChart(
   // connect PV dots and net dots
   const pvPts = data.map((d, i) => `${m.left + i * band + band / 2},${m.top + plotH - (d.pvKWh / maxEnergy) * plotH}`);
   svg.appendChild(el("polyline", { points: pvPts.join(" "), fill: "none", stroke: COLORS.pv, "stroke-width": 2 }));
-  const netPts = data.map((d, i) => `${m.left + i * band + band / 2},${m.top + plotH - (d.netEUR / maxNet) * plotH}`);
+  const netPts = data.map((d, i) => `${m.left + i * band + band / 2},${scaleNet(d.netEUR)}`);
   svg.appendChild(el("polyline", { points: netPts.join(" "), fill: "none", stroke: COLORS.price, "stroke-width": 2 }));
+
+  // zero line for the net (right) axis so negative months are visible
+  const zeroY = scaleNet(0);
+  svg.appendChild(el("line", { x1: m.left, y1: zeroY, x2: m.left + plotW, y2: zeroY, stroke: COLORS.price, "stroke-dasharray": "4 3", "stroke-width": 1, opacity: 0.5 }));
 
   svg.appendChild(el("line", { x1: m.left, y1: m.top + plotH, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
   svg.appendChild(el("line", { x1: m.left + plotW, y1: m.top, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
@@ -155,7 +163,7 @@ export function renderMonthlyChart(
   yLabel.textContent = `Energie kWh/Monat (max ${Math.round(maxEnergy)})`;
   svg.appendChild(yLabel);
   const vLabel = el("text", { x: m.left + plotW + 12, y: m.top - 14, "text-anchor": "end", fill: COLORS.price, "font-size": 12 });
-  vLabel.textContent = `Netto € (max ${Math.round(maxNet)})`;
+  vLabel.textContent = `Netto €/Monat (0 = gestrichelt)`;
   svg.appendChild(vLabel);
   const hint = el("text", { x: m.left, y: H - 6, "text-anchor": "start", fill: "#64748b", "font-size": 11 });
   hint.textContent = "Klick auf einen Monat → Stundendetail. Balken: Eigenverbrauch / Export / Import. Linien: PV (grau), Netto € (rot).";
@@ -173,17 +181,14 @@ export interface DayChartDatum {
   importKWh: number;
   exportKWh: number;
   avgPrice: number;
+  socKWh: number;
 }
 
-export function renderHourlyChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string): void {
-  renderDayChart(host, data, monthLabel);
+export function renderHourlyChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string, socMaxKWh: number): void {
+  renderDayChart(host, data, monthLabel, true, socMaxKWh);
 }
 
-export function renderTypicalDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string): void {
-  renderDayChart(host, data, `${monthLabel} — typischer Tag`);
-}
-
-function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string): void {
+function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string, hasPrice: boolean, socMaxKWh: number): void {
   host.innerHTML = "";
   const W = 920;
   const H = 420;
@@ -203,6 +208,8 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   const posScale = posH / maxPos;
   const negScale = negH / maxNeg;
 
+  const socPts: string[] = [];
+  const showSoc = socMaxKWh > 0;
   data.forEach((d, i) => {
     const cx = m.left + i * band + band / 2;
     const pvH = d.pvKWh * posScale;
@@ -216,6 +223,11 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
     const loadY = zeroY - d.loadKWh * posScale;
     svg.appendChild(el("circle", { cx, cy: loadY, r: 2.5, fill: COLORS.load }));
 
+    if (showSoc) {
+      const socY = zeroY - (d.socKWh / socMaxKWh) * posH;
+      socPts.push(`${cx},${socY}`);
+    }
+
     const hit = el("rect", { x: m.left + i * band, y: m.top, width: band, height: plotH, fill: "transparent" });
     bindTip(hit, () =>
       `<strong>${monthLabel}, ${String(d.hour).padStart(2, "0")}:00 Uhr</strong><br>` +
@@ -224,6 +236,7 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
       `Eigenverbrauch: ${d.selfUseKWh.toFixed(1)} kWh/h<br>` +
       `Export: ${d.exportKWh.toFixed(1)} kWh/h<br>` +
       `Netz-Import: ${d.importKWh.toFixed(1)} kWh/h` +
+      (showSoc ? `<br>Batterie-SoC: <b>${d.socKWh.toFixed(1)} kWh</b>` : "") +
       (d.avgPrice ? `<br>Ø Strompreis: <b>${Math.round(d.avgPrice)} €/MWh</b>` : ""));
     svg.appendChild(hit);
   });
@@ -232,8 +245,18 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   const loadPts = data.map((d, i) => `${m.left + i * band + band / 2},${zeroY - d.loadKWh * posScale}`);
   svg.appendChild(el("polyline", { points: loadPts.join(" "), fill: "none", stroke: COLORS.load, "stroke-width": 2 }));
 
+  // battery SOC polyline (same vertical span as the positive bars; 0 = empty, capacity = top)
+  if (showSoc) {
+    svg.appendChild(el("polyline", { points: socPts.join(" "), fill: "none", stroke: COLORS.soc, "stroke-width": 2 }));
+    for (let i = 0; i < data.length; i++) {
+      const cx = m.left + i * band + band / 2;
+      const socY = zeroY - (data[i].socKWh / socMaxKWh) * posH;
+      svg.appendChild(el("circle", { cx, cy: socY, r: 2.5, fill: COLORS.soc }));
+    }
+  }
+
   // price polyline (right axis)
-  if (maxPrice > 0 && data.some((d) => d.avgPrice > 0)) {
+  if (hasPrice && maxPrice > 0 && data.some((d) => d.avgPrice > 0)) {
     const pricePts = data.map((d, i) => `${m.left + i * band + band / 2},${m.top + posH - (d.avgPrice / maxPrice) * posH}`);
     svg.appendChild(el("polyline", { points: pricePts.join(" "), fill: "none", stroke: COLORS.price, "stroke-width": 2, "stroke-dasharray": "4 2" }));
   }
@@ -247,10 +270,10 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
     svg.appendChild(txt);
   }
   const t1 = el("text", { x: m.left - 12, y: m.top - 14, fill: COLORS.text, "font-size": 12 });
-  t1.textContent = `${monthLabel} — kWh/h (oben: erzeugt/verbraucht/export, unten: Import)`;
+  t1.textContent = `${monthLabel} — kWh/h (oben: erzeugt/verbraucht/export, unten: Import)${showSoc ? " · Batterie-SoC (lila)" : ""}`;
   svg.appendChild(t1);
   const t2 = el("text", { x: m.left + plotW + 12, y: m.top - 14, "text-anchor": "end", fill: COLORS.price, "font-size": 12 });
-  t2.textContent = `Preis €/MWh (max ${Math.round(maxPrice)})`;
+  t2.textContent = hasPrice ? `Preis €/MWh (max ${Math.round(maxPrice)})` : "kein Preisverlauf";
   svg.appendChild(t2);
 
   host.appendChild(svg);
@@ -273,33 +296,54 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
   const plotH = H - m.top - m.bottom;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
 
-  const maxVal = Math.max(1, ...data.map((d) => Math.abs(d.netEUR)));
+  const maxPos = Math.max(1, ...data.map((d) => d.netEUR));
+  const maxNeg = Math.max(1, ...data.map((d) => -d.netEUR));
+  const zeroY = m.top + plotH * 0.68; // leave room below for negative bars
+  const posH = zeroY - m.top;
+  const negH = m.top + plotH - zeroY;
+  const posScale = posH / maxPos;
+  const negScale = negH / maxNeg;
   const band = plotW / data.length;
   const barW = band * 0.5;
 
   data.forEach((d, i) => {
     const cx = m.left + i * band + band / 2;
-    const h = (Math.abs(d.netEUR) / maxVal) * plotH;
-    const y = d.netEUR >= 0 ? m.top + plotH - h : m.top + plotH;
-    const rect = el("rect", { x: cx - barW / 2, y, width: barW, height: h, fill: d.netEUR >= 0 ? COLORS.net : COLORS.price, rx: 2 });
-    bindTip(rect, () =>
-      `<strong>${d.label}</strong><br>Netto: <b>${Math.round(d.netEUR)} €</b><br>` +
-      `Export-Erlös: ${Math.round(d.exportEUR)} €<br>Import-Kosten: ${Math.round(d.importEUR)} €`);
-    svg.appendChild(rect);
-    const lbl = el("text", { x: cx, y: y - 6, "text-anchor": "middle", fill: COLORS.text, "font-size": 11 });
-    lbl.textContent = `${Math.round(d.netEUR)}`;
-    svg.appendChild(lbl);
+    if (d.netEUR >= 0) {
+      const h = d.netEUR * posScale;
+      const rect = el("rect", { x: cx - barW / 2, y: zeroY - h, width: barW, height: h, fill: COLORS.net, rx: 2 });
+      bindTip(rect, () =>
+        `<strong>${d.label}</strong><br>Netto: <b>${Math.round(d.netEUR)} €</b><br>` +
+        `Export-Erlös: ${Math.round(d.exportEUR)} €<br>Import-Kosten: ${Math.round(d.importEUR)} €`);
+      svg.appendChild(rect);
+      const lbl = el("text", { x: cx, y: zeroY - h - 6, "text-anchor": "middle", fill: COLORS.text, "font-size": 11 });
+      lbl.textContent = `${Math.round(d.netEUR)}`;
+      svg.appendChild(lbl);
+    } else {
+      const h = -d.netEUR * negScale;
+      const rect = el("rect", { x: cx - barW / 2, y: zeroY, width: barW, height: h, fill: COLORS.price, rx: 2 });
+      bindTip(rect, () =>
+        `<strong>${d.label}</strong><br>Netto: <b>${Math.round(d.netEUR)} €</b><br>` +
+        `Export-Erlös: ${Math.round(d.exportEUR)} €<br>Import-Kosten: ${Math.round(d.importEUR)} €`);
+      svg.appendChild(rect);
+      const shortBar = h < 18;
+      const lbl = el("text", {
+        x: cx, y: shortBar ? zeroY + h + 14 : zeroY + h - 6,
+        "text-anchor": "middle", fill: shortBar ? COLORS.text : "#fff", "font-size": 11,
+      });
+      lbl.textContent = `${Math.round(d.netEUR)}`;
+      svg.appendChild(lbl);
+    }
     const txt = el("text", { x: cx, y: m.top + plotH + 20, "text-anchor": "middle", fill: COLORS.text, "font-size": 11 });
     txt.textContent = d.label;
     svg.appendChild(txt);
   });
 
-  svg.appendChild(el("line", { x1: m.left, y1: m.top + plotH, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
+  svg.appendChild(el("line", { x1: m.left, y1: zeroY, x2: m.left + plotW, y2: zeroY, stroke: COLORS.axis }));
   const yL = el("text", { x: m.left - 12, y: m.top - 14, "text-anchor": "start", fill: COLORS.text, "font-size": 12 });
   yL.textContent = "Netto-Jahresbilanz (€)";
   svg.appendChild(yL);
   const hint = el("text", { x: m.left, y: H - 4, "text-anchor": "start", fill: "#64748b", "font-size": 11 });
-  hint.textContent = "Netto = Export-Erlös − Import-Kosten für verschiedene Kombinationen aus Einspeisung und Stromtarif.";
+  hint.textContent = "Netto = Export-Erlös − Import-Kosten für Kombinationen aus Einspeisung und Stromtarif. Negativ = Import überwiegt.";
   svg.appendChild(hint);
 
   host.appendChild(svg);
@@ -374,7 +418,8 @@ export function renderLegend(host: HTMLElement): void {
     ["Export (kWh)", COLORS.exportK],
     ["Netz-Import (kWh)", COLORS.import],
     ["Verbrauch (Linie)", COLORS.load],
-    ["Netto € / Strompreis", COLORS.price],
+    ["Netto € (Monat)", COLORS.price],
+    ["Batterie-SoC", COLORS.soc],
   ];
   for (const [label, color] of items) {
     const wrap = document.createElement("span");

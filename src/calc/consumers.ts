@@ -176,6 +176,23 @@ export function totalLoad(cfg: ConsumerConfig): Float64Array {
   return out;
 }
 
+/** Each consumer's load separately (zeros for disabled consumers). */
+export interface ConsumerLoads {
+  household: Float64Array;
+  heatpump: Float64Array;
+  bwwp: Float64Array;
+  ev: Float64Array;
+}
+
+export function loadByConsumer(cfg: ConsumerConfig): ConsumerLoads {
+  return {
+    household: cfg.household.enabled ? householdLoad(cfg.household.annualKWh) : new Float64Array(TOTAL_STEPS),
+    heatpump: cfg.heatpump.enabled ? heatpumpLoad(cfg.heatpump.annualKWh) : new Float64Array(TOTAL_STEPS),
+    bwwp: cfg.bwwp.enabled ? bwwpLoad() : new Float64Array(TOTAL_STEPS),
+    ev: cfg.ev.enabled ? evLoad(cfg.ev.annualKWh, cfg.ev.pvShare) : new Float64Array(TOTAL_STEPS),
+  };
+}
+
 function addInto(dst: Float64Array, src: Float64Array): void {
   for (let i = 0; i < dst.length; i++) dst[i] += src[i];
 }

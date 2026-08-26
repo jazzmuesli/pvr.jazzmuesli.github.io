@@ -2,7 +2,7 @@ import { AppState, Orientation } from "./state";
 import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
-import { CITIES, TariffScheme, City } from "../calc/tariff";
+import { TariffScheme } from "../calc/tariff";
 
 interface SliderOpts {
   label: string;
@@ -260,16 +260,6 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       ],
       (s) => s.importScheme,
       (s, v) => (s.importScheme = v as TariffScheme),
-      state,
-      onChange,
-    ),
-  );
-  host.appendChild(
-    selectControl(
-      "Netzbetreiber / Stadt",
-      CITIES.map((c) => ({ value: c, label: c })),
-      (s) => s.importCity,
-      (s, v) => (s.importCity = v as City),
       state,
       onChange,
     ),

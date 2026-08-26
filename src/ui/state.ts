@@ -1,7 +1,7 @@
 import { SimConfig } from "../calc/types";
 import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
 import { ConsumerConfig, totalLoad } from "../calc/consumers";
-import { City, TariffScheme } from "../calc/tariff";
+import { TariffScheme } from "../calc/tariff";
 
 export type Orientation = "south" | "east" | "west" | "east_west";
 
@@ -32,15 +32,14 @@ export interface AppState {
   exportScheme: "fixed" | "market";
   // Stromtarif (Import)
   importScheme: TariffScheme;
-  importCity: City;
   importFixedCt: number; // ct/kWh
 }
 
 export const DEFAULT_STATE: AppState = {
   peakKWp: 22,
   tiltDeg: 35,
-  orientation: "south",
-  location: DEFAULT_LOCATION,
+  orientation: "east_west",
+  location: "boizenburg",
   capacityKWh: 19.353,
   maxPowerKW: 6,
   minSOC: 0.1,
@@ -63,10 +62,9 @@ export const DEFAULT_STATE: AppState = {
     bwwp: { enabled: true },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },
-  exportScheme: "market",
-  importScheme: "dynamic",
-  importCity: "Boizenburg",
-  importFixedCt: 30,
+  exportScheme: "fixed",
+  importScheme: "fixed",
+  importFixedCt: 24,
 };
 
 export function toSimConfig(s: AppState): SimConfig {

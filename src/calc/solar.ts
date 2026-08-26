@@ -25,6 +25,7 @@ export const LOCATIONS: Record<string, Location> = {
   berlin: { name: "Berlin", latDeg: 52.52, annualYieldPerKWp: 1050 },
   munich: { name: "München", latDeg: 48.14, annualYieldPerKWp: 1100 },
   cologne: { name: "Köln", latDeg: 50.94, annualYieldPerKWp: 1050 },
+  boizenburg: { name: "Boizenburg", latDeg: 53.33, annualYieldPerKWp: 1000 },
 };
 
 export const DEFAULT_LOCATION = "hamburg";

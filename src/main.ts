@@ -1,13 +1,17 @@
 import { simulate } from "./calc/simulation";
-import { computeEconomics, feedInTariffCt, monthForStep, EconOptions } from "./calc/revenue";
+import { computeEconomics, monthForStep, EconOptions } from "./calc/revenue";
 import { getYearPrices } from "./calc/priceData";
 import { STEPS_PER_DAY, SimResult } from "./calc/types";
+import { cityForLocation } from "./calc/tariff";
+import { loadByConsumer } from "./calc/consumers";
+import { importPriceArray } from "./calc/tariff";
+import { effectiveNetPrice } from "./calc/vwap";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimConfig } from "./ui/state";
+import { writeUrl, deserializeState } from "./ui/url";
 import {
   renderMonthlyChart,
   renderHourlyChart,
-  renderTypicalDayChart,
   renderLegend,
   renderScenarioChart,
   DayChartDatum,
@@ -15,14 +19,14 @@ import {
 
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 
-const state = { ...DEFAULT_STATE };
-state.feedInCt = feedInTariffCt(state.commissioningYear, state.peakKWp);
+// Initialise from a shared URL if present; otherwise use the defaults.
+const params = new URLSearchParams(location.search);
+const state = params.toString() ? deserializeState(params.toString()) : { ...DEFAULT_STATE };
 
 const controlsHost = document.getElementById("controls") as HTMLElement;
 const summaryHost = document.getElementById("summary") as HTMLElement;
 const monthlyHost = document.getElementById("monthly") as HTMLElement;
 const hourlyHost = document.getElementById("hourly") as HTMLElement;
-const typicalHost = document.getElementById("typical") as HTMLElement;
 const legendHost = document.getElementById("legend") as HTMLElement;
 const monthTitle = document.getElementById("month-title") as HTMLElement;
 const scenarioHost = document.getElementById("scenario") as HTMLElement;
@@ -37,15 +41,15 @@ function baseOpts(): EconOptions {
     exportScheme: state.exportScheme,
     feedInCt: state.feedInCt,
     importScheme: state.importScheme,
-    importCity: state.importCity,
+    importCity: cityForLocation(state.location),
     importFixedCt: state.importFixedCt,
   };
 }
 
 function hourlyProfile(result: SimResult, month: number): DayChartDatum[] {
   const buckets: {
-    pv: number; load: number; selfUse: number; imp: number; exp: number; priceSum: number; n: number;
-  }[] = Array.from({ length: 24 }, () => ({ pv: 0, load: 0, selfUse: 0, imp: 0, exp: 0, priceSum: 0, n: 0 }));
+    pv: number; load: number; selfUse: number; imp: number; exp: number; priceSum: number; socSum: number; n: number;
+  }[] = Array.from({ length: 24 }, () => ({ pv: 0, load: 0, selfUse: 0, imp: 0, exp: 0, priceSum: 0, socSum: 0, n: 0 }));
   for (let i = 0; i < result.pv.length; i++) {
     const m = monthForStep(i);
     if (m !== month) continue;
@@ -57,6 +61,7 @@ function hourlyProfile(result: SimResult, month: number): DayChartDatum[] {
     b.imp += result.gridImport[i];
     b.exp += result.exportTotal[i];
     b.priceSum += result.price[i];
+    b.socSum += result.soc[i];
     b.n += 1;
   }
   return buckets.map((b, h) => ({
@@ -67,18 +72,7 @@ function hourlyProfile(result: SimResult, month: number): DayChartDatum[] {
     importKWh: (b.imp / Math.max(1, b.n)) * 4,
     exportKWh: (b.exp / Math.max(1, b.n)) * 4,
     avgPrice: b.n > 0 ? b.priceSum / b.n : 0,
-  }));
-}
-
-function typicalDayProfile(econ: ReturnType<typeof computeEconomics>, month: number): DayChartDatum[] {
-  return econ.typicalDay.filter((d) => d.month === month).map((d) => ({
-    hour: d.hour,
-    pvKWh: d.pvKWh,
-    loadKWh: d.loadKWh,
-    selfUseKWh: d.selfUseKWh,
-    importKWh: d.importKWh,
-    exportKWh: d.exportKWh,
-    avgPrice: 0,
+    socKWh: b.n > 0 ? b.socSum / b.n : 0,
   }));
 }
 
@@ -86,11 +80,16 @@ function fmtEUR(v: number): string {
   return v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 
-function renderSummary(econ: ReturnType<typeof computeEconomics>): void {
+function renderSummary(
+  econ: ReturnType<typeof computeEconomics>,
+  eff: { overallCt: number; byConsumer: Record<string, number> },
+  fixedCt: number,
+): void {
   const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
   const importEUR = state.importScheme === "fixed" ? econ.importCostFixedEUR
     : state.importScheme === "dynamic" ? econ.importCostDynamicEUR : econ.importCost14aEUR;
   const selfPct = econ.totalLoadKWh > 0 ? (econ.selfConsumptionKWh / econ.totalLoadKWh) * 100 : 0;
+  const refSub = `Fest-Tarif: ${fixedCt.toFixed(1)} ct/kWh`;
   const cards: [string, string, string][] = [
     ["PV-Ertrag", `${Math.round(econ.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
     ["Verbrauch", `${Math.round(econ.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
@@ -102,6 +101,11 @@ function renderSummary(econ: ReturnType<typeof computeEconomics>): void {
     ["Netto-Bilanz", `${econ.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(econ.netSelectedEUR)}`, "Export − Import"],
     ["Marktprämie", `${econ.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
     ["EEG Referenz", `${econ.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
+    ["Eff. Strompreis (netto)", `${eff.overallCt.toFixed(1)} ct/kWh`, "Netto = (Import − Export) / Verbrauch"],
+    ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, refSub],
+    ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, refSub],
+    ["Eff. Preis Brauchw.-WP", `${eff.byConsumer.bwwp.toFixed(1)} ct/kWh`, refSub],
+    ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, refSub],
   ];
   summaryHost.innerHTML = "";
   for (const [k, v, sub] of cards) {
@@ -114,9 +118,9 @@ function renderSummary(econ: ReturnType<typeof computeEconomics>): void {
 
 function renderScenario(result: SimResult): void {
   const variants: { label: string; exportScheme: "fixed" | "market"; importScheme: "fixed" | "dynamic" | "dynamic14a" }[] = [
-    { label: "Feste Einsp.\n+ Fest", exportScheme: "fixed", importScheme: "fixed" },
+    { label: "Fest + Fest", exportScheme: "fixed", importScheme: "fixed" },
     { label: "DV + Fest", exportScheme: "market", importScheme: "fixed" },
-    { label: "DV + Dynam.", exportScheme: "market", importScheme: "dynamic" },
+    { label: "DV + Dyn", exportScheme: "market", importScheme: "dynamic" },
     { label: "DV + §14a/3", exportScheme: "market", importScheme: "dynamic14a" },
   ];
   const data = variants.map((v) => {
@@ -135,7 +139,13 @@ function recompute(): void {
   const result = simulate({ ...cfg, prices });
   const econ = computeEconomics(result, baseOpts());
 
-  renderSummary(econ);
+  const city = cityForLocation(state.location);
+  const impPrices = importPriceArray(state.importScheme, city, prices);
+  const loads = loadByConsumer(state.consumers);
+  const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
+  const eff = effectiveNetPrice(loads, result.load, result.gridImport, impPrices, exportEUR);
+
+  renderSummary(econ, eff, state.importFixedCt);
 
   const monthly = econ.monthly.map((r) => ({
     month: r.month,
@@ -149,22 +159,15 @@ function recompute(): void {
   renderMonthlyChart(monthlyHost, monthly, selectedMonth, (m) => {
     selectedMonth = m;
     renderHourly(result);
-    renderTypical(econ);
   });
   renderHourly(result);
-  renderTypical(econ);
   renderScenario(result);
 }
 
 function renderHourly(result: SimResult): void {
   const data = hourlyProfile(result, selectedMonth);
   monthTitle.textContent = `${MONTH_LABELS[selectedMonth - 1]} — Stundenverteilung`;
-  renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1]);
-}
-
-function renderTypical(econ: ReturnType<typeof computeEconomics>): void {
-  const data = typicalDayProfile(econ, selectedMonth);
-  renderTypicalDayChart(typicalHost, data, MONTH_LABELS[selectedMonth - 1]);
+  renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
 }
 
 function scheduleRecompute(): void {
@@ -176,6 +179,12 @@ function scheduleRecompute(): void {
   });
 }
 
-buildControls(controlsHost, state, scheduleRecompute);
+const onChange = (): void => {
+  writeUrl(state);
+  scheduleRecompute();
+};
+
+buildControls(controlsHost, state, onChange);
 renderLegend(legendHost);
+writeUrl(state);
 recompute();

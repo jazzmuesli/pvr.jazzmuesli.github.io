@@ -210,9 +210,15 @@ export function simulate(config: SimConfig): SimResult {
     }
     if (L > 0) gridImport[i] = L;
 
-    // 5) Strategic export: discharge extra into the expensive window (only if
-    //    we did not just charge this step).
-    if (discharging && !charged && soc > minSOCkWh) {
+    // 5) Strategic export: sell surplus battery energy whenever the spot is
+    //    positive. A daily-cycling battery cannot store energy long-term, so
+    //    unused surplus would otherwise be curtailed — exporting it (plus the
+    //    EEG Marktprämie when the export VWAP is low) always beats wasting it.
+    //    The profitable arbitrage is: discharge to cover load in expensive
+    //    windows (step 4) and recharge from the grid when the spot is low or
+    //    negative, so selling stored energy at a high spot while buying it
+    //    back cheaply is exactly what we want.
+    if (discharging && !charged && soc > minSOCkWh && p > 0) {
       const maxAdd = maxStepEnergy - dischargeToLoad[i];
       if (maxAdd > 0) {
         const avail = soc - minSOCkWh;
