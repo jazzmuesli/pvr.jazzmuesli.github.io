@@ -33,8 +33,12 @@ export function initChat(opts: ChatUiOptions): ChatBot {
     b.className = `chat-bubble chat-${who}`;
     b.textContent = text;
     log.appendChild(b);
-    log.scrollTop = log.scrollHeight;
+    scrollToEnd();
     return b;
+  }
+
+  function scrollToEnd(): void {
+    log.scrollTop = log.scrollHeight;
   }
 
   async function send(text: string): Promise<void> {

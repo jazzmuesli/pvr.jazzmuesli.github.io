@@ -293,11 +293,51 @@ export function initWizard(opts: WizardOptions): void {
     });
   }
 
+  // ---- highlight controls that just changed -------------------------------
+  const FIELD_ELS: Record<string, HTMLElement[]> = {
+    consumptionKWh: [hk],
+    priceCt: [ict],
+    location: [loc],
+    pv: [pvSeg],
+    battery: [batSeg],
+    heatpump: [wpToggle.wrap],
+    heatpumpKWh: [wpToggle.wrap],
+    ev: [evToggle.wrap],
+    evKWh: [evToggle.wrap],
+    bwwp: [bwToggle.wrap],
+  };
+  const TRACKED: (keyof Scenario)[] = [
+    "consumptionKWh",
+    "priceCt",
+    "location",
+    "pv",
+    "battery",
+    "heatpump",
+    "heatpumpKWh",
+    "ev",
+    "evKWh",
+    "bwwp",
+  ];
+  function flashEl(e: HTMLElement): void {
+    e.classList.remove("flash");
+    void e.offsetWidth; // restart the animation if it is already running
+    e.classList.add("flash");
+  }
+  function flashChanges(prev: Scenario, next: Scenario): void {
+    for (const k of TRACKED) {
+      if (prev[k] !== next[k]) (FIELD_ELS[k] ?? []).forEach(flashEl);
+    }
+  }
+
+  let prevScenario: Scenario = store.getState();
+
   store.subscribe((s) => {
+    flashChanges(prevScenario, s);
+    prevScenario = s;
     syncControls(s);
     scheduleRecompute();
   });
 
-  syncControls(store.getState());
+  syncControls(prevScenario);
   recompute();
 }

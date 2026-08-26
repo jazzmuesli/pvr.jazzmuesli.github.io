@@ -1,27 +1,22 @@
-// The Energiewende advisor: a small, deterministic state machine that walks the
-// user through a recommended PV path (Balkonkraftwerk → 10 kWp → 10 kWp + battery)
-// and offers additional consumers (heat pump, EV, hot-water heat pump). It is
-// deliberately free of any network/LLM calls so it can be unit-tested, and it
-// produces a structured `AdvisorOutput` that the chatbot layer can either return
-// as-is or polish with a language model.
+// The Energiewende advisor: a small, deterministic state machine that turns the
+// user's free-form requests into concrete scenario changes. It is deliberately
+// free of any network/LLM calls so it can be unit-tested, and it produces a
+// structured `AdvisorOutput` that the chatbot layer can either return as-is or
+// polish with a language model.
+//
+// Design principle: the user's words are applied *directly* to the shared
+// scenario (no "Soll ich das übernehmen?" confirmation step). Every recognised
+// change is reflected on the sliders at once and the advisor reports back the
+// resulting economics.
 
 import {
   Scenario,
-  OfferKind,
-  applyOffer,
   computeMetrics,
   appUrl,
   pvLabel,
-  consumerSummary,
 } from "../scenario";
 
-export type Stage =
-  | "welcome"
-  | "offer_balkon"
-  | "offer_10kw"
-  | "offer_10kw_battery"
-  | "ask_consumers"
-  | "ready";
+export type Stage = "welcome" | "ready";
 
 export interface AdvisorContext {
   scenario: Scenario;
@@ -43,17 +38,7 @@ export interface AdvisorOutput {
   link?: string;
 }
 
-const OFFER_LABEL: Record<OfferKind, string> = {
-  balkon: "Balkonkraftwerk (800 Wp, Süd)",
-  "10kw": "10 kWp (Süd)",
-  "10kwBattery": "10 kWp mit 10 kWh Speicher",
-};
-
-const STAGE_OFFER: Partial<Record<Stage, OfferKind>> = {
-  offer_balkon: "balkon",
-  offer_10kw: "10kw",
-  offer_10kw_battery: "10kwBattery",
-};
+const LOCATIONS = ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"];
 
 function fmtEUR(v: number): string {
   return `${Math.round(v).toLocaleString("de-DE")} €`;
@@ -64,6 +49,14 @@ function fmtAmort(years: number, investment: number): string {
   return `${years.toFixed(1)} Jahre`;
 }
 
+function norm(s: string): string {
+  return s
+    .replace(/ü/g, "ue")
+    .replace(/ö/g, "oe")
+    .replace(/ä/g, "ae")
+    .replace(/ß/g, "ss");
+}
+
 function extractKwh(msg: string): number | null {
   const m = msg.match(/(\d{3,5})/);
   if (!m) return null;
@@ -71,25 +64,12 @@ function extractKwh(msg: string): number | null {
   return Number.isFinite(v) ? v : null;
 }
 
-function offerReply(s: Scenario, kind: OfferKind): { reply: string; metrics: ReturnType<typeof computeMetrics> } {
-  const sc = applyOffer(s, kind);
-  const m = computeMetrics(sc);
-  const reply =
-    `${OFFER_LABEL[kind]} – Investition ca. ${fmtEUR(m.investmentEUR)}.\n` +
-    `Erwarteter PV-Ertrag: ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh/Jahr, ` +
-    `davon Eigenverbrauch ${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh (${m.selfPct.toFixed(0)} %).\n` +
-    `Netto-Bilanz (Export − Import): ${fmtEUR(m.netEUR)}/Jahr. ` +
-    `Deine Ersparnis ggü. Volleinspeisung aus dem Netz: ${fmtEUR(m.savingsEUR)}/Jahr.\n` +
-    `Amortisation: ${fmtAmort(m.amortYears, m.investmentEUR)}.\n` +
-    `Soll ich das übernehmen? (ja / nein)`;
-  return { reply, metrics: m };
-}
-
-function summarise(s: Scenario): AdvisorOutput {
+function summarise(s: Scenario, headline?: string): AdvisorOutput {
   const m = computeMetrics(s);
   const reply =
+    (headline ? headline + "\n\n" : "") +
     `Zusammenfassung – ${pvLabel(s)}:\n` +
-    `Verbraucher: ${consumerSummary(s)} @ ${s.priceCt} ct/kWh.\n` +
+    `Verbraucher @ ${s.priceCt} ct/kWh, Ort ${s.location[0].toUpperCase() + s.location.slice(1)}.\n` +
     `PV-Ertrag ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh, Eigenverbrauch ${m.selfPct.toFixed(0)} %, ` +
     `Netto ${fmtEUR(m.netEUR)}/Jahr, Ersparnis ${fmtEUR(m.savingsEUR)}/Jahr, ` +
     `Amortisation ${fmtAmort(m.amortYears, m.investmentEUR)}, eff. Strompreis ${m.effCt.toFixed(1)} ct/kWh.\n` +
@@ -104,126 +84,146 @@ function summarise(s: Scenario): AdvisorOutput {
   };
 }
 
-function askConsumers(s: Scenario): AdvisorOutput {
-  return {
-    reply:
-      `Möchtest du weitere Verbraucher einbinden, um den Eigenverbrauch zu erhöhen?\n` +
-      `• Wärmepumpe (typisch 2.000–5.000 kWh/Jahr)\n` +
-      `• E-Auto (z. B. 2.000 kWh/Jahr)\n` +
-      `• Brauchwasser-Wärmepumpe (~400 kWh/Jahr)\n` +
-      `Sag z. B. „Wärmepumpe 3000" oder „weiter", wenn es passt.`,
-    intent: "ask_consumers",
-    scenario: s,
-    stage: "ask_consumers",
-  };
-}
-
-function nextOfferStage(stage: Stage): Stage {
-  if (stage === "offer_balkon") return "offer_10kw";
-  if (stage === "offer_10kw") return "offer_10kw_battery";
-  if (stage === "offer_10kw_battery") return "ask_consumers";
-  return "ask_consumers";
+function resultReply(s: Scenario, changes: string[]): AdvisorOutput {
+  const m = computeMetrics(s);
+  const reply =
+    `Übernommen:\n• ${changes.join("\n• ")}\n\n` +
+    `Ergebnis (${pvLabel(s)}${s.battery === "on" ? " mit Speicher" : ", ohne Speicher"}):\n` +
+    `PV-Ertrag ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh/Jahr, ` +
+    `Eigenverbrauch ${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh (${m.selfPct.toFixed(0)} %).\n` +
+    `Netto (Export − Import): ${fmtEUR(m.netEUR)}/Jahr. ` +
+    `Ersparnis ggü. Basis: ${fmtEUR(m.savingsEUR)}/Jahr.\n` +
+    `Amortisation: ${fmtAmort(m.amortYears, m.investmentEUR)}, eff. Strompreis ${m.effCt.toFixed(1)} ct/kWh.`;
+  return { reply, intent: "adjust", scenario: s, stage: "ready", metrics: m, link: appUrl(s) };
 }
 
 export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput {
   let scenario: Scenario = { ...ctx.scenario };
-  let stage: Stage = ctx.stage;
   const msg = (message || "").toLowerCase();
+  const changes: string[] = [];
 
   // 1) Explicit request for a summary / deeplink.
-  if (/\b(zusammen|zusammenfass|übersicht|summary|bericht|link|index|details)/.test(msg)) {
+  if (message.trim() !== "" && /\b(zusammen|zusammenfass|übersicht|summary|bericht|link|index|details|zeig)\b/.test(msg)) {
     return summarise(scenario);
   }
 
-  // 2) Explicit adjustments (price, consumers, PV size, battery).
-  let pvKeyword: OfferKind | "20" | null = null;
+  // 2) Electricity price — accepts "24c", "24 ct", "Strompreis 35",
+  //    "anderer Stromanbieter 24c", "20 cent", etc.
   const priceM =
-    msg.match(/(?:stompreis|arbeitspreis|preis|cent|\bct\b|€).*?(\d{1,2}(?:[.,]\d+)?)/) ||
-    msg.match(/(\d{1,2}(?:[.,]\d+)?)\s*(?:ct|cent|€)/);
+    msg.match(/(?:stom|arbeits|preis|cent|\bct\b|€|anbieter).*?(\d{1,2}(?:[.,]\d+)?)/) ||
+    msg.match(/(\d{1,2}(?:[.,]\d+)?)\s*(?:ct|cent|€|c)\b/);
   if (priceM) {
     const v = parseFloat(priceM[1].replace(",", "."));
-    if (v >= 10 && v <= 60) {
-      scenario = { ...scenario, priceCt: v };
+    if (Number.isFinite(v) && v >= 10 && v <= 60 && v !== scenario.priceCt) {
+      scenario.priceCt = v;
+      changes.push(`Strompreis → ${v} ct/kWh`);
     }
   }
+
+  // 3) Location.
+  const nmsg = norm(msg);
+  for (const c of LOCATIONS) {
+    if (nmsg.includes(c) && scenario.location !== c) {
+      scenario.location = c;
+      changes.push(`Ort → ${c[0].toUpperCase() + c.slice(1)}`);
+      break;
+    }
+  }
+
+  // 4) PV size.
+  if (/\b(kein\s*pv|ohne\s*pv|basis)\b/.test(msg)) {
+    if (scenario.pv !== "none") {
+      scenario.pv = "none";
+      changes.push("PV → Kein PV (Basis)");
+    }
+  } else if (/\b(balkon(?:kraftwerk)?|\bbkw\b)\b/.test(msg)) {
+    if (scenario.pv !== "balcony") {
+      scenario.pv = "balcony";
+      changes.push("PV → Balkonkraftwerk 800 Wp");
+    }
+  } else if (/\b20\s*kwp|20kw\b/.test(msg)) {
+    if (scenario.pv !== "20") {
+      scenario.pv = "20";
+      changes.push("PV → 20 kWp (Ost/West)");
+    }
+  } else if (/\b10\s*kwp|10kw\b/.test(msg)) {
+    if (scenario.pv !== "10") {
+      scenario.pv = "10";
+      changes.push("PV → 10 kWp (Süd)");
+    }
+  }
+
+  // 5) Battery / storage.
+  if (/\b(ohne\s*speicher|kein\s*speicher)\b/.test(msg)) {
+    if (scenario.battery !== "off") {
+      scenario.battery = "off";
+      changes.push("Speicher → aus");
+    }
+  } else if (/\b(speicher|batterie)\b/.test(msg) && scenario.pv !== "none") {
+    if (scenario.battery !== "on") {
+      scenario.battery = "on";
+      changes.push("Speicher → ein");
+    }
+  }
+
+  // 6) Consumers.
   if (/\b(wärme(?:pumpe|pumpen)?|heatpump|\bwp\b)\b/.test(msg)) {
-    const kwh = extractKwh(msg) ?? 3500;
-    scenario = { ...scenario, heatpump: true, heatpumpKWh: Math.max(2000, Math.min(5000, kwh)) };
+    const kwh = extractKwh(msg) ?? scenario.heatpumpKWh;
+    const clamped = Math.max(2000, Math.min(5000, kwh));
+    if (!scenario.heatpump || scenario.heatpumpKWh !== clamped) {
+      scenario.heatpump = true;
+      scenario.heatpumpKWh = clamped;
+      changes.push(`Wärmepumpe → ein (${clamped} kWh)`);
+    }
   }
   if (/\b(e-?auto|\bev\b)\b/.test(msg)) {
-    const kwh = extractKwh(msg) ?? 2000;
-    scenario = { ...scenario, ev: true, evKWh: Math.max(500, Math.min(6000, kwh)) };
+    const kwh = extractKwh(msg) ?? scenario.evKWh;
+    const clamped = Math.max(500, Math.min(6000, kwh));
+    if (!scenario.ev || scenario.evKWh !== clamped) {
+      scenario.ev = true;
+      scenario.evKWh = clamped;
+      changes.push(`E-Auto → ein (${clamped} kWh)`);
+    }
   }
   if (/\b(brauchwasser|ww-?wp|\bbwwp\b)\b/.test(msg)) {
-    scenario = { ...scenario, bwwp: true };
-  }
-  if (/\bbalkon(?:kraftwerk)?\b|\bbkw\b/.test(msg)) pvKeyword = "balkon";
-  if (/\b20\s*kwp|20kw\b/.test(msg)) pvKeyword = "20";
-  if (/\b10\s*kwp|10kw\b/.test(msg)) pvKeyword = "10kw";
-  if (/\b(speicher|batterie)\b/.test(msg) && scenario.pv !== "none") {
-    scenario = { ...scenario, battery: "on" };
+    if (!scenario.bwwp) {
+      scenario.bwwp = true;
+      changes.push("Brauchwasser-WP → ein");
+    }
   }
 
-  // 3) Welcome: greet and present the first relevant offer.
-  if (stage === "welcome") {
-    if (pvKeyword === "balkon") {
-      const o = offerReply(scenario, "balkon");
-      return { reply: `Hallo! Gerne berate ich dich zur Energiewende. ${o.reply}`, intent: "offer_balkon", scenario, stage: "offer_balkon", metrics: o.metrics };
+  // 7) Household annual consumption.
+  const hkM = msg.match(/verbrauch.*?(\d{3,5})/);
+  if (hkM) {
+    const v = Number(hkM[1]);
+    if (Number.isFinite(v) && v !== scenario.consumptionKWh) {
+      scenario.consumptionKWh = v;
+      changes.push(`Jahresverbrauch → ${v} kWh`);
     }
-    if (pvKeyword === "10kw" || pvKeyword === "20") {
-      const o = offerReply(scenario, "10kw");
-      return { reply: `Hallo! Gerne berate ich dich zur Energiewende. ${o.reply}`, intent: "offer_10kw", scenario, stage: "offer_10kw", metrics: o.metrics };
-    }
-    const o = offerReply(scenario, "balkon");
-    return {
-      reply:
-        `Hallo! Ich helfe dir bei der Energiewende: vom Balkonkraftwerk bis zur PV-Anlage ` +
-        `mit Speicher. Wir starten mit einem Standard-Haushalt (2.500 kWh/Jahr). ${o.reply}`,
-      intent: "offer_balkon",
-      scenario,
-      stage: "offer_balkon",
-      metrics: o.metrics,
-    };
   }
 
-  // 4) Offer stages: accept / decline, with optional PV-keyword jump.
-  const currentOffer = STAGE_OFFER[stage];
-  if (currentOffer) {
-    if (pvKeyword === "balkon" || pvKeyword === "10kw" || pvKeyword === "20") {
-      const kind: OfferKind = pvKeyword === "balkon" ? "balkon" : "10kw";
-      const targetStage: Stage = kind === "balkon" ? "offer_balkon" : "offer_10kw";
-      const o = offerReply(scenario, kind);
-      return { reply: o.reply, intent: `offer_${kind}`, scenario, stage: targetStage, metrics: o.metrics };
-    }
-    const accepted = /^(ja|ok|gerne|weiter|passt|zeig|ja bitte|mache|klingt gut|gut|übernimm|übernehmen)\b/.test(msg.trim()) || msg.trim() === "";
-    const declined = /\b(nein|überspring|skip|kein|lieber nicht|keine|überspringen|nicht)\b/.test(msg);
-    if (accepted) {
-      const applied = applyOffer(scenario, currentOffer);
-      const next = nextOfferStage(stage);
-      if (next === "ask_consumers") return askConsumers(applied);
-      const o = offerReply(applied, STAGE_OFFER[next]!);
-      return { reply: o.reply, intent: `accept_${currentOffer}`, scenario: applied, stage: next, metrics: o.metrics };
-    }
-    if (declined) {
-      const next = nextOfferStage(stage);
-      if (next === "ask_consumers") return askConsumers(scenario);
-      const o = offerReply(scenario, STAGE_OFFER[next]!);
-      return { reply: o.reply, intent: `decline_${currentOffer}`, scenario, stage: next, metrics: o.metrics };
-    }
-    const o = offerReply(scenario, currentOffer);
-    return { reply: o.reply, intent: `offer_${currentOffer}`, scenario, stage, metrics: o.metrics };
+  // 8) Something changed -> apply and show the resulting economics.
+  if (changes.length) {
+    return resultReply(scenario, changes);
   }
 
-  // 5) Ask-consumers stage.
-  if (stage === "ask_consumers") {
-    if (/\b(weiter|fertig|genug|passt|ok|ja|gut|übernimm|übernehmen)\b/.test(msg)) {
-      return summarise(scenario);
-    }
-    return askConsumers(scenario);
+  // 9) No change: greeting or clarification.
+  if (message.trim() === "") {
+    const m = computeMetrics(scenario);
+    const reply =
+      `Hallo! Ich passe dein PV-Szenario direkt an, sobald du mir etwas sagst – ganz ohne Rückfrage. ` +
+      `Beispiele: „Strompreis 24 ct", „Wärmepumpe 3000", „10 kWp mit Speicher", „anderer Ort Hamburg".\n\n` +
+      `Aktuell: ${pvLabel(scenario)}, ${scenario.consumptionKWh} kWh, ${scenario.priceCt} ct/kWh, ` +
+      `${scenario.location[0].toUpperCase() + scenario.location.slice(1)}.`;
+    return { reply, intent: "welcome", scenario, stage: "ready", metrics: m };
   }
 
-  // 6) Ready: default to a fresh summary (price/consumer changes already applied).
-  return summarise(scenario);
+  return summarise(
+    scenario,
+    `Ich habe keine Änderung erkannt. Sag mir z. B., was ich anpassen soll:\n` +
+      `• Strompreis („24 ct")\n• Ort („Hamburg")\n• PV („Balkonkraftwerk", „10 kWp", „20 kWp")\n` +
+      `• Speicher („mit/ohne Speicher")\n• Verbraucher („Wärmepumpe 3000", „E-Auto", „Brauchwasser").`,
+  );
 }
 
 export function scenariosEqual(a: Scenario, b: Scenario): boolean {
