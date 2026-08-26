@@ -53,7 +53,11 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
     expect(r.opportunityCosts.heating).toBeDefined();
     expect(r.opportunityCosts.car).toBeDefined();
     // The report's opportunity costs must be identical to calling the shared
-    // function directly with the same inputs.
+    // function directly with the same inputs that `runSimulation` derives.
+    const evKWh = r.inputs.consumers.ev.enabled ? r.inputs.consumers.ev.annualKWh : 0;
+    const annualKm = evKWh > 0
+      ? Math.round((evKWh * 100) / r.inputs.car.evKwhPer100km)
+      : r.inputs.car.annualKm;
     const direct = computeOpportunityCosts({
       heating: {
         ...DEFAULT_HEATING_PARAMS,
@@ -61,7 +65,7 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
         jaz: r.inputs.heatpumpJaz,
         heatpumpElectricCt: r.inputs.heatpumpElectricCt,
       },
-      car: r.inputs.car,
+      car: { ...r.inputs.car, evElectricCtPerKwh: r.inputs.importFixedCt, annualKm },
     });
     expect(r.opportunityCosts.heating.heatpump.totalEUR).toBe(direct.heating.heatpump.totalEUR);
     expect(r.opportunityCosts.car.ev.totalEUR).toBe(direct.car.ev.totalEUR);
@@ -84,8 +88,45 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
     );
   });
 
-  it("defaults to the German 2025 car assumptions (15.000 km/yr)", () => {
+  it("derives the EV distance from the default E-Auto Verbrauch (2000 kWh)", () => {
     const r = runSimulation(DEFAULT_SIM_PARAMS);
+    // 2000 kWh / (18 kWh/100km) = 11111 km.
+    expect(r.opportunityCosts.car.annualKm).toBe(Math.round((2000 * 100) / 18));
+  });
+
+  it("Strompreis drives the heat-pump and EV electricity cost (via the app mapping)", () => {
+    // In the app the heat-pump tariff is tied to the Strompreis (see
+    // `toSimParams`), so we set both to the same value here.
+    const base = runSimulation({ ...DEFAULT_SIM_PARAMS, importFixedCt: 24, heatpumpElectricCt: 24 });
+    const pricier = runSimulation({ ...DEFAULT_SIM_PARAMS, importFixedCt: 40, heatpumpElectricCt: 40 });
+    expect(pricier.opportunityCosts.heating.heatpump.energyCostEUR)
+      .toBeGreaterThan(base.opportunityCosts.heating.heatpump.energyCostEUR);
+    expect(pricier.opportunityCosts.car.ev.energyCostEUR)
+      .toBeGreaterThan(base.opportunityCosts.car.ev.energyCostEUR);
+  });
+
+  it("E-Auto Verbrauch (kWh) drives the annual distance and EV cost", () => {
+    const low = runSimulation({
+      ...DEFAULT_SIM_PARAMS,
+      consumers: { ...DEFAULT_SIM_PARAMS.consumers, ev: { enabled: true, annualKWh: 1500, pvShare: 0.8 } },
+    });
+    const high = runSimulation({
+      ...DEFAULT_SIM_PARAMS,
+      consumers: { ...DEFAULT_SIM_PARAMS.consumers, ev: { enabled: true, annualKWh: 3000, pvShare: 0.8 } },
+    });
+    expect(high.opportunityCosts.car.annualKm).toBeGreaterThan(low.opportunityCosts.car.annualKm);
+    expect(high.opportunityCosts.car.ev.energyCostEUR)
+      .toBeGreaterThan(low.opportunityCosts.car.ev.energyCostEUR);
+    // Diesel (same distance) also scales with the EV consumption.
+    expect(high.opportunityCosts.car.diesel.energyCostEUR)
+      .toBeGreaterThan(low.opportunityCosts.car.diesel.energyCostEUR);
+  });
+
+  it("disabling the EV keeps the default annual distance", () => {
+    const r = runSimulation({
+      ...DEFAULT_SIM_PARAMS,
+      consumers: { ...DEFAULT_SIM_PARAMS.consumers, ev: { enabled: false, annualKWh: 0, pvShare: 0.8 } },
+    });
     expect(r.opportunityCosts.car.annualKm).toBe(15000);
   });
 });

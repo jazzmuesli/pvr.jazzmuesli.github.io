@@ -119,6 +119,7 @@ export function scenarioToSimParams(s: Scenario): SimParams {
     importScheme: "fixed",
     importFixedCt: s.priceCt,
     investmentEUR: sp.investmentEUR,
+    heatpumpElectricCt: s.priceCt,
   };
   return p;
 }

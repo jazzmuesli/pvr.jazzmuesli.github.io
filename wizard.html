@@ -100,6 +100,12 @@
           <div id="scenario"></div>
         </div>
 
+        <div id="opportunity" class="panel">
+          <h2>Alternativen im Vergleich</h2>
+          <p class="hint">Was dieselbe Wärmemenge (Wärmepumpe) mit Heizöl/Erdgas und dasselbe Auto (E-Auto) mit Diesel kosten würde.</p>
+          <div id="opportunity-body"></div>
+        </div>
+
         <div class="wiz-actions">
           <button class="pill" id="open-app">🔗 Im vollen Rechner öffnen</button>
           <button class="pill" id="copy-link">📋 Permalink kopieren</button>
@@ -115,7 +121,7 @@
 
     <script type="module">
       import { createStore } from "/src/store.ts";
-      import { defaultScenario, scenarioFromQuery, appUrl } from "/src/scenario.ts";
+      import { defaultScenario, scenarioFromQuery, scenarioToQuery, appUrl } from "/src/scenario.ts";
       import { initWizard } from "/src/wizard/wizard.ts";
       import { initChat } from "/src/chatbot/chat-ui.ts";
       import { openRouterGenerate, ADVISOR_SYSTEM_PROMPT } from "/src/chatbot/openrouter.ts";
@@ -141,6 +147,15 @@
         generate: openRouterGenerate,
         systemPrompt: ADVISOR_SYSTEM_PROMPT,
       });
+
+      // Keep the address bar in sync so the current scenario is always
+      // shareable as a link (e.g. when the advisor adjusts the inputs).
+      function syncUrl() {
+        const q = scenarioToQuery(store.getState()).toString();
+        history.replaceState(null, "", location.pathname + "?" + q);
+      }
+      store.subscribe(syncUrl);
+      syncUrl();
 
       document.getElementById("open-app").addEventListener("click", () =>
         window.open(appUrl(store.getState()), "_blank"),

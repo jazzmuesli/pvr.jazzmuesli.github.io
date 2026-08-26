@@ -213,9 +213,6 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   host.appendChild(
     slider({ label: "  JAZ (Wärme/Elektr.)", min: 1.5, max: 5, step: 0.1, unit: "", get: (s) => s.heatpumpJaz, set: (s, v) => (s.heatpumpJaz = v), fmt: (v) => v.toFixed(1) }, state, onChange),
   );
-  host.appendChild(
-    slider({ label: "  WP Strompreis", min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.heatpumpElectricCt, set: (s, v) => (s.heatpumpElectricCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
-  );
   host.appendChild(checkbox("Brauchwasser-Wärmepumpe", (s) => s.consumers.bwwp.enabled, (s, v) => (s.consumers.bwwp.enabled = v), state, onChange));
   host.appendChild(checkbox("E-Auto", (s) => s.consumers.ev.enabled, (s, v) => (s.consumers.ev.enabled = v), state, onChange));
   host.appendChild(

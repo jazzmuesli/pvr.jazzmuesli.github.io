@@ -112,7 +112,10 @@ export function toSimParams(s: AppState): SimParams {
     importFixedCt: s.importFixedCt,
     investmentEUR: s.investmentEUR,
     heatpumpJaz: s.heatpumpJaz,
-    heatpumpElectricCt: s.heatpumpElectricCt,
+    // The heat pump pays the household Strompreis (so the heating comparison
+    // reacts to the "Strompreis" control). A dedicated `wpc` override can still
+    // be supplied via the API query string.
+    heatpumpElectricCt: s.importFixedCt,
     car: { ...s.car },
   };
 }

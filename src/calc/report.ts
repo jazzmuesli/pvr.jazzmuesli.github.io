@@ -203,7 +203,9 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.importFixedCt = num("ict", p.importFixedCt);
   p.investmentEUR = num("inv", p.investmentEUR);
   p.heatpumpJaz = num("jaz", p.heatpumpJaz);
-  p.heatpumpElectricCt = num("wpc", p.heatpumpElectricCt);
+  // The heat pump pays the Strompreis by default; an explicit `wpc` override
+  // (its own cheaper WP tariff) still wins if present in the query string.
+  p.heatpumpElectricCt = q.get("wpc") !== null ? num("wpc", p.heatpumpElectricCt) : p.importFixedCt;
   // Opportunity-cost (EV vs. diesel) inputs.
   p.car.annualKm = num("km", p.car.annualKm);
   p.car.dieselEurPerL = num("dl", p.car.dieselEurPerL);
@@ -450,14 +452,29 @@ export function runSimulation(p: SimParams): SimReport {
     ...DEFAULT_HEATING_PARAMS,
     heatpumpElectricKWh: p.consumers.heatpump.enabled ? p.consumers.heatpump.annualKWh : 0,
     jaz: p.heatpumpJaz,
+    // The heat pump is a grid consumer, so it pays the household Strompreis
+    // (with an explicit `wpc` override still possible via the query string).
     heatpumpElectricCt: p.heatpumpElectricCt,
+  };
+
+  // The EV comparison is driven by the *actual* inputs the user sets:
+  //   - the EV charges from the grid at the household Strompreis, and
+  //   - the annual distance is back-computed from the E-Auto electricity
+  //     consumption (kWh) the user entered, using the EV's kWh/100 km.
+  // This keeps the comparison in sync with the "Strompreis" and
+  // "E-Auto Verbrauch" controls.
+  const evKWh = p.consumers.ev.enabled ? p.consumers.ev.annualKWh : 0;
+  const carParams: CarParams = {
+    ...p.car,
+    evElectricCtPerKwh: p.importFixedCt,
+    annualKm: evKWh > 0 ? Math.round((evKWh * 100) / p.car.evKwhPer100km) : p.car.annualKm,
   };
 
   // Opportunity-cost comparison (heating + EV vs. diesel) — the single shared
   // function used by both the `/api` endpoint and the client UI.
   const opportunityCosts = computeOpportunityCosts({
     heating: heatingParams,
-    car: p.car,
+    car: carParams,
   });
 
   const summary: SimSummary = {

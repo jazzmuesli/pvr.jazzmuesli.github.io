@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
+import { promises as fs } from "node:fs";
+import path from "node:path";
 import { runSimulation, simParamsFromQuery } from "./src/calc/report";
 
 // Recursively round every number in the report to at most 3 decimal places.
@@ -25,6 +27,35 @@ function apiPlugin(): Plugin {
   const handler = (req: import("http").IncomingMessage, res: import("http").ServerResponse, next: () => void) => {
     if (!req.url) return next();
 
+    // Conversation logging: append a JSON line to logs/<sessionId>.log so real
+    // chats can be reviewed later. Best-effort; never blocks the UI.
+    if (req.url.startsWith("/log")) {
+      let body = "";
+      req.on("data", (c) => {
+        body += c;
+        if (body.length > 1_000_000) req.destroy();
+      });
+      req.on("end", () => {
+        (async () => {
+          try {
+            const parsed = JSON.parse(body || "{}");
+            const rawId = String(parsed?.sessionId ?? "unknown");
+            const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64) || "unknown";
+            const dir = path.resolve(process.cwd(), "logs");
+            await fs.mkdir(dir, { recursive: true });
+            const line = JSON.stringify({ at: new Date().toISOString(), ...parsed.entry }) + "\n";
+            await fs.appendFile(path.join(dir, `${id}.log`), line);
+            res.statusCode = 204;
+            res.end();
+          } catch {
+            res.statusCode = 500;
+            res.end();
+          }
+        })();
+      });
+      return;
+    }
+
     // OpenRouter chat proxy: keeps the API key server-side (OR_PV_KEY).
     if (req.url.startsWith("/chat")) {
       const key = process.env.OR_PV_KEY;
@@ -43,7 +74,7 @@ function apiPlugin(): Plugin {
         (async () => {
           try {
             const parsed = JSON.parse(body || "{}");
-            const model = parsed.model || process.env.OR_MODEL || "meta-llama/llama-3.3-70b-instruct:free";
+            const model = parsed.model || process.env.OR_MODEL || "nvidia/nemotron-3-super-120b-a12b:free";
             const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
               method: "POST",
               headers: {
