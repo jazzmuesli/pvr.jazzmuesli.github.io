@@ -32,8 +32,8 @@ export interface Amortisation {
   paybackYears: number;
 }
 
-export const DEFAULT_PV_COST_PER_KWP = 1400;
-export const DEFAULT_BATTERY_COST_PER_KWH = 700;
+export const DEFAULT_PV_COST_PER_KWP = 1100;
+export const DEFAULT_BATTERY_COST_PER_KWH = 400;
 
 export function computeAmortisation(input: AmortisationInput): Amortisation {
   const pv = input.pvCostPerKWp ?? DEFAULT_PV_COST_PER_KWP;

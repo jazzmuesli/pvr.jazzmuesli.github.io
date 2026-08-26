@@ -84,14 +84,12 @@ function fmtEUR(v: number): string {
 function renderSummary(
   econ: ReturnType<typeof computeEconomics>,
   eff: { overallCt: number; byConsumer: Record<string, number> },
-  fixedCt: number,
   amort: ReturnType<typeof computeAmortisation>,
 ): void {
   const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
   const importEUR = state.importScheme === "fixed" ? econ.importCostFixedEUR
     : state.importScheme === "dynamic" ? econ.importCostDynamicEUR : econ.importCost14aEUR;
   const selfPct = econ.totalLoadKWh > 0 ? (econ.selfConsumptionKWh / econ.totalLoadKWh) * 100 : 0;
-  const refSub = `Fest-Tarif: ${fixedCt.toFixed(1)} ct/kWh`;
   const cards: [string, string, string][] = [
     ["PV-Ertrag", `${Math.round(econ.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
     ["Verbrauch", `${Math.round(econ.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
@@ -104,10 +102,13 @@ function renderSummary(
     ["Marktprämie", `${econ.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
     ["EEG Referenz", `${econ.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
     ["Eff. Strompreis (netto)", `${eff.overallCt.toFixed(1)} ct/kWh`, "Netto = (Import − Export) / Verbrauch"],
-    ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, refSub],
-    ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, refSub],
-    ["Eff. Preis Brauchw.-WP", `${eff.byConsumer.bwwp.toFixed(1)} ct/kWh`, refSub],
-    ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, refSub],
+    ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
+    ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
+    ["Eff. Preis Brauchw.-WP", `${eff.byConsumer.bwwp.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
+    ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
+    ["Investition (PV+Speicher)", fmtEUR(amort.totalInvestmentEUR), `PV ${Math.round(amort.pvInvestmentEUR).toLocaleString("de-DE")} € (${Math.round(state.pvCostPerKWp)} €/kWp) · Speicher ${Math.round(amort.batteryInvestmentEUR).toLocaleString("de-DE")} € (${Math.round(state.batteryCostPerKWh)} €/kWh)`],
+    ["Jahresersparnis", fmtEUR(amort.annualBenefitEUR), "ggü. Volleinspeisung aus dem Netz"],
+    ["Amortisation", amort.paybackYears === Infinity ? "—" : `${amort.paybackYears.toFixed(1)} Jahre`, "einfache Amortisation"],
   ];
   summaryHost.innerHTML = "";
   for (const [k, v, sub] of cards) {
@@ -142,12 +143,23 @@ function recompute(): void {
   const econ = computeEconomics(result, baseOpts());
 
   const city = cityForLocation(state.location);
-  const impPrices = importPriceArray(state.importScheme, city, prices);
+  const impPrices = importPriceArray(state.importScheme, city, prices, state.importFixedCt);
   const loads = loadByConsumer(state.consumers);
   const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
   const eff = effectiveNetPrice(loads, result.load, result.gridImport, impPrices, exportEUR);
 
-  renderSummary(econ, eff, state.importFixedCt);
+  let baselineCostEUR = 0;
+  for (let i = 0; i < result.load.length; i++) baselineCostEUR += (result.load[i] * impPrices[i]) / 100;
+  const amort = computeAmortisation({
+    peakKWp: state.peakKWp,
+    capacityKWh: state.capacityKWh,
+    baselineCostEUR,
+    systemNetEUR: econ.netSelectedEUR,
+    pvCostPerKWp: state.pvCostPerKWp,
+    batteryCostPerKWh: state.batteryCostPerKWh,
+  });
+
+  renderSummary(econ, eff, amort);
 
   const monthly = econ.monthly.map((r) => ({
     month: r.month,

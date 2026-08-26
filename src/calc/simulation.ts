@@ -175,7 +175,12 @@ export function simulate(config: SimConfig): SimResult {
     //    exclusive within a quarter hour).
     const discharging = flags.discharge[i] === 1;
     let charged = false;
-    if (p > 0 && !discharging && soc < maxSOCkWh) {
+    // Charge from PV surplus whenever it exists (free energy is always worth
+    // storing) — this must NOT be blocked by the discharge-window flag, or a
+    // "discharge in the morning" window would prevent the battery from soaking
+    // up morning PV. Only grid-based charging is restricted to non-discharge
+    // windows (see step 1).
+    if (p > 0 && soc < maxSOCkWh) {
       const pvChargeAllowed =
         b.chargeMode === "morning" || b.chargeMode === "gridNegative"
           ? true
@@ -198,8 +203,9 @@ export function simulate(config: SimConfig): SimResult {
     // 3) Export remaining PV directly (price >= 0 here).
     if (p > 0) exportSolar[i] = p;
 
-    // 4) Cover remaining load from the battery, then the grid.
-    if (L > 0 && soc > minSOCkWh) {
+    // 4) Cover remaining load from the battery (only inside the configured
+    //    discharge windows), then the grid.
+    if (discharging && L > 0 && soc > minSOCkWh) {
       const avail = soc - minSOCkWh;
       const e = Math.min(maxStepEnergy, avail, L);
       if (e > 0) {

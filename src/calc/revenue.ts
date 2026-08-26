@@ -127,7 +127,8 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     row.exportRevenueMarketEUR = row.marketValueEUR + row.premiumEUR;
     const selCost = opts.importScheme === "fixed" ? row.importCostFixedEUR
       : opts.importScheme === "dynamic" ? row.importCostDynamicEUR : row.importCost14aEUR;
-    row.netSelectedEUR = row.exportRevenueMarketEUR - selCost;
+    const selExport = opts.exportScheme === "fixed" ? row.exportRevenueFixedEUR : row.exportRevenueMarketEUR;
+    row.netSelectedEUR = selExport - selCost;
   }
 
   const exportRevMarket = marketValue + premiumTotal;

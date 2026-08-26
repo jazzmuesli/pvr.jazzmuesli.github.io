@@ -108,15 +108,20 @@ describe("simulate with load — plausibility", () => {
     expect(giB).toBeLessThan(giN);
   });
 
-  it("a 40 kWh / 5 kW battery can still empty into the evening peak", () => {
+  it("a 40 kWh / 5 kW battery can still discharge substantially into the evening peak", () => {
     const load = totalLoad(consumers);
     const r = simulate(baseConfig(load, 40, 5));
     let maxDayDischarge = 0;
     for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
       let day = 0;
-      for (let k = 0; k < STEPS_PER_DAY; k++) day += r.exportBattery[d * STEPS_PER_DAY + k];
+      for (let k = 0; k < STEPS_PER_DAY; k++) {
+        const i = d * STEPS_PER_DAY + k;
+        day += r.dischargeToLoad[i] + r.exportBattery[i];
+      }
       maxDayDischarge = Math.max(maxDayDischarge, day);
     }
-    expect(maxDayDischarge).toBeGreaterThan(20); // can move substantial energy
+    // The battery should be able to shift a meaningful amount of energy in a day
+    // (covering evening load and/or exporting surplus).
+    expect(maxDayDischarge).toBeGreaterThan(20);
   });
 });

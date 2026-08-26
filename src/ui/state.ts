@@ -33,6 +33,9 @@ export interface AppState {
   // Stromtarif (Import)
   importScheme: TariffScheme;
   importFixedCt: number; // ct/kWh
+  // Investitionskosten (Amortisation)
+  pvCostPerKWp: number; // €/kWp
+  batteryCostPerKWh: number; // €/kWh
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -65,6 +68,8 @@ export const DEFAULT_STATE: AppState = {
   exportScheme: "fixed",
   importScheme: "fixed",
   importFixedCt: 24,
+  pvCostPerKWp: 1100,
+  batteryCostPerKWh: 400,
 };
 
 export function toSimConfig(s: AppState): SimConfig {

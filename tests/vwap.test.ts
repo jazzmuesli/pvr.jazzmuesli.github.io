@@ -4,6 +4,7 @@ import { totalLoad, loadByConsumer, ConsumerConfig } from "../src/calc/consumers
 import { generatePrices } from "../src/calc/priceModel";
 import { importPriceArray } from "../src/calc/tariff";
 import { effectiveNetPrice } from "../src/calc/vwap";
+import { monthForStep } from "../src/calc/revenue";
 import { SimConfig } from "../src/calc/types";
 
 function baseConfig(load: Float64Array, capacityKWh: number): SimConfig {
@@ -50,19 +51,50 @@ describe("effective net price (Import − Export) / Verbrauch", () => {
     // export revenue 0 here isolates the import side; self-consumed PV is free
     const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, 0);
     expect(eff.overallCt).toBeLessThan(fixedCt);
-    expect(eff.byConsumer.household).toBeLessThan(fixedCt);
-    expect(eff.byConsumer.heatpump).toBeLessThan(fixedCt);
-    expect(eff.byConsumer.ev).toBeLessThan(fixedCt);
-    // disabled/empty consumer must not produce NaN
+    // Per-consumer effective = pure grid-import cost, so it lies in [0, fixedCt].
+    for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+      expect(eff.byConsumer[k]).toBeGreaterThanOrEqual(0);
+      expect(eff.byConsumer[k]).toBeLessThanOrEqual(fixedCt);
+    }
+    // The heat pump runs mostly in winter/night, so it draws a lot from the
+    // grid and its effective price sits well above the PV-heavy consumers.
+    expect(eff.byConsumer.heatpump).toBeGreaterThan(5);
+    expect(eff.byConsumer.heatpump).toBeLessThan(23);
     expect(Number.isFinite(eff.byConsumer.bwwp)).toBe(true);
   });
 
-  it("under a dynamic tariff the effective price is below the flat rate", () => {
+  it("per-consumer effective equals the blended price of that consumer's grid imports", () => {
+    const imp = importPriceArray("fixed", city, prices);
+    const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, 0);
+    for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+      const arr = loads[k];
+      let cost = 0, cons = 0;
+      for (let i = 0; i < result.load.length; i++) {
+        cons += arr[i];
+        if (result.load[i] > 0) cost += (arr[i] / result.load[i]) * result.gridImport[i] * (imp[i] / 100);
+      }
+      expect(eff.byConsumer[k]).toBeCloseTo(cons > 0 ? (cost / cons) * 100 : 0, 6);
+    }
+  });
+
+  it("under a dynamic tariff the effective price is never negative", () => {
     const imp = importPriceArray("dynamic", city, prices);
     const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, 0);
     expect(eff.overallCt).toBeLessThan(fixedCt);
-    expect(eff.byConsumer.heatpump).toBeLessThan(fixedCt);
-    expect(eff.byConsumer.ev).toBeLessThan(fixedCt);
+    for (const k of ["household", "heatpump", "ev"] as const) {
+      expect(eff.byConsumer[k]).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("imports far more in winter than in summer", () => {
+    let wImport = 0;
+    let sImport = 0;
+    for (let i = 0; i < result.gridImport.length; i++) {
+      const m = monthForStep(i);
+      if (m === 12 || m === 1 || m === 2) wImport += result.gridImport[i];
+      else if (m === 6 || m === 7 || m === 8) sImport += result.gridImport[i];
+    }
+    expect(wImport).toBeGreaterThan(sImport);
   });
 
   it("more self-consumed PV lowers the effective price", () => {

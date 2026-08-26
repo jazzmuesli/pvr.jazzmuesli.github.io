@@ -279,4 +279,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       onChange,
     ),
   );
+
+  section("Wirtschaftlichkeit (Investition)");
+  host.appendChild(
+    slider({ label: "PV-Investition", min: 500, max: 2500, step: 25, unit: " €/kWp", get: (s) => s.pvCostPerKWp, set: (s, v) => (s.pvCostPerKWp = v), fmt: (v) => String(Math.round(v)) }, state, onChange),
+  );
+  host.appendChild(
+    slider({ label: "Speicher-Investition", min: 200, max: 1500, step: 25, unit: " €/kWh", get: (s) => s.batteryCostPerKWh, set: (s, v) => (s.batteryCostPerKWh = v), fmt: (v) => String(Math.round(v)) }, state, onChange),
+  );
 }

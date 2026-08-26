@@ -70,10 +70,12 @@ describe("battery simulation", () => {
   });
 
   it("uses the battery to avoid grid import and still exports genuine surplus", () => {
-    const withBat = simulate({ ...baseConfig(), prices });
+    const load = new Float64Array(TOTAL_STEPS).fill(0.4); // ~9.6 kWh/day
+    const withBat = simulate({ ...baseConfig(), prices, load });
     const noBat = simulate({
       ...baseConfig({ capacityKWh: 0, dischargeEvening: false, dischargeMorning: false }),
       prices,
+      load,
     });
     // The battery discharges into the expensive windows, replacing grid import.
     expect(sum(withBat.dischargeToLoad)).toBeGreaterThan(0);
