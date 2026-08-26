@@ -18,6 +18,7 @@ import {
   MonthlyChartDatum,
   DayChartDatum,
   ScenarioDatum,
+  TariffCombination,
 } from "../calc/report";
 
 function el(tag: string, attrs: Record<string, string | number> = {}): SVGElement {
@@ -593,6 +594,74 @@ export function renderComparisonChart(host: HTMLElement, data: ComparisonDatum[]
   svg.appendChild(hint);
 
   host.appendChild(svg);
+}
+
+// ---- tariff combinations (per year, per combination) -----------------------
+// One chart per combination: the x-axis is the historical price year, with the
+// export revenue (green, up) and import cost (red, down) bars and the net
+// balance label. Because the dispatch is re-run for each year the volumes and
+// therefore the bars differ between years; and because the tariff schemes
+// differ, the four combinations produce visibly different charts.
+export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCombination): void {
+  host.innerHTML = "";
+  const W = 460;
+  const H = 360;
+  const m = { top: 40, right: 18, bottom: 56, left: 64 };
+  const plotW = W - m.left - m.right;
+  const plotH = H - m.top - m.bottom;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
+
+  const data = combo.years;
+  const bound = niceScale(Math.max(1, ...data.map((d) => Math.max(d.exportEUR, d.importEUR))), 5).max;
+  const zeroY = m.top + plotH / 2;
+  const half = plotH / 2;
+  const scale = (v: number) => zeroY - (v / bound) * half;
+
+  for (const t of [-bound, -bound / 2, 0, bound / 2, bound]) {
+    const y = scale(t);
+    svg.appendChild(el("line", { x1: m.left, y1: y, x2: m.left + plotW, y2: y, stroke: t === 0 ? COLORS.axis : COLORS.grid, "stroke-width": t === 0 ? 1.2 : 1 }));
+    const lbl = el("text", { x: m.left - 10, y: y + 4, "text-anchor": "end", fill: COLORS.muted, "font-size": 10 });
+    lbl.textContent = `${Math.round(t)}`;
+    svg.appendChild(lbl);
+  }
+
+  const band = plotW / data.length;
+  const barW = Math.min(30, band * 0.30);
+
+  data.forEach((d, i) => {
+    const cx = m.left + i * band + band / 2;
+    const gx = cx - barW - 3;
+    const rx = cx + 3;
+
+    const gH = (d.exportEUR / bound) * half;
+    const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar" });
+    bindTip(grec, () => `<strong>${combo.label} — ${d.year}</strong><br>Export-Erlös: <b>${fmtEUR(d.exportEUR)}</b><br>Export: ${Math.round(d.exportKWh)} kWh`);
+    svg.appendChild(grec);
+
+    const rH = (d.importEUR / bound) * half;
+    const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar" });
+    bindTip(rrec, () => `<strong>${combo.label} — ${d.year}</strong><br>Import-Kosten: <b>${fmtEUR(d.importEUR)}</b><br>Import: ${Math.round(d.importKWh)} kWh`);
+    svg.appendChild(rrec);
+
+    const netLbl = el("text", { x: cx, y: m.top + 14, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 11, "font-weight": 700 });
+    netLbl.textContent = `Netto ${fmtEUR(d.netEUR)}`;
+    svg.appendChild(netLbl);
+
+    const txt = el("text", { x: cx, y: m.top + plotH + 20, "text-anchor": "middle", fill: COLORS.text, "font-size": 12 });
+    txt.textContent = d.year;
+    svg.appendChild(txt);
+  });
+
+  const yL = el("text", { x: m.left - 10, y: m.top - 16, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
+  yL.textContent = "Jahresbilanz (€)";
+  svg.appendChild(yL);
+
+  host.appendChild(svg);
+  appendLegend(host, [
+    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect" },
+    { label: "Import-Kosten", color: COLORS.import, shape: "rect" },
+    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line" },
+  ]);
 }
 
 export function renderLegend(host: HTMLElement): void {

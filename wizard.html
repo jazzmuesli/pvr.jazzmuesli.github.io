@@ -63,7 +63,9 @@
       /* chat */
       .chat-panel { position: sticky; top: 20px; height: calc(100vh - 40px); display: flex; flex-direction: column; }
       .chat-panel h2 { margin: 0 0 8px; font-size: 16px; }
-      .chat-log { flex: 1; overflow-y: auto; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+      #chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+      .chat-log { flex: 1; min-height: 0; overflow-y: auto; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+      .chat-input-row { flex-shrink: 0; }
       .chat-bubble { max-width: 92%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
       .chat-user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
       .chat-bot { align-self: flex-start; background: #fff; border: 1px solid var(--border); border-bottom-left-radius: 4px; }

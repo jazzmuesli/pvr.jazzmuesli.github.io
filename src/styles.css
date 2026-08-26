@@ -128,3 +128,7 @@ body {
   max-width: 260px;
 }
 .chart-tooltip strong { color: #7dd3fc; }
+.combo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 18px; }
+.combo-cell { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #fff; }
+.combo-cell h3 { margin: 0 0 4px; font-size: 13px; color: var(--text); }
+@media (max-width: 720px) { .combo-grid { grid-template-columns: 1fr; } }

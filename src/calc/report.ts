@@ -8,9 +8,9 @@
 
 import { simulate } from "./simulation";
 import { computeEconomics, monthForStep, EconOptions } from "./revenue";
-import { getYearPrices } from "./priceData";
+import { getYearPrices, PRICE_YEARS } from "./priceData";
 import { monthOfStep, hourOfStep, STEPS_PER_DAY, TOTAL_STEPS, SimConfig, SimResult, Orientation } from "./types";
-import { cityForLocation, importPriceArray } from "./tariff";
+import { cityForLocation, importPriceArray, TariffScheme } from "./tariff";
 import {
   loadByConsumer,
   ConsumerLoads,
@@ -74,6 +74,34 @@ export interface ScenarioDatum {
   netEUR: number;
   exportEUR: number;
   importEUR: number;
+}
+
+// ---- Tariff combinations over historical price years -----------------------
+// For each relevant combination of export/import tariff scheme the import cost,
+// export revenue and net balance are recomputed for every historical price
+// year (2023–2026) by re-running the full dispatch with that year's spot
+// prices (the battery's strategic discharge and the volumes depend on prices).
+
+export interface TariffComboYear {
+  year: string;
+  exportEUR: number;
+  importEUR: number;
+  netEUR: number;
+  exportKWh: number;
+  importKWh: number;
+}
+
+export interface TariffCombination {
+  key: string;
+  label: string;
+  exportScheme: "fixed" | "market";
+  importScheme: TariffScheme;
+  years: TariffComboYear[];
+}
+
+export interface TariffCombinationReport {
+  years: string[];
+  combinations: TariffCombination[];
 }
 
 // ---- Input parameters ------------------------------------------------------
@@ -224,6 +252,9 @@ export interface SimReport {
   /** Daily profile for every month: daily[month-1][hour]. */
   daily: DayChartDatum[][];
   scenario: ScenarioDatum[];
+  /** Tariff combinations (export/import scheme pairs) evaluated for every
+   *  historical price year 2023–2026. */
+  tariffCombinations: TariffCombinationReport;
   /** Opportunity-cost comparison: heating (heat pump vs. oil vs. gas) and
    *  mobility (EV vs. diesel), for the same useful heat / annual distance. */
   opportunityCosts: OpportunityCosts;
@@ -406,6 +437,64 @@ function scenarioVariants(
   });
 }
 
+// The four tariff combinations the user wants to compare. Two of them are
+// Direktvermarktung (market) export, the others use the fixed feed-in tariff.
+const TARIFF_COMBOS: { key: string; label: string; exportScheme: "fixed" | "market"; importScheme: TariffScheme }[] = [
+  { key: "fixed_fixed", label: "Feste Einspeisung & fester Bezug", exportScheme: "fixed", importScheme: "fixed" },
+  { key: "market_fixed", label: "Direktvermarktung & fester Bezug", exportScheme: "market", importScheme: "fixed" },
+  { key: "market_dynamic", label: "Direktvermarktung & dynamischer Bezug (Tibber)", exportScheme: "market", importScheme: "dynamic" },
+  { key: "market_dynamic14a", label: "Direktvermarktung & dynamisch + §14a/3", exportScheme: "market", importScheme: "dynamic14a" },
+];
+
+function computeTariffCombinations(p: SimParams): TariffCombinationReport {
+  const city = cityForLocation(p.location);
+  const econOpts: EconOptions = {
+    commissioningYear: p.commissioningYear,
+    peakKWp: p.peakKWp,
+    exportScheme: "market",
+    feedInCt: p.feedInCt,
+    importScheme: "fixed",
+    importCity: city,
+    importFixedCt: p.importFixedCt,
+  };
+  // One full dispatch per historical price year (volumes + cost differ by year).
+  const yearRuns = PRICE_YEARS.map((year) => {
+    const cfg = toSimConfig(p);
+    cfg.prices = getYearPrices(year);
+    const result = simulate(cfg);
+    const econ = computeEconomics(result, econOpts);
+    return {
+      year,
+      exportKWh: econ.totalExportKWh,
+      importKWh: econ.totalImportKWh,
+      exportRevFixed: econ.exportRevenueFixedEUR,
+      exportRevMarket: econ.exportRevenueMarketEUR,
+      importFixed: econ.importCostFixedEUR,
+      importDynamic: econ.importCostDynamicEUR,
+      import14a: econ.importCost14aEUR,
+    };
+  });
+  const combinations = TARIFF_COMBOS.map((c) => {
+    const years = yearRuns.map((r) => {
+      const exportEUR = c.exportScheme === "market" ? r.exportRevMarket : r.exportRevFixed;
+      const importEUR =
+        c.importScheme === "fixed" ? r.importFixed
+        : c.importScheme === "dynamic" ? r.importDynamic
+        : r.import14a;
+      return {
+        year: r.year,
+        exportEUR: round2(exportEUR),
+        importEUR: round2(importEUR),
+        netEUR: round2(exportEUR - importEUR),
+        exportKWh: r.exportKWh,
+        importKWh: r.importKWh,
+      };
+    });
+    return { ...c, years };
+  });
+  return { years: PRICE_YEARS, combinations };
+}
+
 export function runSimulation(p: SimParams): SimReport {
   const result = simulate(toSimConfig(p));
   const city = cityForLocation(p.location);
@@ -530,6 +619,7 @@ export function runSimulation(p: SimParams): SimReport {
     monthly,
     daily,
     scenario,
+    tariffCombinations: computeTariffCombinations(p),
     opportunityCosts,
     opportunityInvestment,
   };

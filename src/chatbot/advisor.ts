@@ -14,6 +14,7 @@ import {
   computeMetrics,
   appUrl,
   pvLabel,
+  pvPreset,
 } from "../scenario";
 
 export type Stage = "welcome" | "ready";
@@ -143,40 +144,84 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     }
   }
 
-  // 4) PV size.
+  // 4) PV size — any number is allowed (enums are only example presets).
   if (/\b(kein\s*pv|ohne\s*pv|basis)\b/.test(msg)) {
-    if (scenario.pv !== "none") {
+    if (scenario.peakKWp !== 0) {
       scenario.pv = "none";
+      scenario.peakKWp = 0;
+      scenario.orientation = "south";
+      scenario.battery = "off";
+      scenario.capacityKWh = 0;
+      scenario.maxPowerKW = 0;
+      scenario.investmentEUR = 0;
       changes.push("PV → Kein PV (Basis)");
     }
   } else if (/\b(balkon(?:kraftwerk)?|\bbkw\b)\b/.test(msg)) {
-    if (scenario.pv !== "balcony") {
-      scenario.pv = "balcony";
-      changes.push("PV → Balkonkraftwerk 800 Wp");
-    }
-  } else if (/\b20\s*kwp|20kw\b/.test(msg)) {
-    if (scenario.pv !== "20") {
-      scenario.pv = "20";
-      changes.push("PV → 20 kWp (Ost/West)");
-    }
-  } else if (/\b10\s*kwp|10kw\b/.test(msg)) {
-    if (scenario.pv !== "10") {
-      scenario.pv = "10";
-      changes.push("PV → 10 kWp (Süd)");
+    const p = pvPreset("balcony");
+    scenario.pv = "balcony";
+    scenario.peakKWp = p.kwp;
+    scenario.orientation = p.orientation;
+    scenario.battery = "off";
+    scenario.capacityKWh = 0;
+    scenario.maxPowerKW = 0;
+    scenario.investmentEUR = p.investmentEUR;
+    changes.push(pvLabel(scenario));
+  } else {
+    const pvM = msg.match(/(\d{1,3}(?:[.,]\d+)?)\s*(?:kw|kwp|kw\s*p)/i);
+    if (pvM) {
+      const n = Number(pvM[1].replace(",", "."));
+      if (n > 2) {
+        scenario.pv = n >= 19 ? "20" : "10";
+        scenario.peakKWp = n;
+        scenario.orientation = n >= 19 ? "east_west" : "south";
+        scenario.battery = "off";
+        scenario.capacityKWh = 0;
+        scenario.maxPowerKW = 0;
+        scenario.investmentEUR = Math.round(n * 700);
+        changes.push(pvLabel(scenario));
+      }
     }
   }
 
-  // 5) Battery / storage.
+  // 5) Battery / storage — capacity is a free number, not an enum.
   if (/\b(ohne\s*speicher|kein\s*speicher)\b/.test(msg)) {
     if (scenario.battery !== "off") {
       scenario.battery = "off";
+      scenario.capacityKWh = 0;
+      scenario.maxPowerKW = 0;
       changes.push("Speicher → aus");
     }
-  } else if (/\b(speicher|batterie)\b/.test(msg) && scenario.pv !== "none") {
-    if (scenario.battery !== "on") {
+  } else if (/\b(speicher|batter\w*)\b/i.test(msg) && scenario.peakKWp > 0) {
+    const capM = /\b(speicher|batter\w*)\b/i.test(msg)
+      ? message.match(/(\d{1,3}(?:[.,]\d+)?)\s*kwh/i)
+      : null;
+    if (scenario.battery !== "on" || capM) {
       scenario.battery = "on";
-      changes.push("Speicher → ein");
+      if (capM) {
+        const cap = Number(capM[1].replace(",", "."));
+        scenario.capacityKWh = cap;
+        scenario.maxPowerKW = Math.max(1, Math.round(cap * 0.5));
+        changes.push(`Speicher → ${cap} kWh`);
+      } else if (scenario.capacityKWh <= 0) {
+        const cap = scenario.peakKWp >= 19 ? 15 : scenario.peakKWp >= 9 ? 10 : 2;
+        scenario.capacityKWh = cap;
+        scenario.maxPowerKW = scenario.peakKWp >= 19 ? 8 : scenario.peakKWp >= 9 ? 5 : 1;
+        changes.push(`Speicher → ${cap} kWh`);
+      }
     }
+  }
+
+  // 5b) Investment / cost — "for 30kEUR", "Investition 30000", "Kosten 25000 Euro".
+  const investKM = msg.match(/(\d{1,3})\s*(?:k\s*eur|k\s*€|k€)/i);
+  const investBig = msg.match(/(?:invest(?:ition)?|kosten|preis)\D*(\d{4,7})\s*(?:eur|euro|€)?/i);
+  const investNum = msg.match(/\b(\d{4,7})\s*(?:eur|euro|€)/i);
+  let inv: number | null = null;
+  if (investKM) inv = Number(investKM[1]) * 1000;
+  else if (investBig) inv = Number(investBig[1]);
+  else if (investNum) inv = Number(investNum[1]);
+  if (inv !== null && inv >= 500 && inv <= 200000 && inv !== scenario.investmentEUR) {
+    scenario.investmentEUR = inv;
+    changes.push(`Investment → ${inv.toLocaleString("de-DE")} €`);
   }
 
   // 6) Consumers.
@@ -251,7 +296,12 @@ export function scenariosEqual(a: Scenario, b: Scenario): boolean {
     a.priceCt === b.priceCt &&
     a.location === b.location &&
     a.pv === b.pv &&
+    a.peakKWp === b.peakKWp &&
+    a.orientation === b.orientation &&
     a.battery === b.battery &&
+    a.capacityKWh === b.capacityKWh &&
+    a.maxPowerKW === b.maxPowerKW &&
+    a.investmentEUR === b.investmentEUR &&
     a.heatpump === b.heatpump &&
     a.heatpumpKWh === b.heatpumpKWh &&
     a.ev === b.ev &&

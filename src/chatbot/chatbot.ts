@@ -33,6 +33,7 @@ export interface ChatBotOptions {
 const VALID_PV = ["none", "balcony", "10", "20"] as const;
 const VALID_BAT = ["off", "on"] as const;
 const VALID_LOC = ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"] as const;
+const VALID_ORIENT = ["south", "east", "west", "east_west"] as const;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -47,6 +48,16 @@ export function coercePatch(base: Scenario, p: Partial<Scenario>): Scenario {
     s.location = p.location;
   if (p.pv && (VALID_PV as readonly string[]).includes(p.pv)) s.pv = p.pv;
   if (p.battery && (VALID_BAT as readonly string[]).includes(p.battery)) s.battery = p.battery;
+  // numeric hardware fields — any size is allowed
+  if (typeof p.peakKWp === "number" && Number.isFinite(p.peakKWp))
+    s.peakKWp = clamp(Math.round(p.peakKWp * 100) / 100, 0, 200);
+  if (p.orientation && (VALID_ORIENT as readonly string[]).includes(p.orientation)) s.orientation = p.orientation;
+  if (typeof p.capacityKWh === "number" && Number.isFinite(p.capacityKWh))
+    s.capacityKWh = clamp(Math.round(p.capacityKWh * 100) / 100, 0, 200);
+  if (typeof p.maxPowerKW === "number" && Number.isFinite(p.maxPowerKW))
+    s.maxPowerKW = clamp(Math.round(p.maxPowerKW * 100) / 100, 0, 50);
+  if (typeof p.investmentEUR === "number" && Number.isFinite(p.investmentEUR))
+    s.investmentEUR = clamp(Math.round(p.investmentEUR), 500, 200000);
   if (typeof p.heatpump === "boolean") s.heatpump = p.heatpump;
   if (typeof p.heatpumpKWh === "number" && Number.isFinite(p.heatpumpKWh))
     s.heatpumpKWh = clamp(Math.round(p.heatpumpKWh), 2000, 5000);

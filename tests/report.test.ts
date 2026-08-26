@@ -53,6 +53,35 @@ describe("runSimulation", () => {
     }
   });
 
+  it("tariffCombinations covers every year for every combination", () => {
+    const r = runSimulation(params());
+    const tc = r.tariffCombinations;
+    expect(tc.combinations).toHaveLength(4);
+    expect(tc.years).toEqual(["2023", "2024", "2025", "2026"]);
+    for (const c of tc.combinations) {
+      expect(c.years).toHaveLength(4);
+      for (const y of c.years) {
+        expect(y.netEUR).toBeCloseTo(y.exportEUR - y.importEUR, 1);
+        expect(Number.isFinite(y.exportEUR)).toBe(true);
+        expect(Number.isFinite(y.importEUR)).toBe(true);
+      }
+    }
+  });
+
+  it("tariff combinations differ between schemes and years", () => {
+    const r = runSimulation(params());
+    const tc = r.tariffCombinations;
+    const byKey = Object.fromEntries(tc.combinations.map((c) => [c.key, c]));
+    // Market export earns more than fixed export under the same (fixed) import.
+    const fixedFixed = byKey["fixed_fixed"].years.find((y) => y.year === "2025")!;
+    const marketFixed = byKey["market_fixed"].years.find((y) => y.year === "2025")!;
+    expect(marketFixed.exportEUR).toBeGreaterThan(fixedFixed.exportEUR);
+    // Different import schemes yield different import costs.
+    const dyn = byKey["market_dynamic"].years.find((y) => y.year === "2025")!;
+    const dyn14a = byKey["market_dynamic14a"].years.find((y) => y.year === "2025")!;
+    expect(dyn.importEUR).not.toBeCloseTo(dyn14a.importEUR, 1);
+  });
+
   it("amortisation is investment / annual benefit", () => {
     const inv = 32000;
     const r = runSimulation(params({ investmentEUR: inv }));

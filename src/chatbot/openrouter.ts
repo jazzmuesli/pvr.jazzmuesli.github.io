@@ -38,12 +38,34 @@ export const SCENARIO_TOOL = {
         pv: {
           type: "string",
           enum: ["none", "balcony", "10", "20"],
-          description: "PV-Anlagengröße: none=kein PV, balcony=800 Wp, 10=10 kWp Süd, 20=20 kWp Ost/West.",
+          description:
+            "Nur ein Beispiel-Preset (kein PV / Balkon 800 Wp / 10 kWp / 20 kWp). Für ABWEICHENDE Größen setze stattdessen peakKWp frei und wähle hier das passendste Preset als Hinweis.",
+        },
+        peakKWp: {
+          type: "number",
+          description: "PV-Spitzenleistung in kWp (FREIE Zahl, z. B. 30 für 30 kWp). 0 = kein PV.",
+        },
+        orientation: {
+          type: "string",
+          enum: ["south", "east", "west", "east_west"],
+          description: "Ausrichtung der Module.",
         },
         battery: {
           type: "string",
           enum: ["off", "on"],
           description: "Speicher ein oder aus.",
+        },
+        capacityKWh: {
+          type: "number",
+          description: "Speicher-Kapazität in kWh (FREIE Zahl, z. B. 30). 0 = kein Speicher.",
+        },
+        maxPowerKW: {
+          type: "number",
+          description: "Speicher-Maximalleistung in kW (FREIE Zahl). Oft ≈ 0.5 × capacityKWh.",
+        },
+        investmentEUR: {
+          type: "number",
+          description: "Gesamtinvestition in EUR (PV + Speicher). FREIE Zahl.",
         },
         heatpump: { type: "boolean", description: "Wärmepumpe aktiv?" },
         heatpumpKWh: {

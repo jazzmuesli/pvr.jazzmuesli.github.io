@@ -8,6 +8,8 @@ import {
   runScenario,
   scenarioToQuery,
   pvLabel,
+  pvPreset,
+  spec,
   computeMetrics,
 } from "../scenario";
 import { SimReport } from "../calc/report";
@@ -100,7 +102,18 @@ export function initWizard(opts: WizardOptions): void {
     ["20", "20 kWp", "Ost/West · 35°"],
   ] as [Scenario["pv"], string, string][]) {
     const b = el("button", { class: "seg-btn", "data-pv": val }, [el("span", { class: "t" }, [t]), el("span", { class: "s" }, [s])]) as HTMLButtonElement;
-    b.addEventListener("click", () => store.setState({ pv: val }));
+    b.addEventListener("click", () => {
+      const p = pvPreset(val);
+      store.setState({
+        pv: val,
+        peakKWp: p.kwp,
+        orientation: p.orientation,
+        battery: "off",
+        capacityKWh: 0,
+        maxPowerKW: 0,
+        investmentEUR: p.investmentEUR,
+      });
+    });
     pvSeg.append(b);
     pvButtons[val] = b;
   }
@@ -112,7 +125,28 @@ export function initWizard(opts: WizardOptions): void {
     ["on", "Mit Speicher", "mehr Eigenverbrauch"],
   ] as [Scenario["battery"], string, string][]) {
     const b = el("button", { class: "seg-btn", "data-bat": val }, [el("span", { class: "t" }, [t]), el("span", { class: "s" }, [s])]) as HTMLButtonElement;
-    b.addEventListener("click", () => store.setState({ battery: val }));
+    b.addEventListener("click", () => {
+      const cur = store.getState();
+      if (val === "on") {
+        const cap = cur.capacityKWh > 0 ? cur.capacityKWh : cur.peakKWp >= 19 ? 15 : cur.peakKWp >= 9 ? 10 : 2;
+        const pwr = cur.maxPowerKW > 0 ? cur.maxPowerKW : cur.peakKWp >= 19 ? 8 : cur.peakKWp >= 9 ? 5 : 1;
+        const addon = cur.peakKWp >= 19 ? 12000 : cur.peakKWp >= 9 ? 3000 : 1500;
+        store.setState({
+          battery: "on",
+          capacityKWh: cap,
+          maxPowerKW: pwr,
+          investmentEUR: cur.investmentEUR + (cur.capacityKWh > 0 ? 0 : addon),
+        });
+      } else {
+        const addon = cur.peakKWp >= 19 ? 12000 : cur.peakKWp >= 9 ? 3000 : 1500;
+        store.setState({
+          battery: "off",
+          capacityKWh: 0,
+          maxPowerKW: 0,
+          investmentEUR: Math.max(0, cur.investmentEUR - (cur.capacityKWh > 0 ? addon : 0)),
+        });
+      }
+    });
     batSeg.append(b);
     batButtons[val] = b;
   }
@@ -164,7 +198,10 @@ export function initWizard(opts: WizardOptions): void {
     wpToggle.input.checked = s.heatpump;
     evToggle.input.checked = s.ev;
     bwToggle.input.checked = s.bwwp;
-    for (const v of Object.keys(pvButtons)) pvButtons[v].classList.toggle("active", v === s.pv);
+    for (const v of Object.keys(pvButtons)) {
+      const preset = pvPreset(v as Scenario["pv"]);
+      pvButtons[v].classList.toggle("active", v === s.pv && Math.abs(s.peakKWp - preset.kwp) < 0.01);
+    }
     for (const v of Object.keys(batButtons)) batButtons[v].classList.toggle("active", v === s.battery);
     reco.textContent =
       s.pv === "none"
@@ -210,7 +247,7 @@ export function initWizard(opts: WizardOptions): void {
     const rep = runSimulationCache();
     const data = rep.daily[selectedMonth - 1];
     opts.hourTitle.textContent = `Stundendetail — ${MONTH_LABELS[selectedMonth - 1]}`;
-    const socMax = s.battery === "on" ? (s.pv === "10" ? 10 : s.pv === "20" ? 15 : 2) : 0;
+    const socMax = spec(s).capacityKWh;
     renderHourlyChart(opts.hourly, data, MONTH_LABELS[selectedMonth - 1], socMax);
   }
 

@@ -3,6 +3,11 @@
 // be unit-tested without a server. A `Scenario` is the minimal, human-friendly
 // description of a PV setup; it is expanded into the low-level `SimParams`
 // that `runSimulation` understands.
+//
+// The model is fully numeric: PV size, orientation, battery capacity/power and
+// investment are first-class numbers, so *any* size is supported. The `pv` enum
+// is only a convenience preset (the wizard buttons / example offers); it mirrors
+// the numeric fields but does not restrict them.
 
 import {
   runSimulation,
@@ -13,6 +18,7 @@ import {
 
 export type PVSize = "none" | "balcony" | "10" | "20";
 export type Battery = "off" | "on";
+export type Orientation = "south" | "east" | "west" | "east_west";
 
 export interface Scenario {
   /** Household annual consumption in kWh (the standard lastprofile base). */
@@ -21,8 +27,19 @@ export interface Scenario {
   priceCt: number;
   /** City key understood by the simulation (e.g. "boizenburg"). */
   location: string;
+  /** Selected preset (none/balcony/10/20) — UI convenience only. */
   pv: PVSize;
+  /** PV peak power in kWp (authoritative). */
+  peakKWp: number;
+  /** Module orientation. */
+  orientation: Orientation;
   battery: Battery;
+  /** Battery usable capacity in kWh (authoritative; 0 when off). */
+  capacityKWh: number;
+  /** Battery max power in kW (authoritative). */
+  maxPowerKW: number;
+  /** Total investment in EUR (PV + battery). */
+  investmentEUR: number;
   heatpump: boolean;
   heatpumpKWh: number;
   ev: boolean;
@@ -41,7 +58,12 @@ export function defaultScenario(): Scenario {
     priceCt: 30,
     location: "boizenburg",
     pv: "10",
+    peakKWp: 10,
+    orientation: "south",
     battery: "off",
+    capacityKWh: 0,
+    maxPowerKW: 0,
+    investmentEUR: 7000,
     heatpump: false,
     heatpumpKWh: 3500,
     ev: false,
@@ -50,17 +72,17 @@ export function defaultScenario(): Scenario {
   };
 }
 
-// --- derived hardware spec -------------------------------------------------
+// --- preset hardware spec (for the example buttons / offers) ---------------
 export interface PVSpec {
   kwp: number;
-  orientation: "south" | "east" | "west" | "east_west";
+  orientation: Orientation;
   capacityKWh: number;
   maxPowerKW: number;
   investmentEUR: number;
 }
 
-export function pvSpec(s: Scenario): PVSpec {
-  switch (s.pv) {
+export function pvPreset(pv: PVSize): PVSpec {
+  switch (pv) {
     case "none":
       return { kwp: 0, orientation: "south", capacityKWh: 0, maxPowerKW: 0, investmentEUR: 0 };
     case "balcony":
@@ -72,19 +94,18 @@ export function pvSpec(s: Scenario): PVSpec {
   }
 }
 
-/** Spec with the battery add-on cost folded in. */
+/** Effective hardware spec derived from the (authoritative) numeric fields. */
 export function spec(s: Scenario): PVSpec {
-  const p = pvSpec(s);
-  if (s.battery === "off") {
-    p.capacityKWh = 0;
-    p.maxPowerKW = 0;
-  } else {
-    p.investmentEUR += s.pv === "10" ? 3000 : s.pv === "20" ? 12000 : 1500;
-  }
-  return p;
+  const bat = s.battery === "on";
+  return {
+    kwp: s.peakKWp,
+    orientation: s.orientation,
+    capacityKWh: bat ? s.capacityKWh : 0,
+    maxPowerKW: bat ? s.maxPowerKW : 0,
+    investmentEUR: s.investmentEUR,
+  };
 }
 
-// --- expand scenario -> SimParams ------------------------------------------
 export function scenarioToSimParams(s: Scenario): SimParams {
   const sp = spec(s);
   const p: SimParams = {
@@ -119,7 +140,6 @@ export function scenarioToSimParams(s: Scenario): SimParams {
     importScheme: "fixed",
     importFixedCt: s.priceCt,
     investmentEUR: sp.investmentEUR,
-    heatpumpElectricCt: s.priceCt,
   };
   return p;
 }
@@ -184,18 +204,28 @@ export function scenarioFromQuery(qs: string): Scenario {
   s.priceCt = num("ict", s.priceCt);
   const loc = q.get("loc");
   if (loc) s.location = loc;
+  const kwp = num("kwp", NaN);
+  if (Number.isFinite(kwp)) {
+    s.peakKWp = kwp;
+    s.pv = kwp >= 19 ? "20" : kwp >= 9 ? "10" : kwp >= 0.5 ? "balcony" : "none";
+  }
+  const o = q.get("o");
+  if (o === "south" || o === "east" || o === "west" || o === "east_west") s.orientation = o;
+  const cap = num("cap", NaN);
+  if (Number.isFinite(cap) && cap > 0) {
+    s.battery = "on";
+    s.capacityKWh = cap;
+  } else {
+    s.battery = "off";
+    s.capacityKWh = 0;
+  }
+  s.maxPowerKW = num("pwr", s.maxPowerKW);
+  s.investmentEUR = num("inv", s.investmentEUR);
   s.heatpump = bool("wp");
   s.heatpumpKWh = num("wk", s.heatpumpKWh);
   s.ev = bool("ev");
   s.evKWh = num("ek", s.evKWh);
   s.bwwp = bool("bw");
-  const kwp = num("kwp", NaN);
-  if (Number.isFinite(kwp)) {
-    s.pv =
-      kwp >= 19 ? "20" : kwp >= 9 ? "10" : kwp >= 0.5 ? "balcony" : "none";
-  }
-  const cap = num("cap", NaN);
-  if (Number.isFinite(cap) && cap > 0) s.battery = "on";
   return s;
 }
 
@@ -203,23 +233,32 @@ export function scenarioFromQuery(qs: string): Scenario {
 export type OfferKind = "balkon" | "10kw" | "10kwBattery";
 
 export function applyOffer(s: Scenario, kind: OfferKind): Scenario {
-  switch (kind) {
-    case "balkon":
-      return { ...s, pv: "balcony", battery: "off" };
-    case "10kw":
-      return { ...s, pv: "10", battery: "off" };
-    case "10kwBattery":
-      return { ...s, pv: "10", battery: "on" };
+  const pv = kind === "balkon" ? "balcony" : "10";
+  const base = pvPreset(pv);
+  const out: Scenario = {
+    ...s,
+    pv,
+    peakKWp: base.kwp,
+    orientation: base.orientation,
+    battery: "off",
+    capacityKWh: 0,
+    maxPowerKW: 0,
+    investmentEUR: base.investmentEUR,
+  };
+  if (kind === "10kwBattery") {
+    out.battery = "on";
+    out.capacityKWh = base.capacityKWh;
+    out.maxPowerKW = base.maxPowerKW;
+    out.investmentEUR = base.investmentEUR + (base.kwp >= 19 ? 12000 : 3000);
   }
+  return out;
 }
 
 export function pvLabel(s: Scenario): string {
-  return {
-    none: "Kein PV (Basis)",
-    balcony: "Balkonkraftwerk 800 Wp",
-    "10": "10 kWp (Süd)",
-    "20": "20 kWp (Ost/West)",
-  }[s.pv];
+  if (s.peakKWp <= 0) return "Kein PV (Basis)";
+  if (s.peakKWp < 1) return `Balkonkraftwerk ${Math.round(s.peakKWp * 1000)} Wp`;
+  const ort = s.orientation === "east_west" ? "Ost/West" : s.orientation === "south" ? "Süd" : s.orientation;
+  return `${s.peakKWp} kWp (${ort})`;
 }
 
 export interface ScenarioMetrics {
@@ -238,7 +277,7 @@ export interface ScenarioMetrics {
 /** Compute the economics of a scenario, including savings vs. a no-PV baseline. */
 export function computeMetrics(s: Scenario): ScenarioMetrics {
   const rep = runScenario(s);
-  const base = runScenario({ ...s, pv: "none", battery: "off" });
+  const base = runScenario({ ...s, pv: "none", peakKWp: 0, battery: "off", capacityKWh: 0, maxPowerKW: 0, investmentEUR: 0 });
   const baselineCost = (base.summary.totalLoadKWh * s.priceCt) / 100;
   const netCost = rep.summary.importCostEUR - rep.summary.exportRevenueEUR;
   const savings = baselineCost - netCost;

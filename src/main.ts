@@ -6,6 +6,7 @@ import {
   renderMonthlyChart,
   renderHourlyChart,
   renderScenarioChart,
+  renderTariffCombinationChart,
 } from "./ui/charts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
@@ -24,6 +25,8 @@ const heatingHost = document.getElementById("heating") as HTMLElement;
 const heatingBody = document.getElementById("heating-body") as HTMLElement;
 const carHost = document.getElementById("car") as HTMLElement;
 const carBody = document.getElementById("car-body") as HTMLElement;
+const combosHost = document.getElementById("tarif-combos") as HTMLElement;
+const combosBody = document.getElementById("tarif-combos-body") as HTMLElement;
 
 let selectedMonth = 6; // July
 let rafPending = false;
@@ -169,6 +172,28 @@ function recompute(): void {
   renderScenarioChart(scenarioHost, report.scenario);
   renderHeating(report);
   renderOpportunityCar(report);
+  renderTariffCombinations(report);
+}
+
+function renderTariffCombinations(r: SimReport): void {
+  combosHost.style.display = "";
+  const years = r.tariffCombinations.years.join(", ");
+  combosBody.innerHTML =
+    `<div class="hint">Import-Kosten & Export-Erlös je Tarifkombination, berechnet über die historischen Spot-Preisjahre ${years} ` +
+    `(Volllast-Auslegung: PV-Erzeugung, Verbrauch und Batterie-Dispatch werden pro Jahr neu simuliert).</div>` +
+    `<div class="combo-grid"></div>`;
+  const grid = combosBody.querySelector(".combo-grid") as HTMLElement;
+  for (const combo of r.tariffCombinations.combinations) {
+    const cell = document.createElement("div");
+    cell.className = "combo-cell";
+    const title = document.createElement("h3");
+    title.textContent = combo.label;
+    const chart = document.createElement("div");
+    cell.appendChild(title);
+    cell.appendChild(chart);
+    grid.appendChild(cell);
+    renderTariffCombinationChart(chart, combo);
+  }
 }
 
 function scheduleRecompute(): void {
