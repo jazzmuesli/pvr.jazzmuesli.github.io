@@ -157,7 +157,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   if (/\b(brauchwasser|ww-?wp|\bbwwp\b)\b/.test(msg)) {
     scenario = { ...scenario, bwwp: true };
   }
-  if (/\bbalkon(?:kraftwerk)?\b/.test(msg)) pvKeyword = "balkon";
+  if (/\bbalkon(?:kraftwerk)?\b|\bbkw\b/.test(msg)) pvKeyword = "balkon";
   if (/\b20\s*kwp|20kw\b/.test(msg)) pvKeyword = "20";
   if (/\b10\s*kwp|10kw\b/.test(msg)) pvKeyword = "10kw";
   if (/\b(speicher|batterie)\b/.test(msg) && scenario.pv !== "none") {

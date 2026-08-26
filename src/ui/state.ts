@@ -3,6 +3,7 @@ import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
 import { ConsumerConfig, totalLoad } from "../calc/consumers";
 import { TariffScheme } from "../calc/tariff";
 import { SimParams } from "../calc/report";
+import { CarParams, DEFAULT_CAR_PARAMS } from "../calc/car";
 
 export type Orientation = "south" | "east" | "west" | "east_west";
 
@@ -40,6 +41,8 @@ export interface AppState {
   // Kostenvergleich mit Heizöl / Gas.
   heatpumpJaz: number;
   heatpumpElectricCt: number;
+  // Opportunitätskosten: E-Auto vs. Diesel (jährliche Fahrleistung u. a.).
+  car: CarParams;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -77,6 +80,7 @@ export const DEFAULT_STATE: AppState = {
   investmentEUR: 32000,
   heatpumpJaz: 3,
   heatpumpElectricCt: 24,
+  car: { ...DEFAULT_CAR_PARAMS },
 };
 
 /** Map the UI state onto the pure simulation parameters. */
@@ -109,6 +113,7 @@ export function toSimParams(s: AppState): SimParams {
     investmentEUR: s.investmentEUR,
     heatpumpJaz: s.heatpumpJaz,
     heatpumpElectricCt: s.heatpumpElectricCt,
+    car: { ...s.car },
   };
 }
 

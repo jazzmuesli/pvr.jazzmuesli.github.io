@@ -85,17 +85,17 @@ describe("runSimulation", () => {
 describe("heating section", () => {
   it("is included in the report and uses the heat-pump consumption", () => {
     const r = runSimulation(params({ consumers: { ...baseConsumers, heatpump: { enabled: true, annualKWh: 5000 } }, heatpumpJaz: 3 }));
-    expect(r.heating).toBeDefined();
-    expect(r.heating.heatpumpElectricKWh).toBe(5000);
-    expect(r.heating.usefulHeatKWh).toBe(15000);
-    expect(r.heating.heatpump.totalEUR).toBeCloseTo(1200, 2);
-    expect(r.heating.oil.totalEUR).toBeGreaterThan(r.heating.heatpump.totalEUR);
-    expect(r.heating.gas.totalEUR).toBeGreaterThan(r.heating.heatpump.totalEUR);
+    expect(r.opportunityCosts).toBeDefined();
+    expect(r.opportunityCosts.heating.heatpumpElectricKWh).toBe(5000);
+    expect(r.opportunityCosts.heating.usefulHeatKWh).toBe(15000);
+    expect(r.opportunityCosts.heating.heatpump.totalEUR).toBeCloseTo(1200, 2);
+    expect(r.opportunityCosts.heating.oil.totalEUR).toBeGreaterThan(r.opportunityCosts.heating.heatpump.totalEUR);
+    expect(r.opportunityCosts.heating.gas.totalEUR).toBeGreaterThan(r.opportunityCosts.heating.heatpump.totalEUR);
   });
 
   it("reflects the JAZ query parameter", () => {
     const r = runSimulation(params({ heatpumpJaz: 4, consumers: { ...baseConsumers, heatpump: { enabled: true, annualKWh: 5000 } } }));
-    expect(r.heating.usefulHeatKWh).toBe(20000);
+    expect(r.opportunityCosts.heating.usefulHeatKWh).toBe(20000);
   });
 });
 

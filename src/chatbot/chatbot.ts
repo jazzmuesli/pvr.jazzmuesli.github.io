@@ -5,6 +5,7 @@
 import { Store } from "../store";
 import { Scenario } from "../scenario";
 import { AdvisorOutput, AdvisorContext, advisorTurn, scenariosEqual, Stage } from "./advisor";
+import { Logger } from "./logger";
 
 export type GenerateFn = (system: string, out: AdvisorOutput) => Promise<string>;
 
@@ -12,6 +13,7 @@ export interface ChatBotOptions {
   store: Store<Scenario>;
   generate?: GenerateFn;
   systemPrompt?: string;
+  logger?: Logger;
 }
 
 export class ChatBot {
@@ -19,11 +21,13 @@ export class ChatBot {
   private store: Store<Scenario>;
   private generate?: GenerateFn;
   private systemPrompt: string;
+  private logger?: Logger;
 
   constructor(opts: ChatBotOptions) {
     this.store = opts.store;
     this.generate = opts.generate;
     this.systemPrompt = opts.systemPrompt ?? "Du bist ein Energiewende-Berater.";
+    this.logger = opts.logger;
   }
 
   reset(): void {
@@ -43,6 +47,10 @@ export class ChatBot {
       this.store.setState(out.scenario);
     }
 
+    if (this.logger && message.trim() !== "") {
+      this.logger.record({ role: "user", text: message, stage: this.stage });
+    }
+
     let reply = out.reply;
     if (this.generate) {
       try {
@@ -50,6 +58,16 @@ export class ChatBot {
       } catch {
         reply = out.reply; // fall back to the template if the LLM is unavailable
       }
+    }
+
+    if (this.logger) {
+      this.logger.record({
+        role: "bot",
+        text: reply,
+        intent: out.intent,
+        stage: out.stage,
+        scenario: out.scenario,
+      });
     }
     return { ...out, reply };
   }

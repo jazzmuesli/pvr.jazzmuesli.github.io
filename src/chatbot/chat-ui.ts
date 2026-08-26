@@ -5,6 +5,7 @@
 import { Store } from "../store";
 import { Scenario } from "../scenario";
 import { ChatBot, GenerateFn } from "./chatbot";
+import { createLogger } from "./logger";
 
 export interface ChatUiOptions {
   mount: HTMLElement;
@@ -14,7 +15,8 @@ export interface ChatUiOptions {
 }
 
 export function initChat(opts: ChatUiOptions): ChatBot {
-  const bot = new ChatBot({ store: opts.store, generate: opts.generate, systemPrompt: opts.systemPrompt });
+  const logger = createLogger();
+  const bot = new ChatBot({ store: opts.store, generate: opts.generate, systemPrompt: opts.systemPrompt, logger });
 
   opts.mount.innerHTML = `
     <div class="chat-log" id="chat-log"></div>

@@ -21,11 +21,17 @@ import {
 import { effectiveNetPrice, EffectivePrice } from "./vwap";
 import { computeAmortisation, Amortisation } from "./amortisation";
 import {
-  computeHeating,
   HeatingParams,
-  HeatingReport,
   DEFAULT_HEATING_PARAMS,
 } from "./heating";
+import {
+  DEFAULT_CAR_PARAMS,
+  CarParams,
+} from "./car";
+import {
+  computeOpportunityCosts,
+  OpportunityCosts,
+} from "./opportunity";
 
 // ---- Domain types shared with the UI ----------------------------------------
 
@@ -108,6 +114,10 @@ export interface SimParams {
   // fossil-fuelled alternative cost comparison in `heating`).
   heatpumpJaz: number;
   heatpumpElectricCt: number;
+  // Opportunity-cost comparison inputs (heating + EV vs. diesel). The defaults
+  // are realistic for a German household; the heat-pump electricity comes from
+  // the heat-pump consumer above.
+  car: CarParams;
 }
 
 export const DEFAULT_SIM_PARAMS: SimParams = {
@@ -143,6 +153,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   investmentEUR: 32000,
   heatpumpJaz: 3,
   heatpumpElectricCt: 24,
+  car: { ...DEFAULT_CAR_PARAMS },
 };
 
 // Parse URL-style query parameters into SimParams. Mirrors the names used by
@@ -193,6 +204,10 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.investmentEUR = num("inv", p.investmentEUR);
   p.heatpumpJaz = num("jaz", p.heatpumpJaz);
   p.heatpumpElectricCt = num("wpc", p.heatpumpElectricCt);
+  // Opportunity-cost (EV vs. diesel) inputs.
+  p.car.annualKm = num("km", p.car.annualKm);
+  p.car.dieselEurPerL = num("dl", p.car.dieselEurPerL);
+  p.car.evElectricCtPerKwh = num("ec", p.car.evElectricCtPerKwh);
   return p;
 }
 
@@ -207,8 +222,9 @@ export interface SimReport {
   /** Daily profile for every month: daily[month-1][hour]. */
   daily: DayChartDatum[][];
   scenario: ScenarioDatum[];
-  /** Heating cost comparison (heat pump vs. oil vs. gas) for the same useful heat. */
-  heating: HeatingReport;
+  /** Opportunity-cost comparison: heating (heat pump vs. oil vs. gas) and
+   *  mobility (EV vs. diesel), for the same useful heat / annual distance. */
+  opportunityCosts: OpportunityCosts;
 }
 
 export interface SimSummary {
@@ -436,7 +452,13 @@ export function runSimulation(p: SimParams): SimReport {
     jaz: p.heatpumpJaz,
     heatpumpElectricCt: p.heatpumpElectricCt,
   };
-  const heating = computeHeating(heatingParams);
+
+  // Opportunity-cost comparison (heating + EV vs. diesel) — the single shared
+  // function used by both the `/api` endpoint and the client UI.
+  const opportunityCosts = computeOpportunityCosts({
+    heating: heatingParams,
+    car: p.car,
+  });
 
   const summary: SimSummary = {
     totalPVKWh: annualSum(result.pv),
@@ -459,7 +481,7 @@ export function runSimulation(p: SimParams): SimReport {
     monthly,
     daily,
     scenario,
-    heating,
+    opportunityCosts,
   };
 }
 

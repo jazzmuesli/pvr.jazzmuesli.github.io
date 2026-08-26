@@ -10,6 +10,7 @@ import {
   pvLabel,
   computeMetrics,
 } from "../scenario";
+import { SimReport } from "../calc/report";
 import {
   renderMonthlyChart,
   renderHourlyChart,
@@ -230,8 +231,57 @@ export function initWizard(opts: WizardOptions): void {
     });
     renderHourly();
     renderScenarioChart(opts.scenarioEl, rep.scenario);
+    renderOpportunity(rep);
     const url = `${location.pathname}?${scenarioToQuery(s).toString()}`;
     history.replaceState(null, "", url);
+  }
+
+  function renderOpportunity(r: SimReport): void {
+    const host = document.getElementById("opportunity") as HTMLElement | null;
+    const body = document.getElementById("opportunity-body") as HTMLElement | null;
+    if (!host || !body) return;
+    const oc = r.opportunityCosts;
+    host.style.display = oc.heating.heatpumpElectricKWh > 0 || oc.car.annualKm > 0 ? "" : "none";
+
+    const fmt = (v: number) => `${Math.round(v).toLocaleString("de-DE")} €`;
+    let html = "";
+
+    if (oc.heating.heatpumpElectricKWh > 0) {
+      const h = oc.heating;
+      const rows = [
+        { a: h.heatpump, hl: true, d: "" },
+        { a: h.oil, hl: false, d: `${h.oil.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.oil.deltaVsHeatpumpEUR)} ggü. WP` },
+        { a: h.gas, hl: false, d: `${h.gas.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.gas.deltaVsHeatpumpEUR)} ggü. WP` },
+      ];
+      html += `<div class="heat-head">Wärmepumpe: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh → ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</div>`;
+      html += `<div class="summary">` + rows.map(({ a, hl, d }) => `
+        <div class="card${hl ? " card-hl" : ""}">
+          <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/J.</span></div>
+          <div class="card-key">${a.label}</div>
+          <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · Netz ${fmt(a.gridFeeEUR)}` : ""}</div>
+          <div class="card-sub">Schornsteinfeger ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · Nebenk. ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
+          ${d ? `<div class="card-sub">${d}</div>` : ""}
+        </div>`).join("") + `</div>`;
+    }
+
+    if (oc.car.annualKm > 0) {
+      const c = oc.car;
+      const rows = [
+        { a: c.ev, hl: true, d: "" },
+        { a: c.diesel, hl: false, d: `${c.diesel.deltaVsEvEUR > 0 ? "+" : ""}${fmt(c.diesel.deltaVsEvEUR)} ggü. E-Auto` },
+      ];
+      html += `<div class="heat-head">E-Auto vs. Diesel: ${Math.round(c.annualKm).toLocaleString("de-DE")} km/Jahr</div>`;
+      html += `<div class="summary">` + rows.map(({ a, hl, d }) => `
+        <div class="card${hl ? " card-hl" : ""}">
+          <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/J.</span></div>
+          <div class="card-key">${a.label}</div>
+          <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
+          <div class="card-sub">Wartung ${fmt(a.maintenanceEUR)} · Steuer ${fmt(a.vehicleTaxEUR)}</div>
+          ${d ? `<div class="card-sub">${d}</div>` : ""}
+        </div>`).join("") + `</div>`;
+    }
+
+    body.innerHTML = html;
   }
 
   function scheduleRecompute(): void {
