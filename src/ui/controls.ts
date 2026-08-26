@@ -120,6 +120,11 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     host.appendChild(h);
   };
 
+  section("Investition");
+  host.appendChild(
+    slider({ label: "Gesamtinvestition", min: 5000, max: 80000, step: 1000, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+  );
+
   section("PV-Anlage");
   host.appendChild(
     slider({ label: "Peak-Leistung", min: 1, max: 50, step: 1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => String(v) }, state, onChange),
@@ -264,9 +269,6 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       onChange,
     ),
   );
-  host.appendChild(
-    slider({ label: "Fester Arbeitspreis (Import)", min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
-  );
 
   section("Strompreis");
   host.appendChild(
@@ -280,11 +282,8 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
 
-  section("Wirtschaftlichkeit (Investition)");
+  section("Wirtschaftlichkeit");
   host.appendChild(
-    slider({ label: "PV-Investition", min: 500, max: 2500, step: 25, unit: " €/kWp", get: (s) => s.pvCostPerKWp, set: (s, v) => (s.pvCostPerKWp = v), fmt: (v) => String(Math.round(v)) }, state, onChange),
-  );
-  host.appendChild(
-    slider({ label: "Speicher-Investition", min: 200, max: 1500, step: 25, unit: " €/kWh", get: (s) => s.batteryCostPerKWh, set: (s, v) => (s.batteryCostPerKWh = v), fmt: (v) => String(Math.round(v)) }, state, onChange),
+    slider({ label: "Fester Arbeitspreis (Import)", min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
   );
 }

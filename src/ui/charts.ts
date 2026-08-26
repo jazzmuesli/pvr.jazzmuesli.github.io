@@ -12,6 +12,14 @@
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
+import {
+  ConsumerKey,
+  CONSUMER_ORDER,
+  MonthlyChartDatum,
+  DayChartDatum,
+  ScenarioDatum,
+} from "../calc/report";
+
 function el(tag: string, attrs: Record<string, string | number> = {}): SVGElement {
   const e = document.createElementNS(SVGNS, tag);
   for (const k in attrs) e.setAttribute(k, String(attrs[k]));
@@ -19,9 +27,6 @@ function el(tag: string, attrs: Record<string, string | number> = {}): SVGElemen
 }
 
 // ---- semantic palette ------------------------------------------------------
-export type ConsumerKey = "household" | "heatpump" | "bwwp" | "ev";
-
-export const CONSUMER_ORDER: ConsumerKey[] = ["household", "heatpump", "bwwp", "ev"];
 export const CONSUMER_LABELS: Record<ConsumerKey, string> = {
   household: "Haushalt",
   heatpump: "Wärmepumpe",
@@ -58,13 +63,6 @@ export const CONSUMER_COLORS: Record<ConsumerKey, string> = {
   bwwp: COLORS.bwwp,
   ev: COLORS.ev,
 };
-
-export interface ConsumerBreakdown {
-  household: number;
-  heatpump: number;
-  bwwp: number;
-  ev: number;
-}
 
 // ---- scale helper ----------------------------------------------------------
 function niceScale(maxV: number, targetTicks = 5): { max: number; step: number } {
@@ -165,18 +163,6 @@ function appendLegend(host: HTMLElement, items: LegendItem[]): void {
 }
 
 // ---- monthly chart (stacked consumer load + PV + net EUR) ------------------
-export interface MonthlyChartDatum {
-  month: number;
-  label: string;
-  pvKWh: number;
-  load: ConsumerBreakdown;
-  totalLoadKWh: number;
-  selfConsumptionKWh: number;
-  importKWh: number;
-  exportKWh: number;
-  netEUR: number;
-}
-
 export function renderMonthlyChart(
   host: HTMLElement,
   data: MonthlyChartDatum[],
@@ -321,18 +307,6 @@ export function renderMonthlyChart(
 }
 
 // ---- day chart (hourly, stacked consumer area + PV/import/SOC/price) -------
-export interface DayChartDatum {
-  hour: number;
-  pvKWh: number;
-  load: ConsumerBreakdown;
-  totalLoadKWh: number;
-  selfUseKWh: number;
-  importKWh: number;
-  exportKWh: number;
-  avgPrice: number;
-  socKWh: number;
-}
-
 export function renderHourlyChart(host: HTMLElement, data: DayChartDatum[], monthLabel: string, socMaxKWh: number): void {
   renderDayChart(host, data, monthLabel, true, socMaxKWh);
 }
@@ -476,13 +450,6 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
 }
 
 // ---- scenario comparison (export revenue vs import cost, net) --------------
-export interface ScenarioDatum {
-  label: string;
-  netEUR: number;
-  exportEUR: number;
-  importEUR: number;
-}
-
 export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): void {
   host.innerHTML = "";
   const W = 960;

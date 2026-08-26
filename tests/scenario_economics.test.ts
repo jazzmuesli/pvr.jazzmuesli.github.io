@@ -48,7 +48,7 @@ function scenario(ex: "fixed" | "market", im: "fixed" | "dynamic" | "dynamic14a"
   const imp = importPriceArray(im, city, prices, ict);
   let baseline = 0;
   for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
-  const a = computeAmortisation({ peakKWp: 22, capacityKWh: 19.353, baselineCostEUR: baseline, systemNetEUR: net });
+  const a = computeAmortisation({ baselineCostEUR: baseline, systemNetEUR: net, investmentEUR: 32000 });
   const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, exportEUR);
   return { exportEUR, importEUR, net, baseline, benefit: a.annualBenefitEUR, payback: a.paybackYears, overallEff: eff.overallCt, byConsumer: eff.byConsumer };
 }
@@ -63,7 +63,7 @@ function evaluate(peakKWp: number, cap: number): Scn {
   const imp = importPriceArray("fixed", city, prices, 24);
   let baseline = 0;
   for (let i = 0; i < res.load.length; i++) baseline += (res.load[i] * imp[i]) / 100;
-  const a = computeAmortisation({ peakKWp, capacityKWh: cap, baselineCostEUR: baseline, systemNetEUR: net });
+  const a = computeAmortisation({ baselineCostEUR: baseline, systemNetEUR: net, investmentEUR: 32000 });
   return { exportEUR, importEUR, net, baseline, benefit: a.annualBenefitEUR, payback: a.paybackYears, overallEff: 0, byConsumer: {} };
 }
 

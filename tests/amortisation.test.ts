@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeAmortisation, DEFAULT_PV_COST_PER_KWP, DEFAULT_BATTERY_COST_PER_KWH } from "../src/calc/amortisation";
+import { computeAmortisation } from "../src/calc/amortisation";
 import { simulate } from "../src/calc/simulation";
 import { totalLoad, ConsumerConfig } from "../src/calc/consumers";
 import { generatePrices } from "../src/calc/priceModel";
@@ -28,72 +28,68 @@ const consumers: ConsumerConfig = {
 };
 
 const city = cityForLocation("boizenburg");
+
+// Mirror runSimulation: baseline = cost of importing the whole load at the tariff.
+function baselineFor(result: ReturnType<typeof simulate>, ict: number): number {
+  const imp = importPriceArray("fixed", city, generatePrices(12345), ict);
+  let baseline = 0;
+  for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
+  return baseline;
+}
+
 describe("amortisation (simple payback)", () => {
   it("annualBenefit = baselineCost + systemNetEUR", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 300 });
+    const a = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
     expect(a.annualBenefitEUR).toBeCloseTo(1800, 6);
   });
 
-  it("investment = PV (per kWp) + battery (per kWh)", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 300 });
-    expect(a.pvInvestmentEUR).toBeCloseTo(10 * DEFAULT_PV_COST_PER_KWP, 6);
-    expect(a.batteryInvestmentEUR).toBeCloseTo(5 * DEFAULT_BATTERY_COST_PER_KWH, 6);
-    expect(a.totalInvestmentEUR).toBeCloseTo(10 * DEFAULT_PV_COST_PER_KWP + 5 * DEFAULT_BATTERY_COST_PER_KWH, 6);
-    expect(a.paybackYears).toBeCloseTo(a.totalInvestmentEUR / 1800, 6);
+  it("investment is the single supplied total, independent of kWp/kWh", () => {
+    const a = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
+    expect(a.totalInvestmentEUR).toBe(20000);
+    expect(a.paybackYears).toBeCloseTo(20000 / 1800, 6);
+
+    // Different sizes at the same total investment yield the same payback inputs.
+    const small = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
+    const big = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
+    expect(big.totalInvestmentEUR).toBe(small.totalInvestmentEUR);
   });
 
-  it("a larger, costlier system has a longer payback", () => {
-    const small = computeAmortisation({ peakKWp: 5, capacityKWh: 0, baselineCostEUR: 1000, systemNetEUR: 500 });
-    const big = computeAmortisation({ peakKWp: 10, capacityKWh: 0, baselineCostEUR: 1000, systemNetEUR: 500 });
-    expect(big.totalInvestmentEUR).toBeGreaterThan(small.totalInvestmentEUR);
-    expect(big.paybackYears).toBeGreaterThan(small.paybackYears);
+  it("a larger investment lengthens the payback (benefit held constant)", () => {
+    const cheap = computeAmortisation({ baselineCostEUR: 1000, systemNetEUR: 500, investmentEUR: 15000 });
+    const pricey = computeAmortisation({ baselineCostEUR: 1000, systemNetEUR: 500, investmentEUR: 30000 });
+    expect(pricey.totalInvestmentEUR).toBeGreaterThan(cheap.totalInvestmentEUR);
+    expect(pricey.paybackYears).toBeGreaterThan(cheap.paybackYears);
   });
 
   it("an unprofitable system has infinite payback", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 0, baselineCostEUR: 1000, systemNetEUR: -1000 });
+    const a = computeAmortisation({ baselineCostEUR: 1000, systemNetEUR: -1000, investmentEUR: 10000 });
     expect(a.annualBenefitEUR).toBeLessThanOrEqual(0);
     expect(a.paybackYears).toBe(Infinity);
   });
 
-  it("default investment for 22 kWp + 19.353 kWh ≈ 32 kEUR", () => {
-    const a = computeAmortisation({ peakKWp: 22, capacityKWh: 19.353, baselineCostEUR: 1500, systemNetEUR: 300 });
-    expect(a.totalInvestmentEUR).toBeGreaterThan(30000);
-    expect(a.totalInvestmentEUR).toBeLessThan(33000);
-    expect(a.pvInvestmentEUR).toBeCloseTo(22 * DEFAULT_PV_COST_PER_KWP, 6);
-    expect(a.batteryInvestmentEUR).toBeCloseTo(19.353 * DEFAULT_BATTERY_COST_PER_KWH, 6);
-  });
-
   it("payback decreases as the import tariff rises (more savings from self-consumption)", () => {
-    const prices = generatePrices(12345);
     const load = totalLoad(consumers);
     const result = simulate(baseConfig(load, 19.353));
-    const paybackFor = (ict: number) => {
+    const paybackFor = (ict: number, investmentEUR: number) => {
       const econ = computeEconomics(result, {
         commissioningYear: 2025, peakKWp: 22, exportScheme: "fixed", feedInCt: 7.2,
         importScheme: "fixed", importCity: city, importFixedCt: ict,
       });
-      // Mirror main.ts: baseline = cost of importing the WHOLE load at the chosen tariff.
-      const imp = importPriceArray("fixed", city, prices, ict);
-      let baseline = 0;
-      for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
-      return computeAmortisation({ peakKWp: 22, capacityKWh: 19.353, baselineCostEUR: baseline, systemNetEUR: econ.netSelectedEUR }).paybackYears;
+      return computeAmortisation({ baselineCostEUR: baselineFor(result, ict), systemNetEUR: econ.netSelectedEUR, investmentEUR }).paybackYears;
     };
-    const cheap = paybackFor(24);
-    const pricey = paybackFor(44.5);
+    const cheap = paybackFor(24, 32000);
+    const pricey = paybackFor(44.5, 32000);
     expect(cheap).toBeGreaterThan(pricey);
   });
 
-  it("a real default config yields a finite, positive payback", () => {    const prices = generatePrices(12345);
+  it("a real default config yields a finite, positive payback", () => {
     const load = totalLoad(consumers);
     const result = simulate(baseConfig(load, 19.353));
     const econ = computeEconomics(result, {
       commissioningYear: 2025, peakKWp: 22, exportScheme: "fixed", feedInCt: 7.2,
       importScheme: "fixed", importCity: cityForLocation("boizenburg"), importFixedCt: 24,
     });
-    const imp = importPriceArray("fixed", city, prices);
-    let baseline = 0;
-    for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
-    const a = computeAmortisation({ peakKWp: 22, capacityKWh: 19.353, baselineCostEUR: baseline, systemNetEUR: econ.netSelectedEUR });
+    const a = computeAmortisation({ baselineCostEUR: baselineFor(result, 24), systemNetEUR: econ.netSelectedEUR, investmentEUR: 32000 });
     expect(a.annualBenefitEUR).toBeGreaterThan(0);
     expect(a.paybackYears).toBeGreaterThan(0);
     expect(a.paybackYears).toBeLessThan(40);

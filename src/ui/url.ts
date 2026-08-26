@@ -50,8 +50,7 @@ export function serializeState(s: AppState): string {
   p.set("ex", s.exportScheme);
   p.set("im", s.importScheme);
   p.set("ict", String(s.importFixedCt));
-  p.set("pvc", String(s.pvCostPerKWp));
-  p.set("batc", String(s.batteryCostPerKWh));
+  p.set("inv", String(s.investmentEUR));
   return p.toString();
 }
 
@@ -97,8 +96,7 @@ export function deserializeState(qs: string): AppState {
   str(p, "ex", (v) => (s.exportScheme = v as AppState["exportScheme"]));
   str(p, "im", (v) => (s.importScheme = v as AppState["importScheme"]));
   num(p, "ict", (v) => (s.importFixedCt = v));
-  num(p, "pvc", (v) => (s.pvCostPerKWp = v));
-  num(p, "batc", (v) => (s.batteryCostPerKWh = v));
+  num(p, "inv", (v) => (s.investmentEUR = v));
   return s;
 }
 

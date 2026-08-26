@@ -1,22 +1,11 @@
-import { simulate } from "./calc/simulation";
-import { computeEconomics, monthForStep, EconOptions } from "./calc/revenue";
-import { getYearPrices } from "./calc/priceData";
-import { STEPS_PER_DAY, SimResult } from "./calc/types";
-import { cityForLocation } from "./calc/tariff";
-import { loadByConsumer, ConsumerLoads } from "./calc/consumers";
-import { importPriceArray } from "./calc/tariff";
-import { effectiveNetPrice } from "./calc/vwap";
-import { computeAmortisation } from "./calc/amortisation";
+import { runSimulation, SimReport } from "./calc/report";
 import { buildControls } from "./ui/controls";
-import { DEFAULT_STATE, toSimConfig } from "./ui/state";
+import { DEFAULT_STATE, toSimParams } from "./ui/state";
 import { writeUrl, deserializeState } from "./ui/url";
 import {
   renderMonthlyChart,
   renderHourlyChart,
   renderScenarioChart,
-  DayChartDatum,
-  MonthlyChartDatum,
-  ConsumerBreakdown,
 } from "./ui/charts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
@@ -34,107 +23,41 @@ const scenarioHost = document.getElementById("scenario") as HTMLElement;
 
 let selectedMonth = 6; // July
 let rafPending = false;
+let report: SimReport | null = null;
 
-function baseOpts(): EconOptions {
-  return {
-    commissioningYear: state.commissioningYear,
-    peakKWp: state.peakKWp,
-    exportScheme: state.exportScheme,
-    feedInCt: state.feedInCt,
-    importScheme: state.importScheme,
-    importCity: cityForLocation(state.location),
-    importFixedCt: state.importFixedCt,
-  };
-}
-
-function hourlyProfile(result: SimResult, loads: ConsumerLoads, month: number): DayChartDatum[] {
-  const empty = (): ConsumerBreakdown => ({ household: 0, heatpump: 0, bwwp: 0, ev: 0 });
-  const buckets: {
-    pv: number; load: ConsumerBreakdown; selfUse: number; imp: number; exp: number; priceSum: number; socSum: number; n: number;
-  }[] = Array.from({ length: 24 }, () => ({ pv: 0, load: empty(), selfUse: 0, imp: 0, exp: 0, priceSum: 0, socSum: 0, n: 0 }));
-  for (let i = 0; i < result.pv.length; i++) {
-    const m = monthForStep(i);
-    if (m !== month) continue;
-    const h = Math.floor((i % STEPS_PER_DAY) / (STEPS_PER_DAY / 24));
-    const b = buckets[h];
-    b.pv += result.pv[i];
-    b.load.household += loads.household[i];
-    b.load.heatpump += loads.heatpump[i];
-    b.load.bwwp += loads.bwwp[i];
-    b.load.ev += loads.ev[i];
-    b.selfUse += result.directUse[i] + result.dischargeToLoad[i];
-    b.imp += result.gridImport[i];
-    b.exp += result.exportTotal[i];
-    b.priceSum += result.price[i];
-    b.socSum += result.soc[i];
-    b.n += 1;
-  }
-  return buckets.map((b, h) => {
-    const per = (v: number) => (b.n > 0 ? (v / b.n) * 4 : 0);
-    return {
-      hour: h,
-      pvKWh: per(b.pv),
-      load: {
-        household: per(b.load.household),
-        heatpump: per(b.load.heatpump),
-        bwwp: per(b.load.bwwp),
-        ev: per(b.load.ev),
-      },
-      totalLoadKWh: per(b.load.household + b.load.heatpump + b.load.bwwp + b.load.ev),
-      selfUseKWh: per(b.selfUse),
-      importKWh: per(b.imp),
-      exportKWh: per(b.exp),
-      avgPrice: b.n > 0 ? b.priceSum / b.n : 0,
-      socKWh: b.n > 0 ? b.socSum / b.n : 0,
-    };
-  });
-}
-
-// Per-consumer monthly totals (kWh), aligned with month index 0..11.
-function monthlyConsumerSums(loads: ConsumerLoads): ConsumerBreakdown[] {
-  const sums: ConsumerBreakdown[] = Array.from({ length: 12 }, () => ({ household: 0, heatpump: 0, bwwp: 0, ev: 0 }));
-  for (let i = 0; i < loads.household.length; i++) {
-    const m = monthForStep(i) - 1;
-    sums[m].household += loads.household[i];
-    sums[m].heatpump += loads.heatpump[i];
-    sums[m].bwwp += loads.bwwp[i];
-    sums[m].ev += loads.ev[i];
-  }
-  return sums;
+function importSchemeLabel(): string {
+  return state.importScheme === "fixed" ? "fester Tarif"
+    : state.importScheme === "dynamic" ? "dynamisch (Spot)"
+    : "dynamisch + §14a/3";
 }
 
 function fmtEUR(v: number): string {
   return v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 }
 
-function renderSummary(
-  econ: ReturnType<typeof computeEconomics>,
-  eff: { overallCt: number; byConsumer: Record<string, number> },
-  amort: ReturnType<typeof computeAmortisation>,
-): void {
-  const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
-  const importEUR = state.importScheme === "fixed" ? econ.importCostFixedEUR
-    : state.importScheme === "dynamic" ? econ.importCostDynamicEUR : econ.importCost14aEUR;
-  const selfPct = econ.totalLoadKWh > 0 ? (econ.selfConsumptionKWh / econ.totalLoadKWh) * 100 : 0;
+function renderSummary(r: SimReport): void {
+  const s = r.summary;
+  const eff = r.effectivePrice;
+  const selfPct = s.totalLoadKWh > 0 ? (s.selfConsumptionKWh / s.totalLoadKWh) * 100 : 0;
   const cards: [string, string, string][] = [
-    ["PV-Ertrag", `${Math.round(econ.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Verbrauch", `${Math.round(econ.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Eigenverbrauch", `${Math.round(econ.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)} % des Verbrauchs`],
-    ["Netz-Import", `${Math.round(econ.totalImportKWh).toLocaleString("de-DE")} kWh`, "Batterie + Verbrauch"],
-    ["Export", `${Math.round(econ.totalExportKWh).toLocaleString("de-DE")} kWh`, "ins Netz"],
-    ["Export-Erlös", fmtEUR(exportEUR), state.exportScheme === "market" ? "Direktvermarktung" : "Feste Vergütung"],
-    ["Stromkosten", fmtEUR(importEUR), state.importScheme === "fixed" ? "fester Tarif" : state.importScheme === "dynamic" ? "dynamisch" : "dynamisch + §14a/3"],
-    ["Netto-Bilanz", `${econ.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(econ.netSelectedEUR)}`, "Export − Import"],
-    ["Marktprämie", `${econ.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
-    ["EEG Referenz", `${econ.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
+    ["PV-Ertrag", `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
+    ["Verbrauch", `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
+    ["Eigenverbrauch", `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)} % des Verbrauchs`],
+    ["Netz-Import", `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, "Batterie + Verbrauch"],
+    ["Export", `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, "ins Netz"],
+    ["Export-Erlös", fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? "Direktvermarktung" : "Feste Vergütung"],
+    ["Stromkosten", fmtEUR(s.importCostEUR), importSchemeLabel()],
+    ["Netto-Bilanz", `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, "Export − Import"],
+    ["Marktprämie", `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
+    ["EEG Referenz", `${s.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
     ["Eff. Strompreis (netto)", `${eff.overallCt.toFixed(1)} ct/kWh`, "Netto = (Import − Export) / Verbrauch"],
     ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
     ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
     ["Eff. Preis Brauchw.-WP", `${eff.byConsumer.bwwp.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
     ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
-    ["Investition (PV+Speicher)", fmtEUR(amort.totalInvestmentEUR), `PV ${Math.round(amort.pvInvestmentEUR).toLocaleString("de-DE")} € (${Math.round(state.pvCostPerKWp)} €/kWp) · Speicher ${Math.round(amort.batteryInvestmentEUR).toLocaleString("de-DE")} € (${Math.round(state.batteryCostPerKWh)} €/kWh)`],
-    ["Jahresersparnis", fmtEUR(amort.annualBenefitEUR), "ggü. Volleinspeisung aus dem Netz"],
-    ["Amortisation", amort.paybackYears === Infinity ? "—" : `${amort.paybackYears.toFixed(1)} Jahre`, "einfache Amortisation"],
+    ["Investition (gesamt)", fmtEUR(r.amortisation.totalInvestmentEUR), "einmalige Gesamtinvestition"],
+    ["Jahresersparnis", fmtEUR(r.amortisation.annualBenefitEUR), "ggü. Volleinspeisung aus dem Netz"],
+    ["Amortisation", r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} Jahre`, "einfache Amortisation"],
   ];
   summaryHost.innerHTML = "";
   for (const [k, v, sub] of cards) {
@@ -145,75 +68,23 @@ function renderSummary(
   }
 }
 
-function renderScenario(result: SimResult): void {
-  const variants: { label: string; exportScheme: "fixed" | "market"; importScheme: "fixed" | "dynamic" | "dynamic14a" }[] = [
-    { label: "Fest + Fest", exportScheme: "fixed", importScheme: "fixed" },
-    { label: "DV + Fest", exportScheme: "market", importScheme: "fixed" },
-    { label: "DV + Dyn", exportScheme: "market", importScheme: "dynamic" },
-    { label: "DV + §14a/3", exportScheme: "market", importScheme: "dynamic14a" },
-  ];
-  const data = variants.map((v) => {
-    const e = computeEconomics(result, { ...baseOpts(), exportScheme: v.exportScheme, importScheme: v.importScheme });
-    const exportEUR = v.exportScheme === "fixed" ? e.exportRevenueFixedEUR : e.exportRevenueMarketEUR;
-    const importEUR = v.importScheme === "fixed" ? e.importCostFixedEUR
-      : v.importScheme === "dynamic" ? e.importCostDynamicEUR : e.importCost14aEUR;
-    return { label: v.label, netEUR: exportEUR - importEUR, exportEUR, importEUR };
-  });
-  renderScenarioChart(scenarioHost, data);
+function renderHourly(): void {
+  if (!report) return;
+  const data = report.daily[selectedMonth - 1];
+  monthTitle.textContent = `${MONTH_LABELS[selectedMonth - 1]} — Stundenverteilung`;
+  renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
 }
 
 function recompute(): void {
-  const cfg = toSimConfig(state);
-  const prices = getYearPrices(state.priceYear);
-  const result = simulate({ ...cfg, prices });
-  const econ = computeEconomics(result, baseOpts());
+  report = runSimulation(toSimParams(state));
 
-  const city = cityForLocation(state.location);
-  const impPrices = importPriceArray(state.importScheme, city, prices, state.importFixedCt);
-  const loads = loadByConsumer(state.consumers);
-  const exportEUR = state.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
-  const eff = effectiveNetPrice(loads, result.load, result.gridImport, impPrices, exportEUR);
-
-  let baselineCostEUR = 0;
-  for (let i = 0; i < result.load.length; i++) baselineCostEUR += (result.load[i] * impPrices[i]) / 100;
-  const amort = computeAmortisation({
-    peakKWp: state.peakKWp,
-    capacityKWh: state.capacityKWh,
-    baselineCostEUR,
-    systemNetEUR: econ.netSelectedEUR,
-    pvCostPerKWp: state.pvCostPerKWp,
-    batteryCostPerKWh: state.batteryCostPerKWh,
-  });
-
-  renderSummary(econ, eff, amort);
-
-  const monthlySums = monthlyConsumerSums(loads);
-  const monthly: MonthlyChartDatum[] = econ.monthly.map((r, i) => {
-    const lb = monthlySums[i];
-    return {
-      month: r.month,
-      label: MONTH_LABELS[r.month - 1],
-      pvKWh: r.pvKWh,
-      load: { household: lb.household, heatpump: lb.heatpump, bwwp: lb.bwwp, ev: lb.ev },
-      totalLoadKWh: lb.household + lb.heatpump + lb.bwwp + lb.ev,
-      selfConsumptionKWh: r.selfConsumptionKWh,
-      importKWh: r.importKWh,
-      exportKWh: r.exportKWh,
-      netEUR: r.netSelectedEUR,
-    };
-  });
-  renderMonthlyChart(monthlyHost, monthly, selectedMonth, (m) => {
+  renderSummary(report);
+  renderMonthlyChart(monthlyHost, report.monthly, selectedMonth, (m) => {
     selectedMonth = m;
-    renderHourly(result, loads);
+    renderHourly();
   });
-  renderHourly(result, loads);
-  renderScenario(result);
-}
-
-function renderHourly(result: SimResult, loads: ConsumerLoads): void {
-  const data = hourlyProfile(result, loads, selectedMonth);
-  monthTitle.textContent = `${MONTH_LABELS[selectedMonth - 1]} — Stundenverteilung`;
-  renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
+  renderHourly();
+  renderScenarioChart(scenarioHost, report.scenario);
 }
 
 function scheduleRecompute(): void {

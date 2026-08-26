@@ -2,6 +2,7 @@ import { SimConfig } from "../calc/types";
 import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
 import { ConsumerConfig, totalLoad } from "../calc/consumers";
 import { TariffScheme } from "../calc/tariff";
+import { SimParams } from "../calc/report";
 
 export type Orientation = "south" | "east" | "west" | "east_west";
 
@@ -33,9 +34,8 @@ export interface AppState {
   // Stromtarif (Import)
   importScheme: TariffScheme;
   importFixedCt: number; // ct/kWh
-  // Investitionskosten (Amortisation)
-  pvCostPerKWp: number; // €/kWp
-  batteryCostPerKWh: number; // €/kWh
+  // Investition: eine einzige Gesamtinvestition (€), unabhängig von kWp/kWh.
+  investmentEUR: number;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -70,9 +70,39 @@ export const DEFAULT_STATE: AppState = {
   exportScheme: "fixed",
   importScheme: "fixed",
   importFixedCt: 24,
-  pvCostPerKWp: 1100,
-  batteryCostPerKWh: 400,
+  investmentEUR: 32000,
 };
+
+/** Map the UI state onto the pure simulation parameters. */
+export function toSimParams(s: AppState): SimParams {
+  return {
+    peakKWp: s.peakKWp,
+    tiltDeg: s.tiltDeg,
+    orientation: s.orientation,
+    location: s.location,
+    capacityKWh: s.capacityKWh,
+    maxPowerKW: s.maxPowerKW,
+    minSOC: s.minSOC,
+    maxSOC: s.maxSOC,
+    efficiency: s.efficiency,
+    startSOC: s.startSOC,
+    chargeMode: s.chargeMode,
+    dischargeEvening: s.dischargeEvening,
+    dischargeMorning: s.dischargeMorning,
+    eveningStart: s.eveningStart,
+    eveningEnd: s.eveningEnd,
+    morningStart: s.morningStart,
+    morningEnd: s.morningEnd,
+    feedInCt: s.feedInCt,
+    commissioningYear: s.commissioningYear,
+    priceYear: s.priceYear,
+    consumers: s.consumers,
+    exportScheme: s.exportScheme,
+    importScheme: s.importScheme,
+    importFixedCt: s.importFixedCt,
+    investmentEUR: s.investmentEUR,
+  };
+}
 
 export function toSimConfig(s: AppState): SimConfig {
   const hasBattery = s.capacityKWh > 0;

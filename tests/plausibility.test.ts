@@ -49,7 +49,7 @@ function scenario(ex: "fixed" | "market", im: "fixed" | "dynamic" | "dynamic14a"
   const imp = importPriceArray(im, city, prices, ict);
   let baseline = 0;
   for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
-  const a = computeAmortisation({ peakKWp: 22, capacityKWh: 19.353, baselineCostEUR: baseline, systemNetEUR: net });
+  const a = computeAmortisation({ baselineCostEUR: baseline, systemNetEUR: net, investmentEUR: 32000 });
   const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, exportEUR);
   return { exportEUR, importEUR, net, baseline, benefit: a.annualBenefitEUR, payback: a.paybackYears, overallEff: eff.overallCt, byConsumer: eff.byConsumer };
 }
@@ -64,7 +64,7 @@ function evaluate(peakKWp: number, cap: number): Scn {
   const imp = importPriceArray("fixed", city, prices, 24);
   let baseline = 0;
   for (let i = 0; i < res.load.length; i++) baseline += (res.load[i] * imp[i]) / 100;
-  const a = computeAmortisation({ peakKWp, capacityKWh: cap, baselineCostEUR: baseline, systemNetEUR: net });
+  const a = computeAmortisation({ baselineCostEUR: baseline, systemNetEUR: net, investmentEUR: 32000 });
   return { exportEUR, importEUR, net, baseline, benefit: a.annualBenefitEUR, payback: a.paybackYears, overallEff: 0, byConsumer: {} };
 }
 
@@ -170,24 +170,24 @@ describe("parameter plausibility (price / PV / battery)", () => {
 
 describe("amortisation plausibility", () => {
   it("annualBenefit = baselineCost + systemNetEUR", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 300 });
+    const a = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
     expect(a.annualBenefitEUR).toBeCloseTo(1800, 6);
   });
 
-  it("investment = PV (per kWp) + battery (per kWh)", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 300 });
-    expect(a.totalInvestmentEUR).toBeCloseTo(a.pvInvestmentEUR + a.batteryInvestmentEUR, 6);
+  it("investment is the single supplied total and independent of kWp/kWh", () => {
+    const a = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 300, investmentEUR: 20000 });
+    expect(a.totalInvestmentEUR).toBe(20000);
   });
 
-  it("a costlier system (higher €/kWp or €/kWh) has a longer payback", () => {
-    const cheap = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 500 });
-    const pricey = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 500, pvCostPerKWp: 2000, batteryCostPerKWh: 800 });
+  it("a costlier system (higher total investment) has a longer payback", () => {
+    const cheap = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 500, investmentEUR: 15000 });
+    const pricey = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 500, investmentEUR: 30000 });
     expect(pricey.totalInvestmentEUR).toBeGreaterThan(cheap.totalInvestmentEUR);
     expect(pricey.paybackYears).toBeGreaterThan(cheap.paybackYears);
   });
 
   it("an unprofitable system has infinite payback", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 0, baselineCostEUR: 1000, systemNetEUR: -1000 });
+    const a = computeAmortisation({ baselineCostEUR: 1000, systemNetEUR: -1000, investmentEUR: 10000 });
     expect(a.annualBenefitEUR).toBeLessThanOrEqual(0);
     expect(a.paybackYears).toBe(Infinity);
   });

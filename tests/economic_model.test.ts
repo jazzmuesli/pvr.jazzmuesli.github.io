@@ -54,7 +54,7 @@ function model(peak: number, cap: number, evPvShare: number, ict = FLAT, exportS
   for (let i = 0; i < result.load.length; i++) baseline += (result.load[i] * imp[i]) / 100;
   const exportEUR = exportScheme === "fixed" ? econ.exportRevenueFixedEUR : econ.exportRevenueMarketEUR;
   const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, exportEUR);
-  const amort = computeAmortisation({ peakKWp: peak, capacityKWh: cap, baselineCostEUR: baseline, systemNetEUR: econ.netSelectedEUR });
+  const amort = computeAmortisation({ baselineCostEUR: baseline, systemNetEUR: econ.netSelectedEUR, investmentEUR: 32000 });
   return { econ, eff, amort, baseline };
 }
 
@@ -125,14 +125,14 @@ describe("amortisation consistency", () => {
     expect(m.amort.annualBenefitEUR).toBeCloseTo(m.baseline + m.econ.netSelectedEUR, 4);
   });
 
-  it("investment = PV (per kWp) + battery (per kWh)", () => {
-    const a = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 100, systemNetEUR: 10 });
-    expect(a.totalInvestmentEUR).toBeCloseTo(10 * 1100 + 5 * 400, 4);
+  it("investment is the single supplied total", () => {
+    const a = computeAmortisation({ baselineCostEUR: 100, systemNetEUR: 10, investmentEUR: 32000 });
+    expect(a.totalInvestmentEUR).toBe(32000);
   });
 
-  it("a costlier system (higher €/kWp or €/kWh) has a longer payback", () => {
-    const cheap = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 500 });
-    const pricey = computeAmortisation({ peakKWp: 10, capacityKWh: 5, baselineCostEUR: 1500, systemNetEUR: 500, pvCostPerKWp: 2000, batteryCostPerKWh: 800 });
+  it("a costlier system (higher total investment) has a longer payback", () => {
+    const cheap = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 500, investmentEUR: 15000 });
+    const pricey = computeAmortisation({ baselineCostEUR: 1500, systemNetEUR: 500, investmentEUR: 30000 });
     expect(pricey.totalInvestmentEUR).toBeGreaterThan(cheap.totalInvestmentEUR);
     expect(pricey.paybackYears).toBeGreaterThan(cheap.paybackYears);
   });
