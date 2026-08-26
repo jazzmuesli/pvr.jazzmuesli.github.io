@@ -3,17 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PV-Szenario-Baukasten — Was-wäre-wenn?</title>
+    <title>PV-Szenario-Baukasten & Berater</title>
     <link rel="stylesheet" href="/src/styles.css" />
     <style>
       .wiz-layout {
         display: grid;
-        grid-template-columns: 380px 1fr;
+        grid-template-columns: 380px 1fr 360px;
         gap: 20px;
         padding: 20px;
         align-items: start;
       }
-      @media (max-width: 980px) {
+      @media (max-width: 1200px) {
+        .wiz-layout { grid-template-columns: 360px 1fr; }
+        .chat-panel { grid-column: 1 / -1; }
+      }
+      @media (max-width: 820px) {
         .wiz-layout { grid-template-columns: 1fr; }
       }
       .wiz-side { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
@@ -21,8 +25,7 @@
       .step-num {
         display: inline-flex; align-items: center; justify-content: center;
         width: 22px; height: 22px; border-radius: 50%;
-        background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
-        margin-right: 8px;
+        background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; margin-right: 8px;
       }
       .step h3 { font-size: 14px; margin: 0 0 4px; display: inline-block; }
       .step .desc { font-size: 12px; color: var(--muted); margin: 2px 0 10px 30px; }
@@ -51,102 +54,33 @@
       .pos { color: #16a34a; }
       .neg { color: #dc2626; }
       .reco { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #075985; margin: 0 0 12px 30px; }
-      .wiz-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px 30px; }
+      .wiz-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
       .pill { font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
       .pill:hover { border-color: var(--accent); }
       .loading { font-size: 12px; color: var(--muted); }
       .err { color: #dc2626; font-size: 13px; }
+
+      /* chat */
+      .chat-panel { position: sticky; top: 20px; height: calc(100vh - 40px); display: flex; flex-direction: column; }
+      .chat-panel h2 { margin: 0 0 8px; font-size: 16px; }
+      .chat-log { flex: 1; overflow-y: auto; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+      .chat-bubble { max-width: 92%; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; }
+      .chat-user { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+      .chat-bot { align-self: flex-start; background: #fff; border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+      .chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+      .chat-input { flex: 1; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 13px; }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <h1>PV-Szenario-Baukasten</h1>
-      <p>Was-wäre-wenn? — Schritt für Schritt vom Haushaltsverbrauch zum passenden Balkonkraftwerk oder zur PV-Anlage mit Speicher.</p>
+      <h1>PV-Szenario-Baukasten &amp; Berater</h1>
+      <p>Was-wäre-wenn? — Schieberegler links, intelligenter Energiewende-Berater rechts. Beides steuert dasselbe Szenario.</p>
     </header>
 
     <div class="wiz-layout">
-      <aside class="wiz-side sidebar">
-        <!-- Step 1: Haushalt -->
-        <div class="step">
-          <h3><span class="step-num">1</span> Haushalt & Strompreis</h3>
-          <div class="desc">Personenanzahl legt das Standard-Lastprofil fest (1 → 1.500, 2 → 2.500, 3 → 3.500 kWh …).</div>
-          <div class="control">
-            <label>Personen im Haushalt <span class="val" id="persons-val">2</span></label>
-            <div class="persons" id="persons"></div>
-          </div>
-          <div class="control">
-            <label>Jahresverbrauch Haushalt <span class="val"><span id="hk-val">2500</span> kWh</span></label>
-            <input type="range" id="hk" min="500" max="9000" step="100" value="2500" />
-          </div>
-          <div class="control">
-            <label>Strompreis (Arbeitspreis) <span class="val"><span id="ict-val">30</span> ct/kWh</span></label>
-            <input type="range" id="ict" min="15" max="50" step="0.5" value="30" />
-          </div>
-          <div class="control">
-            <label>Ort</label>
-            <select id="loc">
-              <option value="boizenburg">Boizenburg</option>
-              <option value="hamburg">Hamburg</option>
-              <option value="berlin">Berlin</option>
-              <option value="koeln">Köln</option>
-              <option value="muenchen">München</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Step 2: Zusatzverbraucher -->
-        <div class="step">
-          <h3><span class="step-num">2</span> Weitere Verbraucher</h3>
-          <div class="desc">Optional — macht das Szenario realistischer (Wärmepumpe, E-Auto …).</div>
-          <div class="toggle-row">
-            <div>
-              <div class="lbl">Wärmepumpe</div>
-              <div class="sub">~5.000 kWh/Jahr</div>
-            </div>
-            <label class="switch"><input type="checkbox" id="wp" /><span class="track"></span><span class="knob"></span></label>
-          </div>
-          <div class="toggle-row">
-            <div>
-              <div class="lbl">E-Auto</div>
-              <div class="sub">~2.000 kWh/Jahr (80% PV)</div>
-            </div>
-            <label class="switch"><input type="checkbox" id="ev" /><span class="track"></span><span class="knob"></span></label>
-          </div>
-          <div class="toggle-row">
-            <div>
-              <div class="lbl">Brauchwasser-WP</div>
-              <div class="sub">~400 kWh/Jahr</div>
-            </div>
-            <label class="switch"><input type="checkbox" id="bw" /><span class="track"></span><span class="knob"></span></label>
-          </div>
-        </div>
-
-        <!-- Step 3: PV -->
-        <div class="step">
-          <h3><span class="step-num">3</span> PV-Anlage wählen</h3>
-          <div class="desc">Beginne klein mit einem Balkonkraftwerk oder gehe direkt auf Volldach.</div>
-          <div class="seg" id="pv-seg">
-            <button class="seg-btn" data-pv="none"><span class="t">Kein PV</span><span class="s">Basis / Vergleich</span></button>
-            <button class="seg-btn" data-pv="balcony"><span class="t">Balkonkraftwerk</span><span class="s">800 Wp · Süd</span></button>
-            <button class="seg-btn" data-pv="10"><span class="t">10 kWp</span><span class="s">Süd · 35°</span></button>
-            <button class="seg-btn" data-pv="20"><span class="t">20 kWp</span><span class="s">Ost/West · 35°</span></button>
-          </div>
-          <div class="reco" id="pv-reco"></div>
-        </div>
-
-        <!-- Step 4: Speicher -->
-        <div class="step">
-          <h3><span class="step-num">4</span> Speicher</h3>
-          <div class="desc">Ein Speicher hebt den Eigenverbrauch — lohnt sich besonders bei Überschüssen.</div>
-          <div class="seg" id="bat-seg">
-            <button class="seg-btn" data-bat="off"><span class="t">Ohne Speicher</span><span class="s">einfach & günstig</span></button>
-            <button class="seg-btn" data-bat="on"><span class="t">Mit Speicher</span><span class="s">mehr Eigenverbrauch</span></button>
-          </div>
-        </div>
-      </aside>
+      <aside id="wiz-sidebar" class="sidebar wiz-side"></aside>
 
       <section class="content">
-        <div id="status" class="loading" style="margin-bottom:10px"></div>
         <div id="summary" class="summary"></div>
 
         <div class="panel">
@@ -162,7 +96,7 @@
 
         <div class="panel">
           <h2>Szenarienvergleich — Netto-Bilanz</h2>
-          <p class="hint">Netto = Export-Erlös − Import-Kosten für verschiedene Einspeise- & Bezugstarife.</p>
+          <p class="hint">Netto = Export-Erlös − Import-Kosten für verschiedene Einspeise- &amp; Bezugstarife.</p>
           <div id="scenario"></div>
         </div>
 
@@ -172,234 +106,51 @@
           <span id="copied" class="loading" style="display:none">kopiert!</span>
         </div>
       </section>
+
+      <aside class="panel chat-panel">
+        <h2>Energiewende-Berater</h2>
+        <div id="chat"></div>
+      </aside>
     </div>
 
     <script type="module">
-      import { renderMonthlyChart, renderScenarioChart, renderHourlyChart } from "/src/ui/charts.ts";
+      import { createStore } from "/src/store.ts";
+      import { defaultScenario, scenarioFromQuery, appUrl } from "/src/scenario.ts";
+      import { initWizard } from "/src/wizard/wizard.ts";
+      import { initChat } from "/src/chatbot/chat-ui.ts";
+      import { openRouterGenerate, ADVISOR_SYSTEM_PROMPT } from "/src/chatbot/openrouter.ts";
 
-      // ---- central scenario state -------------------------------------------
-      const STANDARD_KWH = { 1: 1500, 2: 2500, 3: 3500, 4: 4500, 5: 5500, 6: 6500 };
-      const state = {
-        persons: 2,
-        hk: 2500,
-        ict: 30,
-        loc: "boizenburg",
-        wp: false, wk: 5000,
-        ev: false, ek: 2000,
-        bw: false,
-        pv: "10",
-        battery: "off",
-        selectedMonth: 1,
-      };
+      const qs = location.search.replace(/^\?/, "");
+      const initial = qs ? scenarioFromQuery(qs) : defaultScenario();
+      const store = createStore(initial);
 
-      // ---- derived parameters ------------------------------------------------
-      const TILT = 35, FI = 7.2;
-      function pvSpec() {
-        switch (state.pv) {
-          case "none":   return { kwp: 0,    o: "south",     cap: 0,  pwr: 0,  inv: 0 };
-          case "balcony":return { kwp: 0.8,  o: "south",     cap: 2,  pwr: 1,  inv: 800 };
-          case "10":     return { kwp: 10,   o: "south",     cap: 10, pwr: 5,  inv: 15000 };
-          case "20":     return { kwp: 20,   o: "east_west", cap: 15, pwr: 8,  inv: 28000 };
-        }
-      }
-      function spec() {
-        const p = pvSpec();
-        if (state.battery === "off") { p.cap = 0; p.pwr = 0; }
-        else { p.inv += state.pv === "10" ? 7000 : state.pv === "20" ? 12000 : 1500; }
-        return p;
-      }
-
-      function buildQuery() {
-        const s = spec();
-        const q = new URLSearchParams();
-        q.set("kwp", s.kwp);
-        q.set("tilt", TILT);
-        q.set("o", s.o);
-        q.set("loc", state.loc);
-        q.set("cap", s.cap);
-        q.set("pwr", s.pwr);
-        q.set("minsoc", 0.1);
-        q.set("maxsoc", 0.95);
-        q.set("eff", 0.95);
-        q.set("soc0", 0.5);
-        q.set("charge", "morning");
-        q.set("de", 1);
-        q.set("dm", 1);
-        q.set("evs", 17);
-        q.set("eve", 23);
-        q.set("mns", 5);
-        q.set("mne", 12);
-        q.set("fi", FI);
-        q.set("yr", 2025);
-        q.set("py", 2025);
-        q.set("hh", 1);
-        q.set("hk", state.hk);
-        q.set("wp", state.wp ? 1 : 0);
-        q.set("wk", state.wp ? state.wk : 0);
-        q.set("bw", state.bw ? 1 : 0);
-        q.set("ev", state.ev ? 1 : 0);
-        q.set("ek", state.ev ? state.ek : 0);
-        q.set("es", 0.8);
-        q.set("ex", "fixed");
-        q.set("im", "fixed");
-        q.set("ict", state.ict);
-        q.set("inv", s.inv);
-        return q;
-      }
-
-      let report = null;
-      let inflight = null;
-
-      function fmtEUR(v) { return `${Math.round(v).toLocaleString("de-DE")} €`; }
-      function fmtKWh(v) { return v >= 100 ? Math.round(v).toLocaleString("de-DE") : v.toFixed(1); }
-
-      async function run() {
-        const q = buildQuery();
-        const url = `/api?${q.toString()}`;
-        document.getElementById("status").textContent = "Berechne …";
-        const thisReq = fetch(url).then((r) => r.json());
-        inflight = thisReq;
-        let data;
-        try { data = await thisReq; } catch (e) {
-          document.getElementById("status").innerHTML = '<span class="err">API nicht erreichbar (läuft der Dev-Server?)</span>';
-          return;
-        }
-        if (inflight !== thisReq) return; // stale
-        report = data;
-        renderAll();
-        document.getElementById("status").textContent =
-          `Szenario: ${pvLabel()} · ${state.battery === "on" ? "mit" : "ohne"} Speicher · ${state.hk.toLocaleString("de-DE")} kWh Haushalt @ ${state.ict} ct`;
-      }
-
-      function pvLabel() {
-        return { none: "Kein PV", balcony: "Balkonkraftwerk 800 Wp", "10": "10 kWp Süd", "20": "20 kWp Ost/West" }[state.pv];
-      }
-
-      function renderAll() {
-        if (!report) return;
-        renderSummary();
-        renderMonthlyChart(document.getElementById("monthly"), report.monthly, state.selectedMonth, (m) => {
-          state.selectedMonth = m;
-          renderHourly();
-        });
-        renderScenarioChart(document.getElementById("scenario"), report.scenario);
-        renderHourly();
-      }
-
-      function renderHourly() {
-        if (!report) return;
-        const panel = document.getElementById("hourly-panel");
-        if (state.pv === "none") { panel.style.display = "none"; return; }
-        panel.style.display = "block";
-        const monthData = report.daily[state.selectedMonth - 1];
-        const label = report.monthly[state.selectedMonth - 1].label;
-        document.getElementById("month-title").textContent = `Stundendetail — ${label}`;
-        const socMax = spec().cap;
-        renderHourlyChart(document.getElementById("hourly"), monthData, label, socMax);
-      }
-
-      function renderSummary() {
-        const s = report.summary;
-        const a = report.amortisation;
-        const ep = report.effectivePrice.overallCt;
-        const baselineCost = report.summary.totalLoadKWh * state.ict / 100;
-        const netCost = s.importCostEUR - s.exportRevenueEUR;
-        const savings = baselineCost - netCost;
-        const selfPct = s.totalPVKWh > 0 ? (s.selfConsumptionKWh / s.totalPVKWh) * 100 : 0;
-        const hasSystem = state.pv !== "none" && spec().inv > 0;
-
-        const cards = [
-          { k: "PV-Ertrag", v: `${fmtKWh(s.totalPVKWh)} kWh`, s: state.pv === "none" ? "Basis" : "pro Jahr" },
-          { k: "Eigenverbrauch", v: `${fmtKWh(s.selfConsumptionKWh)} kWh`, s: selfPct > 0 ? `${selfPct.toFixed(0)} % des PV` : "—" },
-          { k: "Netz-Import", v: `${fmtKWh(s.totalImportKWh)} kWh`, s: "pro Jahr" },
-          { k: "Netto (Export−Import)", v: fmtEUR(s.netSelectedEUR), s: "pro Jahr", cls: s.netSelectedEUR >= 0 ? "pos" : "neg" },
-          { k: "Ersparnis vs. Basis", v: savings > 0 ? fmtEUR(savings) : "—", s: "pro Jahr", cls: savings > 0 ? "pos" : "" },
-          { k: "Amortisation", v: hasSystem && a.paybackYears && isFinite(a.paybackYears) ? `${a.paybackYears.toFixed(1)} J.` : "—", s: hasSystem ? `Inv. ${fmtEUR(spec().inv)}` : "kein System" },
-          { k: "Eff. Strompreis", v: `${ep.toFixed(1)} ct`, s: "gewichteter Ø" },
-        ];
-        document.getElementById("summary").innerHTML = cards.map((c) =>
-          `<div class="card"><div class="card-val ${c.cls || ""}">${c.v}</div><div class="card-key">${c.k}</div><div class="card-sub">${c.s}</div></div>`
-        ).join("");
-      }
-
-      // ---- reco text --------------------------------------------------------
-      function updateReco() {
-        const r = document.getElementById("pv-reco");
-        const txt = {
-          none: "Du siehst hier deine reine Bezugskosten — der Ausgangspunkt für jeden Vergleich.",
-          balcony: "Ideal als Einstieg: steckerfertig, keine Baugenehmigung nötig, senkt sofort den Bezug in der Mittagszeit.",
-          "10": "Klassische Einfamilienhaus-Anlage. Deckt einen Großteil des Haushaltsstroms und liefert Überschuss ins Netz.",
-          "20": "Volldach Ost/West: flacheres Tagesprofil, mehr Eigenverbrauch am Morgen/Abend, größter Überschuss.",
-        }[state.pv];
-        r.textContent = txt;
-      }
-
-      // ---- wiring -----------------------------------------------------------
-      // persons
-      const personsWrap = document.getElementById("persons");
-      for (let n = 1; n <= 6; n++) {
-        const b = document.createElement("button");
-        b.className = "seg-btn" + (n === state.persons ? " active" : "");
-        b.textContent = n;
-        b.onclick = () => {
-          state.persons = n;
-          state.hk = STANDARD_KWH[n];
-          document.getElementById("hk").value = state.hk;
-          document.getElementById("hk-val").textContent = state.hk;
-          [...personsWrap.children].forEach((c, i) => c.classList.toggle("active", i + 1 === n));
-          run();
-        };
-        personsWrap.appendChild(b);
-      }
-      document.getElementById("hk").addEventListener("input", (e) => {
-        state.hk = +e.target.value;
-        document.getElementById("hk-val").textContent = state.hk;
-        run();
-      });
-      document.getElementById("ict").addEventListener("input", (e) => {
-        state.ict = +e.target.value;
-        document.getElementById("ict-val").textContent = state.ict;
-        run();
-      });
-      document.getElementById("loc").addEventListener("change", (e) => { state.loc = e.target.value; run(); });
-      document.getElementById("wp").addEventListener("change", (e) => { state.wp = e.target.checked; run(); });
-      document.getElementById("ev").addEventListener("change", (e) => { state.ev = e.target.checked; run(); });
-      document.getElementById("bw").addEventListener("change", (e) => { state.bw = e.target.checked; run(); });
-
-      document.querySelectorAll("#pv-seg .seg-btn").forEach((b) => {
-        if (b.dataset.pv === state.pv) b.classList.add("active");
-        b.onclick = () => {
-          state.pv = b.dataset.pv;
-          document.querySelectorAll("#pv-seg .seg-btn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          updateReco();
-          run();
-        };
-      });
-      document.querySelectorAll("#bat-seg .seg-btn").forEach((b) => {
-        if (b.dataset.bat === state.battery) b.classList.add("active");
-        b.onclick = () => {
-          state.battery = b.dataset.bat;
-          document.querySelectorAll("#bat-seg .seg-btn").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active");
-          run();
-        };
+      initWizard({
+        store,
+        sidebar: document.getElementById("wiz-sidebar"),
+        summary: document.getElementById("summary"),
+        monthly: document.getElementById("monthly"),
+        hourPanel: document.getElementById("hourly-panel"),
+        hourTitle: document.getElementById("month-title"),
+        hourly: document.getElementById("hourly"),
+        scenarioEl: document.getElementById("scenario"),
       });
 
-      // actions
-      function appUrl() {
-        return `/?${buildQuery().toString()}`;
-      }
-      document.getElementById("open-app").onclick = () => window.open(appUrl(), "_blank");
-      document.getElementById("copy-link").onclick = async () => {
-        try { await navigator.clipboard.writeText(location.origin + appUrl()); } catch {}
+      initChat({
+        mount: document.getElementById("chat"),
+        store,
+        generate: openRouterGenerate,
+        systemPrompt: ADVISOR_SYSTEM_PROMPT,
+      });
+
+      document.getElementById("open-app").addEventListener("click", () =>
+        window.open(appUrl(store.getState()), "_blank"),
+      );
+      document.getElementById("copy-link").addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(location.origin + appUrl(store.getState())); } catch {}
         const c = document.getElementById("copied");
-        c.style.display = "inline"; setTimeout(() => (c.style.display = "none"), 1500);
-      };
-
-      // init
-      updateReco();
-      run();
+        c.style.display = "inline";
+        setTimeout(() => (c.style.display = "none"), 1500);
+      });
     </script>
   </body>
 </html>
