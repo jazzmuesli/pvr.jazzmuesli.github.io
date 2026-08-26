@@ -22,8 +22,8 @@ function baseConfig(load: Float64Array, capacityKWh: number): SimConfig {
 }
 
 const consumers: ConsumerConfig = {
-  household: { enabled: true, annualKWh: 4000 },
-  heatpump: { enabled: true, annualKWh: 5000 },
+  household: { enabled: true, annualKWh: 2400 },
+  heatpump: { enabled: true, annualKWh: 6500 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };

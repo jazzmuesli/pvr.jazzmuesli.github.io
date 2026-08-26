@@ -1,10 +1,11 @@
 :root {
-  --bg: #f1f5f9;
+  --bg: #eef2f7;
   --panel: #ffffff;
   --ink: #0f172a;
   --muted: #64748b;
   --accent: #0ea5e9;
   --border: #e2e8f0;
+  --grid: #eef2f7;
 }
 * { box-sizing: border-box; }
 body {
@@ -35,6 +36,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 .sidebar { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
 .sidebar h3 {
@@ -71,33 +73,38 @@ body {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
+.card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08); }
 .card-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .card-key { font-size: 12px; margin-top: 2px; }
 .card-sub { font-size: 11px; color: var(--muted); }
 .panel { margin-bottom: 20px; }
 .panel h2 { margin: 0 0 8px; font-size: 16px; }
 .hint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
-.chart { display: block; }
-.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 8px; font-size: 12px; color: var(--muted); }
+.chart { display: block; width: 100%; height: auto; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 10px; font-size: 12px; color: var(--muted); }
 .legend-item { display: flex; align-items: center; gap: 6px; }
-.legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 2px 4px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.chart-legend .legend-item { display: flex; align-items: center; gap: 7px; }
+.chart-legend .legend-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08); flex: 0 0 auto; }
 .bar { cursor: pointer; transition: opacity 0.1s; }
-.bar:hover { opacity: 0.8; }
+.bar:hover { opacity: 0.82; }
 .month-hit { cursor: pointer; }
-.month-hit.selected { fill: rgba(14, 165, 233, 0.08); }
+.month-hit.selected { fill: rgba(14, 165, 233, 0.10); }
 .chart-tooltip {
   position: fixed;
   display: none;
   z-index: 1000;
   background: #0f172a;
   color: #f8fafc;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 9px 11px;
+  border-radius: 10px;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.5;
   pointer-events: none;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  max-width: 240px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.30);
+  max-width: 260px;
 }
 .chart-tooltip strong { color: #7dd3fc; }

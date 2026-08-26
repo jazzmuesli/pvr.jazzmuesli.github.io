@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { simulate } from "../src/calc/simulation";
 import { totalLoad, ConsumerConfig } from "../src/calc/consumers";
 import { generatePrices } from "../src/calc/priceModel";
-import { SimConfig, STEPS_PER_DAY, TOTAL_STEPS } from "../src/calc/types";
+import { SimConfig, STEPS_PER_DAY, STEPS_PER_HOUR, TOTAL_STEPS } from "../src/calc/types";
 
 function baseConfig(load: Float64Array, capacityKWh = 19.353, maxKW = 6): SimConfig {
   return {
@@ -29,8 +29,8 @@ function baseConfig(load: Float64Array, capacityKWh = 19.353, maxKW = 6): SimCon
 }
 
 const consumers: ConsumerConfig = {
-  household: { enabled: true, annualKWh: 4000 },
-  heatpump: { enabled: true, annualKWh: 5000 },
+  household: { enabled: true, annualKWh: 2400 },
+  heatpump: { enabled: true, annualKWh: 6500 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };
@@ -111,17 +111,18 @@ describe("simulate with load — plausibility", () => {
   it("a 40 kWh / 5 kW battery can still discharge substantially into the evening peak", () => {
     const load = totalLoad(consumers);
     const r = simulate(baseConfig(load, 40, 5));
-    let maxDayDischarge = 0;
+    let maxEveningDischarge = 0;
     for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
-      let day = 0;
+      let evening = 0;
       for (let k = 0; k < STEPS_PER_DAY; k++) {
         const i = d * STEPS_PER_DAY + k;
-        day += r.dischargeToLoad[i] + r.exportBattery[i];
+        const h = Math.floor(k / STEPS_PER_HOUR);
+        if (h >= 17 && h < 23) evening += r.dischargeToLoad[i] + r.exportBattery[i];
       }
-      maxDayDischarge = Math.max(maxDayDischarge, day);
+      maxEveningDischarge = Math.max(maxEveningDischarge, evening);
     }
-    // The battery should be able to shift a meaningful amount of energy in a day
-    // (covering evening load and/or exporting surplus).
-    expect(maxDayDischarge).toBeGreaterThan(20);
+    // Discharge is gated to windows, so over a single evening peak the 40 kWh
+    // battery should still deliver a meaningful share of its capacity.
+    expect(maxEveningDischarge).toBeGreaterThan(10);
   });
 });

@@ -94,7 +94,13 @@ describe("battery simulation", () => {
   });
 
   it("gridNegative charges from the grid only at non-positive prices", () => {
-    const r = simulate({ ...baseConfig({ chargeMode: "gridNegative" }), prices });
+    // No PV so the battery has room to absorb grid energy at negative prices
+    // (with PV the battery is already full at the midday negative-price steps).
+    const r = simulate({
+      ...baseConfig({ chargeMode: "gridNegative" }),
+      prices,
+      pv: { peakKWp: 0, tiltDeg: 35, orientation: "south", location: "hamburg" },
+    });
     expect(sum(r.chargeGrid)).toBeGreaterThan(0);
     for (let i = 0; i < TOTAL_STEPS; i++) {
       if (r.chargeGrid[i] > 0) expect(prices[i]).toBeLessThanOrEqual(0);

@@ -60,8 +60,10 @@ export const DEFAULT_STATE: AppState = {
   commissioningYear: 2025,
   priceYear: "2025",
   consumers: {
-    household: { enabled: true, annualKWh: 4000 },
-    heatpump: { enabled: true, annualKWh: 5000 },
+    // Profile calibrated to the real household data in ~/MyDocuments/ha:
+    // heat pump ~6.6 MWh/yr (temp-driven, winter-heavy), base load ~2.4 MWh/yr.
+    household: { enabled: true, annualKWh: 2400 },
+    heatpump: { enabled: true, annualKWh: 6500 },
     bwwp: { enabled: true },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },

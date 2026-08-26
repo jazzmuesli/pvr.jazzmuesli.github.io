@@ -3,7 +3,7 @@ import { computeEconomics, monthForStep, EconOptions } from "./calc/revenue";
 import { getYearPrices } from "./calc/priceData";
 import { STEPS_PER_DAY, SimResult } from "./calc/types";
 import { cityForLocation } from "./calc/tariff";
-import { loadByConsumer } from "./calc/consumers";
+import { loadByConsumer, ConsumerLoads } from "./calc/consumers";
 import { importPriceArray } from "./calc/tariff";
 import { effectiveNetPrice } from "./calc/vwap";
 import { computeAmortisation } from "./calc/amortisation";
@@ -13,9 +13,10 @@ import { writeUrl, deserializeState } from "./ui/url";
 import {
   renderMonthlyChart,
   renderHourlyChart,
-  renderLegend,
   renderScenarioChart,
   DayChartDatum,
+  MonthlyChartDatum,
+  ConsumerBreakdown,
 } from "./ui/charts";
 
 const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
@@ -28,7 +29,6 @@ const controlsHost = document.getElementById("controls") as HTMLElement;
 const summaryHost = document.getElementById("summary") as HTMLElement;
 const monthlyHost = document.getElementById("monthly") as HTMLElement;
 const hourlyHost = document.getElementById("hourly") as HTMLElement;
-const legendHost = document.getElementById("legend") as HTMLElement;
 const monthTitle = document.getElementById("month-title") as HTMLElement;
 const scenarioHost = document.getElementById("scenario") as HTMLElement;
 
@@ -47,17 +47,21 @@ function baseOpts(): EconOptions {
   };
 }
 
-function hourlyProfile(result: SimResult, month: number): DayChartDatum[] {
+function hourlyProfile(result: SimResult, loads: ConsumerLoads, month: number): DayChartDatum[] {
+  const empty = (): ConsumerBreakdown => ({ household: 0, heatpump: 0, bwwp: 0, ev: 0 });
   const buckets: {
-    pv: number; load: number; selfUse: number; imp: number; exp: number; priceSum: number; socSum: number; n: number;
-  }[] = Array.from({ length: 24 }, () => ({ pv: 0, load: 0, selfUse: 0, imp: 0, exp: 0, priceSum: 0, socSum: 0, n: 0 }));
+    pv: number; load: ConsumerBreakdown; selfUse: number; imp: number; exp: number; priceSum: number; socSum: number; n: number;
+  }[] = Array.from({ length: 24 }, () => ({ pv: 0, load: empty(), selfUse: 0, imp: 0, exp: 0, priceSum: 0, socSum: 0, n: 0 }));
   for (let i = 0; i < result.pv.length; i++) {
     const m = monthForStep(i);
     if (m !== month) continue;
     const h = Math.floor((i % STEPS_PER_DAY) / (STEPS_PER_DAY / 24));
     const b = buckets[h];
     b.pv += result.pv[i];
-    b.load += result.load[i];
+    b.load.household += loads.household[i];
+    b.load.heatpump += loads.heatpump[i];
+    b.load.bwwp += loads.bwwp[i];
+    b.load.ev += loads.ev[i];
     b.selfUse += result.directUse[i] + result.dischargeToLoad[i];
     b.imp += result.gridImport[i];
     b.exp += result.exportTotal[i];
@@ -65,16 +69,38 @@ function hourlyProfile(result: SimResult, month: number): DayChartDatum[] {
     b.socSum += result.soc[i];
     b.n += 1;
   }
-  return buckets.map((b, h) => ({
-    hour: h,
-    pvKWh: (b.pv / Math.max(1, b.n)) * 4,
-    loadKWh: (b.load / Math.max(1, b.n)) * 4,
-    selfUseKWh: (b.selfUse / Math.max(1, b.n)) * 4,
-    importKWh: (b.imp / Math.max(1, b.n)) * 4,
-    exportKWh: (b.exp / Math.max(1, b.n)) * 4,
-    avgPrice: b.n > 0 ? b.priceSum / b.n : 0,
-    socKWh: b.n > 0 ? b.socSum / b.n : 0,
-  }));
+  return buckets.map((b, h) => {
+    const per = (v: number) => (b.n > 0 ? (v / b.n) * 4 : 0);
+    return {
+      hour: h,
+      pvKWh: per(b.pv),
+      load: {
+        household: per(b.load.household),
+        heatpump: per(b.load.heatpump),
+        bwwp: per(b.load.bwwp),
+        ev: per(b.load.ev),
+      },
+      totalLoadKWh: per(b.load.household + b.load.heatpump + b.load.bwwp + b.load.ev),
+      selfUseKWh: per(b.selfUse),
+      importKWh: per(b.imp),
+      exportKWh: per(b.exp),
+      avgPrice: b.n > 0 ? b.priceSum / b.n : 0,
+      socKWh: b.n > 0 ? b.socSum / b.n : 0,
+    };
+  });
+}
+
+// Per-consumer monthly totals (kWh), aligned with month index 0..11.
+function monthlyConsumerSums(loads: ConsumerLoads): ConsumerBreakdown[] {
+  const sums: ConsumerBreakdown[] = Array.from({ length: 12 }, () => ({ household: 0, heatpump: 0, bwwp: 0, ev: 0 }));
+  for (let i = 0; i < loads.household.length; i++) {
+    const m = monthForStep(i) - 1;
+    sums[m].household += loads.household[i];
+    sums[m].heatpump += loads.heatpump[i];
+    sums[m].bwwp += loads.bwwp[i];
+    sums[m].ev += loads.ev[i];
+  }
+  return sums;
 }
 
 function fmtEUR(v: number): string {
@@ -161,25 +187,31 @@ function recompute(): void {
 
   renderSummary(econ, eff, amort);
 
-  const monthly = econ.monthly.map((r) => ({
-    month: r.month,
-    label: MONTH_LABELS[r.month - 1],
-    pvKWh: r.pvKWh,
-    selfConsumptionKWh: r.selfConsumptionKWh,
-    importKWh: r.importKWh,
-    exportKWh: r.exportKWh,
-    netEUR: r.netSelectedEUR,
-  }));
+  const monthlySums = monthlyConsumerSums(loads);
+  const monthly: MonthlyChartDatum[] = econ.monthly.map((r, i) => {
+    const lb = monthlySums[i];
+    return {
+      month: r.month,
+      label: MONTH_LABELS[r.month - 1],
+      pvKWh: r.pvKWh,
+      load: { household: lb.household, heatpump: lb.heatpump, bwwp: lb.bwwp, ev: lb.ev },
+      totalLoadKWh: lb.household + lb.heatpump + lb.bwwp + lb.ev,
+      selfConsumptionKWh: r.selfConsumptionKWh,
+      importKWh: r.importKWh,
+      exportKWh: r.exportKWh,
+      netEUR: r.netSelectedEUR,
+    };
+  });
   renderMonthlyChart(monthlyHost, monthly, selectedMonth, (m) => {
     selectedMonth = m;
-    renderHourly(result);
+    renderHourly(result, loads);
   });
-  renderHourly(result);
+  renderHourly(result, loads);
   renderScenario(result);
 }
 
-function renderHourly(result: SimResult): void {
-  const data = hourlyProfile(result, selectedMonth);
+function renderHourly(result: SimResult, loads: ConsumerLoads): void {
+  const data = hourlyProfile(result, loads, selectedMonth);
   monthTitle.textContent = `${MONTH_LABELS[selectedMonth - 1]} — Stundenverteilung`;
   renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
 }
@@ -199,6 +231,5 @@ const onChange = (): void => {
 };
 
 buildControls(controlsHost, state, onChange);
-renderLegend(legendHost);
 writeUrl(state);
 recompute();
