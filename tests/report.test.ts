@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { runSimulation, simParamsFromQuery, DEFAULT_SIM_PARAMS, SimParams } from "../src/calc/report";
+import { runSimulation, simParamsFromQuery, DEFAULT_SIM_PARAMS, SimParams, estimateInvestmentEUR } from "../src/calc/report";
 import { ConsumerConfig } from "../src/calc/consumers";
 
 const baseConsumers: ConsumerConfig = {
@@ -22,6 +22,39 @@ describe("runSimulation", () => {
     expect(r.daily[0]).toHaveLength(24);
     expect(r.scenario).toHaveLength(4);
     expect(typeof r.amortisation.paybackYears).toBe("number");
+  });
+
+  it("exposes the lifecycle cashflow analysis with all metrics", () => {
+    const r = runSimulation(params());
+    const c = r.cashflow;
+    expect(Number.isFinite(c.npvEUR)).toBe(true);
+    expect(Number.isFinite(c.irrPercent)).toBe(true);
+    expect(c.lcoeCtPerKWh).toBeGreaterThan(0);
+    expect(c.simplePaybackYears).toBeGreaterThan(0);
+    expect(c.yearly).toHaveLength(r.inputs.horizonYears + 1);
+    expect(c.yearly[0].netCashflowEUR).toBe(-r.inputs.investmentEUR);
+  });
+
+  it("summary reports self-consumption rate and autarky degree", () => {
+    const r = runSimulation(params());
+    expect(r.summary.selfConsumptionRatePct).toBeGreaterThanOrEqual(0);
+    expect(r.summary.selfConsumptionRatePct).toBeLessThanOrEqual(100);
+    expect(r.summary.selfSufficiencyPct).toBeGreaterThan(0);
+    expect(r.summary.selfSufficiencyPct).toBeLessThanOrEqual(100);
+  });
+
+  it("the investment estimator scales with PV and battery size (TODO 2.3)", () => {
+    const small = estimateInvestmentEUR(5, 0);
+    const bigger = estimateInvestmentEUR(10, 10);
+    expect(bigger).toBeGreaterThan(small);
+    // No battery → purely PV cost; no battery adds positive battery cost.
+    const withBat = estimateInvestmentEUR(10, 10);
+    const noBat = estimateInvestmentEUR(10, 0);
+    expect(withBat).toBeGreaterThan(noBat);
+    // A 22 kWp / 19 kWh system lands in a realistic ballpark.
+    const full = estimateInvestmentEUR(22, 19);
+    expect(full).toBeGreaterThan(20000);
+    expect(full).toBeLessThan(40000);
   });
 
   it("monthly chart sums reproduce the annual totals", () => {

@@ -166,11 +166,14 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
     expect(Number.isFinite(inv.pvPaybackYears)).toBe(true);
     expect(inv.heatingSavingEUR).toBeGreaterThan(0);
     expect(inv.financeableHeatpumpEUR).not.toBeNull();
-    // financeable = saving * payback (within rounding).
-    expect(inv.financeableHeatpumpEUR!).toBeCloseTo(
-      inv.heatingSavingEUR * inv.pvPaybackYears,
-      0,
-    );
+    // financeable = present value of the annual saving over the discounted
+    // analysis horizon (TODO 6.1), not the old saving × simple payback.
+    const d = r.inputs.discountRatePct / 100;
+    let expected = 0;
+    for (let t = 1; t <= r.inputs.horizonYears; t++) {
+      expected += inv.heatingSavingEUR / Math.pow(1 + d, t);
+    }
+    expect(inv.financeableHeatpumpEUR!).toBeCloseTo(expected, 0);
     expect(inv.financeableEvEUR).not.toBeNull();
   });
 

@@ -51,6 +51,17 @@ export function serializeState(s: AppState): string {
   p.set("im", s.importScheme);
   p.set("ict", String(s.importFixedCt));
   p.set("inv", String(s.investmentEUR));
+  p.set("hor", String(s.horizonYears));
+  p.set("d", String(s.discountRatePct));
+  p.set("esc", String(s.priceEscalationPct));
+  p.set("om", String(s.omPercentPerYear));
+  p.set("invlife", String(s.inverterLifetimeYears));
+  p.set("invrep", String(s.inverterReplacementCostEUR));
+  p.set("batlife", String(s.batteryLifetimeYears));
+  p.set("batrep", String(s.batteryReplacementCostEUR));
+  p.set("batdeg", String(s.batteryDegradationPct));
+  p.set("pvdeg", String(s.pvDegradationPct));
+  p.set("stdby", String(s.standbyWattage));
   return p.toString();
 }
 
@@ -97,6 +108,17 @@ export function deserializeState(qs: string): AppState {
   str(p, "im", (v) => (s.importScheme = v as AppState["importScheme"]));
   num(p, "ict", (v) => (s.importFixedCt = v));
   num(p, "inv", (v) => (s.investmentEUR = v));
+  num(p, "hor", (v) => (s.horizonYears = v));
+  num(p, "d", (v) => (s.discountRatePct = v));
+  num(p, "esc", (v) => (s.priceEscalationPct = v));
+  num(p, "om", (v) => (s.omPercentPerYear = v));
+  num(p, "invlife", (v) => (s.inverterLifetimeYears = v));
+  num(p, "invrep", (v) => (s.inverterReplacementCostEUR = v));
+  num(p, "batlife", (v) => (s.batteryLifetimeYears = v));
+  num(p, "batrep", (v) => (s.batteryReplacementCostEUR = v));
+  num(p, "batdeg", (v) => (s.batteryDegradationPct = v));
+  num(p, "pvdeg", (v) => (s.pvDegradationPct = v));
+  num(p, "stdby", (v) => (s.standbyWattage = v));
   return s;
 }
 

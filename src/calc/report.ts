@@ -20,6 +20,7 @@ import {
 } from "./consumers";
 import { effectiveNetPrice, EffectivePrice } from "./vwap";
 import { computeAmortisation, Amortisation } from "./amortisation";
+import { computeCashflow, CashflowAnalysis, CashflowInput } from "./cashflow";
 import {
   HeatingParams,
   DEFAULT_HEATING_PARAMS,
@@ -138,6 +139,18 @@ export interface SimParams {
   importFixedCt: number;
   // Cost — a single total, independent of kWp / kWh size.
   investmentEUR: number;
+  // Economic parameters
+  horizonYears: number;           // Analysis period (default 20)
+  discountRatePct: number;        // Discount rate for NPV (default 3%)
+  priceEscalationPct: number;     // Electricity price escalation (default 2%)
+  omPercentPerYear: number;       // O&M as % of investment/year (default 1.5%)
+  inverterLifetimeYears: number;  // Inverter lifespan (default 13)
+  inverterReplacementCostEUR: number; // Inverter replacement cost (default 1500)
+  batteryLifetimeYears: number;   // Battery lifespan (default 13)
+  batteryReplacementCostEUR: number; // Battery replacement cost (default 500 * capacityKWh)
+  batteryDegradationPct: number;  // Annual battery degradation (default 0.01 = 1%)
+  pvDegradationPct: number;       // Annual PV degradation (default 0.005 = 0.5%)
+  standbyWattage: number;         // Battery standby consumption (default 5W)
   // Heating: JAZ of the heat pump and its electricity price (for the
   // fossil-fuelled alternative cost comparison in `heating`).
   heatpumpJaz: number;
@@ -169,6 +182,19 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   feedInCt: 7.2,
   commissioningYear: 2025,
   priceYear: "2025",
+  // Economic parameters
+  horizonYears: 20,
+  discountRatePct: 3,
+  priceEscalationPct: 2,
+  omPercentPerYear: 1.5,
+  inverterLifetimeYears: 13,
+  inverterReplacementCostEUR: 1500,
+  batteryLifetimeYears: 13,
+  batteryReplacementCostEUR: 6000,
+  batteryDegradationPct: 0.01,
+  pvDegradationPct: 0.005,
+  standbyWattage: 5,
+  // Consumers
   consumers: {
     household: { enabled: true, annualKWh: 2400 },
     heatpump: { enabled: true, annualKWh: 6500 },
@@ -179,8 +205,13 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   importScheme: "fixed",
   importFixedCt: 24,
   investmentEUR: 32000,
+  // Heating: JAZ of the heat pump and its electricity price (for the
+  // fossil-fuelled alternative cost comparison in `heating`).
   heatpumpJaz: 3,
   heatpumpElectricCt: 24,
+  // Opportunity-cost comparison inputs (heating + EV vs. diesel). The defaults
+  // are realistic for a German household; the heat-pump electricity comes from
+  // the heat-pump consumer above.
   car: { ...DEFAULT_CAR_PARAMS },
 };
 
@@ -230,6 +261,18 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.importScheme = (str("im", p.importScheme) as SimParams["importScheme"]) ?? p.importScheme;
   p.importFixedCt = num("ict", p.importFixedCt);
   p.investmentEUR = num("inv", p.investmentEUR);
+  // Economic / lifecycle-cashflow parameters.
+  p.horizonYears = num("hor", p.horizonYears);
+  p.discountRatePct = num("d", p.discountRatePct);
+  p.priceEscalationPct = num("esc", p.priceEscalationPct);
+  p.omPercentPerYear = num("om", p.omPercentPerYear);
+  p.inverterLifetimeYears = num("invlife", p.inverterLifetimeYears);
+  p.inverterReplacementCostEUR = num("invrep", p.inverterReplacementCostEUR);
+  p.batteryLifetimeYears = num("batlife", p.batteryLifetimeYears);
+  p.batteryReplacementCostEUR = num("batrep", p.batteryReplacementCostEUR);
+  p.batteryDegradationPct = num("batdeg", p.batteryDegradationPct);
+  p.pvDegradationPct = num("pvdeg", p.pvDegradationPct);
+  p.standbyWattage = num("stdby", p.standbyWattage);
   p.heatpumpJaz = num("jaz", p.heatpumpJaz);
   // The heat pump pays the Strompreis by default; an explicit `wpc` override
   // (its own cheaper WP tariff) still wins if present in the query string.
@@ -241,12 +284,41 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   return p;
 }
 
+// ---- Investment auto-estimator (TODO 2.3) -----------------------------------
+// `investmentEUR` stays the authoritative figure, but this estimator provides a
+// realistic *default* derived from system size, without re-introducing the old
+// amortisation artifact (the saving side now carries the real battery costs).
+// PV costs are slightly degressive with size; battery at ~€/kWh.
+
+export const DEFAULT_COST_PER_KWP = 1300; // €/kWp (degressive as size grows)
+export const DEFAULT_COST_PER_KWH = 600; // €/kWh battery
+
+/** Estimate a realistic all-in system investment from PV and battery size. */
+export function estimateInvestmentEUR(
+  peakKWp: number,
+  capacityKWh: number,
+  costPerKWp = DEFAULT_COST_PER_KWP,
+  costPerKWh = DEFAULT_COST_PER_KWH,
+): number {
+  const pvCost = peakKWp * costPerKWp * degressionFactor(peakKWp);
+  const batteryCost = capacityKWh * costPerKWh;
+  return Math.round(pvCost + batteryCost);
+}
+
+// Slight degression: larger arrays get a marginally lower €/kWp.
+function degressionFactor(kWp: number): number {
+  if (kWp <= 10) return 1;
+  if (kWp >= 30) return 0.9;
+  return 1 - (kWp - 10) * 0.005;
+}
+
 // ---- Report ----------------------------------------------------------------
 
 export interface SimReport {
   inputs: SimParams;
   summary: SimSummary;
   amortisation: Amortisation;
+  cashflow: CashflowAnalysis;
   effectivePrice: EffectivePrice;
   monthly: MonthlyChartDatum[];
   /** Daily profile for every month: daily[month-1][hour]. */
@@ -265,6 +337,8 @@ export interface SimReport {
 export interface OpportunityInvestment {
   /** PV simple payback (years); may be Infinity when there is no PV benefit. */
   pvPaybackYears: number;
+  /** PV discounted payback (years); may be Infinity when there is no PV benefit. */
+  discountedPvPaybackYears: number;
   /** Heat pump vs. gas: annual saving (€). */
   heatingSavingEUR: number;
   /** Investment a heat pump could be financed with over the PV payback (€), or null if N/A. */
@@ -286,6 +360,10 @@ export interface SimSummary {
   netSelectedEUR: number;
   marktPraemieCt: number;
   referenceValueCt: number;
+  /** Self-consumption rate: Eigenverbrauch / PV-Produktion (%). */
+  selfConsumptionRatePct: number;
+  /** Self-sufficiency (Autarkiegrad): Eigenverbrauch / Gesamtlast (%). */
+  selfSufficiencyPct: number;
 }
 
 function toSimConfig(p: SimParams): SimConfig {
@@ -583,25 +661,57 @@ export function runSimulation(p: SimParams): SimReport {
     car: carParams,
   });
 
+  // Calculate multi-year cashflow analysis
+  const cashflowInput: CashflowInput = {
+    annualBenefitEUR: amortisation.annualBenefitEUR,
+    annualPVKWh: annualSum(result.pv),
+    investmentEUR: p.investmentEUR,
+    peakKWp: p.peakKWp,
+    capacityKWh: p.capacityKWh,
+    feedInCt: p.feedInCt,
+    horizonYears: p.horizonYears,
+    discountRatePct: p.discountRatePct,
+    priceEscalationPct: p.priceEscalationPct,
+    omPercentPerYear: p.omPercentPerYear,
+    inverterLifetimeYears: p.inverterLifetimeYears,
+    inverterReplacementCostEUR: p.inverterReplacementCostEUR,
+    batteryLifetimeYears: p.batteryLifetimeYears,
+    batteryReplacementCostEUR: p.batteryReplacementCostEUR,
+    batteryDegradationPct: p.batteryDegradationPct,
+    pvDegradationPct: p.pvDegradationPct,
+    standbyWattage: p.standbyWattage,
+    omInflationPct: p.priceEscalationPct,
+  };
+  const cashflow = computeCashflow(cashflowInput);
+
   // Tie the fossil-vs-electric decision to the PV economics: the annual saving
-  // can finance a heat pump / EV over the PV's own payback horizon.
-  const pvPaybackYears = amortisation.paybackYears;
+  // can finance a heat pump / EV over the PV's discounted investment horizon.
+  // The "financeable budget" is the present value of the annual saving over the
+  // full analysis horizon (Barwert) — consistent with how the PV itself is
+  // appraised (TODO 6.1).
+  const discountedPaybackYears = cashflow.discountedPaybackYears;
   const heatingSavingEUR = opportunityCosts.heating.gas.totalEUR - opportunityCosts.heating.heatpump.totalEUR;
   const carSavingEUR = opportunityCosts.car.diesel.totalEUR - opportunityCosts.car.ev.totalEUR;
   const financeable = (savingEUR: number): number | null =>
-    Number.isFinite(pvPaybackYears) && savingEUR > 0 ? round2(savingEUR * pvPaybackYears) : null;
+    amortisation.annualBenefitEUR > 0 && savingEUR > 0
+      ? calculatePresentValueOfSavings(savingEUR, p.discountRatePct, p.horizonYears)
+      : null;
   const opportunityInvestment = {
-    pvPaybackYears,
+    pvPaybackYears: amortisation.paybackYears, // Keep simple payback for backward compatibility
+    discountedPvPaybackYears: discountedPaybackYears,
     heatingSavingEUR: round2(heatingSavingEUR),
     financeableHeatpumpEUR: financeable(heatingSavingEUR),
     carSavingEUR: round2(carSavingEUR),
     financeableEvEUR: financeable(carSavingEUR),
   };
 
+  const totalPVKWh = annualSum(result.pv);
+  const totalLoadKWh = annualSum(result.load);
+  const selfConsumptionKWh = annualSum(result.directUse) + annualSum(result.dischargeToLoad);
   const summary: SimSummary = {
-    totalPVKWh: annualSum(result.pv),
-    totalLoadKWh: annualSum(result.load),
-    selfConsumptionKWh: annualSum(result.directUse) + annualSum(result.dischargeToLoad),
+    totalPVKWh,
+    totalLoadKWh,
+    selfConsumptionKWh,
     totalExportKWh: annualSum(result.exportTotal),
     totalImportKWh: annualSum(result.gridImport),
     exportRevenueEUR: exportEUR,
@@ -609,12 +719,15 @@ export function runSimulation(p: SimParams): SimReport {
     netSelectedEUR: econ.netSelectedEUR,
     marktPraemieCt: econ.marktPraemieCt,
     referenceValueCt: econ.referenceValueCt,
+    selfConsumptionRatePct: totalPVKWh > 0 ? (selfConsumptionKWh / totalPVKWh) * 100 : 0,
+    selfSufficiencyPct: totalLoadKWh > 0 ? (selfConsumptionKWh / totalLoadKWh) * 100 : 0,
   };
 
   return {
     inputs: p,
     summary,
     amortisation,
+    cashflow,
     effectivePrice,
     monthly,
     daily,
@@ -623,6 +736,26 @@ export function runSimulation(p: SimParams): SimReport {
     opportunityCosts,
     opportunityInvestment,
   };
+}
+
+function calculatePresentValueOfSavings(
+  annualSavingEUR: number,
+  discountRatePct: number,
+  years: number
+): number {
+  if (annualSavingEUR <= 0 || years <= 0 || discountRatePct < 0) {
+    return 0;
+  }
+  
+  const discountRate = discountRatePct / 100;
+  let presentValue = 0;
+  
+  for (let year = 1; year <= years; year++) {
+    const discountFactor = Math.pow(1 + discountRate, year);
+    presentValue += annualSavingEUR / discountFactor;
+  }
+  
+  return round2(presentValue);
 }
 
 const MONTH_LABELS = [

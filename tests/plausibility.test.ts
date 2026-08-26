@@ -200,3 +200,35 @@ describe("amortisation plausibility", () => {
     }
   });
 });
+
+describe("self-consumption & autarky plausibility (TODO 4.1)", () => {
+  function rates(peakKWp: number, cap: number): { scr: number; ssr: number } {
+    const res = simulate(baseConfig(load, cap, peakKWp));
+    const selfConsumption =
+      annualSum(res.directUse) + annualSum(res.dischargeToLoad);
+    const pv = annualSum(res.pv);
+    const totalLoad = annualSum(res.load);
+    return {
+      scr: pv > 0 ? (selfConsumption / pv) * 100 : 0,
+      ssr: totalLoad > 0 ? (selfConsumption / totalLoad) * 100 : 0,
+    };
+  }
+
+  it("autarky (self-sufficiency) is higher with a battery than without", () => {
+    const withBat = rates(22, 19.353).ssr;
+    const noBat = rates(22, 0).ssr;
+    expect(withBat).toBeGreaterThan(noBat);
+  });
+
+  it("self-consumption rate falls as PV is strongly oversized (large export share)", () => {
+    const small = rates(10, 19.353).scr;
+    const huge = rates(60, 19.353).scr;
+    expect(huge).toBeLessThan(small);
+  });
+
+  it("autarky stays in a plausible range for the configured system", () => {
+    const withBat = rates(22, 19.353);
+    expect(withBat.ssr).toBeGreaterThan(30);
+    expect(withBat.ssr).toBeLessThan(100);
+  });
+});

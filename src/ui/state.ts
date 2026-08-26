@@ -37,6 +37,18 @@ export interface AppState {
   importFixedCt: number; // ct/kWh
   // Investition: eine einzige Gesamtinvestition (€), unabhängig von kWp/kWh.
   investmentEUR: number;
+  // Ökonomische Parameter (Lebensdauer-Cashflow).
+  horizonYears: number;
+  discountRatePct: number;
+  priceEscalationPct: number;
+  omPercentPerYear: number;
+  inverterLifetimeYears: number;
+  inverterReplacementCostEUR: number;
+  batteryLifetimeYears: number;
+  batteryReplacementCostEUR: number;
+  batteryDegradationPct: number;
+  pvDegradationPct: number;
+  standbyWattage: number;
   // Heizung: JAZ der Wärmepumpe und ihr Strompreis (ct/kWh) für den
   // Kostenvergleich mit Heizöl / Gas.
   heatpumpJaz: number;
@@ -78,6 +90,17 @@ export const DEFAULT_STATE: AppState = {
   importScheme: "fixed",
   importFixedCt: 24,
   investmentEUR: 32000,
+  horizonYears: 20,
+  discountRatePct: 3,
+  priceEscalationPct: 2,
+  omPercentPerYear: 1.5,
+  inverterLifetimeYears: 13,
+  inverterReplacementCostEUR: 1500,
+  batteryLifetimeYears: 13,
+  batteryReplacementCostEUR: 6000,
+  batteryDegradationPct: 0.01,
+  pvDegradationPct: 0.005,
+  standbyWattage: 5,
   heatpumpJaz: 3,
   heatpumpElectricCt: 24,
   car: { ...DEFAULT_CAR_PARAMS },
@@ -111,6 +134,17 @@ export function toSimParams(s: AppState): SimParams {
     importScheme: s.importScheme,
     importFixedCt: s.importFixedCt,
     investmentEUR: s.investmentEUR,
+    horizonYears: s.horizonYears,
+    discountRatePct: s.discountRatePct,
+    priceEscalationPct: s.priceEscalationPct,
+    omPercentPerYear: s.omPercentPerYear,
+    inverterLifetimeYears: s.inverterLifetimeYears,
+    inverterReplacementCostEUR: s.inverterReplacementCostEUR,
+    batteryLifetimeYears: s.batteryLifetimeYears,
+    batteryReplacementCostEUR: s.batteryReplacementCostEUR,
+    batteryDegradationPct: s.batteryDegradationPct,
+    pvDegradationPct: s.pvDegradationPct,
+    standbyWattage: s.standbyWattage,
     heatpumpJaz: s.heatpumpJaz,
     // The heat pump pays the household Strompreis (so the heating comparison
     // reacts to the "Strompreis" control). A dedicated `wpc` override can still
