@@ -129,6 +129,7 @@ function apiPlugin(): Plugin {
 
 export default defineConfig({
   root: ".",
+  base: "/pvr.jazzmuesli.github.io/",
   build: {
     outDir: "dist",
     target: "es2020",
