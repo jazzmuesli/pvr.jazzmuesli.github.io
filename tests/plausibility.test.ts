@@ -205,7 +205,7 @@ describe("self-consumption & autarky plausibility (TODO 4.1)", () => {
   function rates(peakKWp: number, cap: number): { scr: number; ssr: number } {
     const res = simulate(baseConfig(load, cap, peakKWp));
     const selfConsumption =
-      annualSum(res.directUse) + annualSum(res.dischargeToLoad);
+      annualSum(res.directUse) + annualSum(res.dischargeToLoadPV);
     const pv = annualSum(res.pv);
     const totalLoad = annualSum(res.load);
     return {
@@ -213,6 +213,33 @@ describe("self-consumption & autarky plausibility (TODO 4.1)", () => {
       ssr: totalLoad > 0 ? (selfConsumption / totalLoad) * 100 : 0,
     };
   }
+
+  it("self-consumption never exceeds PV production (energy conservation)", () => {
+    const res = simulate(baseConfig(load, 19.353, 22));
+    const pv = annualSum(res.pv);
+    const sc = annualSum(res.directUse) + annualSum(res.dischargeToLoadPV);
+    expect(sc).toBeLessThanOrEqual(pv);
+  });
+
+  it("self-consumption rate stays in 0–100% for various PV/battery sizes", () => {
+    for (const [kwp, cap] of [[5, 5], [10, 10], [22, 19.353], [40, 30], [60, 19.353]]) {
+      const r = rates(kwp, cap);
+      expect(r.scr).toBeGreaterThanOrEqual(0);
+      expect(r.scr).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("grid-charged energy does not inflate self-consumption", () => {
+    // With gridNegative mode the battery charges from the grid at negative
+    // prices.  The grid-charged portion must not be counted as self-consumption.
+    const cfg = baseConfig(load, 19.353, 22);
+    cfg.battery.chargeMode = "gridNegative";
+    const res = simulate(cfg);
+    const pv = annualSum(res.pv);
+    const sc = annualSum(res.directUse) + annualSum(res.dischargeToLoadPV);
+    expect(sc).toBeLessThanOrEqual(pv);
+    expect(sc).toBeGreaterThanOrEqual(0);
+  });
 
   it("autarky (self-sufficiency) is higher with a battery than without", () => {
     const withBat = rates(22, 19.353).ssr;

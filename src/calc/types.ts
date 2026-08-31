@@ -105,6 +105,8 @@ export interface SimResult {
   chargeGrid: Float64Array;
   /** Battery energy discharged to cover load per step (kWh). */
   dischargeToLoad: Float64Array;
+  /** Portion of dischargeToLoad that originated from PV (kWh). */
+  dischargeToLoadPV: Float64Array;
   /** Energy exported directly from PV per step (kWh). */
   exportSolar: Float64Array;
   /** Energy exported from the battery per step (kWh). */

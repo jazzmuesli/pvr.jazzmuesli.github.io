@@ -36,9 +36,9 @@ describe("computeEconomics", () => {
   const r = simulate(cfg(totalLoad(consumers)));
   const e = computeEconomics(r, econOpts);
 
-  it("self-consumption equals direct use + battery-to-load", () => {
+  it("self-consumption equals direct use + battery-to-load (PV origin only)", () => {
     let sc = 0;
-    for (let i = 0; i < TOTAL_STEPS; i++) sc += r.directUse[i] + r.dischargeToLoad[i];
+    for (let i = 0; i < TOTAL_STEPS; i++) sc += r.directUse[i] + r.dischargeToLoadPV[i];
     expect(e.selfConsumptionKWh).toBeCloseTo(sc, 3);
     expect(e.selfConsumptionKWh).toBeGreaterThan(0);
   });

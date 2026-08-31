@@ -95,7 +95,7 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     const row = monthly[monthForStep(i) - 1];
     const exp = result.exportTotal[i];
     const imp = result.gridImport[i];
-    const sc = result.directUse[i] + result.dischargeToLoad[i];
+    const sc = result.directUse[i] + result.dischargeToLoadPV[i];
 
     totalPV += result.pv[i]; totalLoad += result.load[i]; selfConsumption += sc;
     totalExport += exp; totalImport += imp;
@@ -146,7 +146,7 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     const h = Math.floor((i % STEPS_PER_DAY) / (STEPS_PER_DAY / 24));
     const key = `${m}-${h}`;
     const a = acc.get(key) ?? { pv: 0, load: 0, sc: 0, imp: 0, exp: 0 };
-    a.pv += result.pv[i]; a.load += result.load[i]; a.sc += result.directUse[i] + result.dischargeToLoad[i];
+    a.pv += result.pv[i]; a.load += result.load[i]; a.sc += result.directUse[i] + result.dischargeToLoadPV[i];
     a.imp += result.gridImport[i]; a.exp += result.exportTotal[i];
     acc.set(key, a);
   }

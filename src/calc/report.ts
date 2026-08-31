@@ -448,7 +448,7 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
     d.load.heatpump += loads.heatpump[i];
     d.load.bwwp += loads.bwwp[i];
     d.load.ev += loads.ev[i];
-    d.selfUseKWh += result.directUse[i] + result.dischargeToLoad[i];
+    d.selfUseKWh += result.directUse[i] + result.dischargeToLoadPV[i];
     d.importKWh += result.gridImport[i];
     d.exportKWh += result.exportTotal[i];
     d.avgPrice += result.price[i];
@@ -616,7 +616,7 @@ export function runSimulation(p: SimParams): SimReport {
       pvKWh: r.pvKWh,
       load: { household: s.household, heatpump: s.heatpump, bwwp: s.bwwp, ev: s.ev },
       totalLoadKWh: r.loadKWh,
-      selfConsumptionKWh: r.importKWh > 0 ? r.loadKWh - r.importKWh : r.loadKWh,
+      selfConsumptionKWh: r.selfConsumptionKWh,
       importKWh: r.importKWh,
       exportKWh: r.exportKWh,
       netEUR: r.netSelectedEUR,
@@ -707,7 +707,7 @@ export function runSimulation(p: SimParams): SimReport {
 
   const totalPVKWh = annualSum(result.pv);
   const totalLoadKWh = annualSum(result.load);
-  const selfConsumptionKWh = annualSum(result.directUse) + annualSum(result.dischargeToLoad);
+  const selfConsumptionKWh = annualSum(result.directUse) + annualSum(result.dischargeToLoadPV);
   const summary: SimSummary = {
     totalPVKWh,
     totalLoadKWh,

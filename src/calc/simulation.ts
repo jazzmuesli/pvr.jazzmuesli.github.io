@@ -112,6 +112,7 @@ export function simulate(config: SimConfig): SimResult {
   const maxSOCkWh = b.maxSOC * cap;
   const minSOCkWh = b.minSOC * cap;
   let soc = active ? b.startSOC * cap : 0;
+  let pvSOC = active ? b.startSOC * cap : 0; // PV-originated kWh in battery
 
   const loadArr = new Float64Array(TOTAL_STEPS);
   const socArr = new Float64Array(TOTAL_STEPS);
@@ -119,6 +120,7 @@ export function simulate(config: SimConfig): SimResult {
   const chargeSolar = new Float64Array(TOTAL_STEPS);
   const chargeGrid = new Float64Array(TOTAL_STEPS);
   const dischargeToLoad = new Float64Array(TOTAL_STEPS);
+  const dischargeToLoadPV = new Float64Array(TOTAL_STEPS);
   const exportSolar = new Float64Array(TOTAL_STEPS);
   const exportBattery = new Float64Array(TOTAL_STEPS);
   const gridImport = new Float64Array(TOTAL_STEPS);
@@ -156,6 +158,7 @@ export function simulate(config: SimConfig): SimResult {
         if (e > 0) {
           chargeGrid[i] = e;
           soc += e * eff;
+          // Grid-charged energy is NOT counted as PV; pvSOC stays unchanged.
         }
       }
       loadArr[i] = load[i];
@@ -195,6 +198,7 @@ export function simulate(config: SimConfig): SimResult {
           chargeSolar[i] = e;
           p -= e;
           soc += e * eff;
+          pvSOC += e * eff;
           charged = true;
         }
       }
@@ -214,6 +218,11 @@ export function simulate(config: SimConfig): SimResult {
       if (e > 0) {
         dischargeToLoad[i] = e;
         soc -= e;
+        // Only the PV-originated fraction counts as self-consumption.
+        const pvFrac = soc > 0 ? pvSOC / soc : 0;
+        const pvPart = e * Math.min(1, pvFrac);
+        dischargeToLoadPV[i] = pvPart;
+        pvSOC = Math.max(0, pvSOC - pvPart);
         L -= e;
       }
     }
@@ -235,6 +244,9 @@ export function simulate(config: SimConfig): SimResult {
         if (e > 0) {
           exportBattery[i] = e;
           soc -= e;
+          // Strategic export also drains PV proportionally.
+          const pvFrac = soc > 0 ? pvSOC / soc : 0;
+          pvSOC = Math.max(0, pvSOC - e * Math.min(1, pvFrac));
         }
       }
     }
@@ -253,6 +265,7 @@ export function simulate(config: SimConfig): SimResult {
     chargeSolar,
     chargeGrid,
     dischargeToLoad,
+    dischargeToLoadPV,
     exportSolar,
     exportBattery,
     gridImport,
