@@ -617,7 +617,7 @@ export function runSimulation(p: SimParams): SimReport {
       load: { household: s.household, heatpump: s.heatpump, bwwp: s.bwwp, ev: s.ev },
       totalLoadKWh: r.loadKWh,
       selfConsumptionKWh: r.selfConsumptionKWh,
-      importKWh: r.importKWh,
+      importKWh: r.loadKWh - r.selfConsumptionKWh,
       exportKWh: r.exportKWh,
       netEUR: r.netSelectedEUR,
     };
@@ -708,12 +708,15 @@ export function runSimulation(p: SimParams): SimReport {
   const totalPVKWh = annualSum(result.pv);
   const totalLoadKWh = annualSum(result.load);
   const selfConsumptionKWh = annualSum(result.directUse) + annualSum(result.dischargeToLoadPV);
+  // Netz-Import is the residual so that Eigenverbrauch + Netz-Import = Verbrauch.
+  // This includes both direct grid import and grid-charged battery discharge.
+  const totalImportKWh = totalLoadKWh - selfConsumptionKWh;
   const summary: SimSummary = {
     totalPVKWh,
     totalLoadKWh,
     selfConsumptionKWh,
     totalExportKWh: annualSum(result.exportTotal),
-    totalImportKWh: annualSum(result.gridImport),
+    totalImportKWh,
     exportRevenueEUR: exportEUR,
     importCostEUR,
     netSelectedEUR: econ.netSelectedEUR,

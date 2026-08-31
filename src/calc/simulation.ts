@@ -217,11 +217,11 @@ export function simulate(config: SimConfig): SimResult {
       const e = Math.min(maxStepEnergy, avail, L);
       if (e > 0) {
         dischargeToLoad[i] = e;
-        soc -= e;
-        // Only the PV-originated fraction counts as self-consumption.
+        // Compute PV fraction BEFORE reducing SOC (otherwise pvFrac is inflated).
         const pvFrac = soc > 0 ? pvSOC / soc : 0;
         const pvPart = e * Math.min(1, pvFrac);
         dischargeToLoadPV[i] = pvPart;
+        soc -= e;
         pvSOC = Math.max(0, pvSOC - pvPart);
         L -= e;
       }
@@ -243,9 +243,9 @@ export function simulate(config: SimConfig): SimResult {
         const e = Math.min(maxAdd, avail);
         if (e > 0) {
           exportBattery[i] = e;
-          soc -= e;
-          // Strategic export also drains PV proportionally.
+          // Compute PV fraction BEFORE reducing SOC.
           const pvFrac = soc > 0 ? pvSOC / soc : 0;
+          soc -= e;
           pvSOC = Math.max(0, pvSOC - e * Math.min(1, pvFrac));
         }
       }

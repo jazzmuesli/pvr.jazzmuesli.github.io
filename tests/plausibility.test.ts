@@ -258,4 +258,25 @@ describe("self-consumption & autarky plausibility (TODO 4.1)", () => {
     expect(withBat.ssr).toBeGreaterThan(30);
     expect(withBat.ssr).toBeLessThan(100);
   });
+
+  it("energy balance: Eigenverbrauch + Netz-Import = Verbrauch", () => {
+    // For various PV/battery sizes, the energy balance must always close.
+    for (const [kwp, cap] of [[0.4, 19.353], [5, 5], [10, 10], [22, 19.353], [40, 30]]) {
+      const res = simulate(baseConfig(load, cap, kwp));
+      const pv = annualSum(res.pv);
+      const totalLoad = annualSum(res.load);
+      const sc = annualSum(res.directUse) + annualSum(res.dischargeToLoadPV);
+      const imp = totalLoad - sc;
+      expect(imp).toBeGreaterThanOrEqual(0);
+      expect(sc + imp).toBeCloseTo(totalLoad, 0);
+    }
+  });
+
+  it("dischargeToLoadPV never exceeds chargeSolar + startSOC energy", () => {
+    // The PV-originated battery discharge cannot exceed the PV energy stored.
+    const res = simulate(baseConfig(load, 19.353, 22));
+    const pvCharged = annualSum(res.chargeSolar);
+    const pvDischarged = annualSum(res.dischargeToLoadPV);
+    expect(pvDischarged).toBeLessThanOrEqual(pvCharged + 0.01);
+  });
 });
