@@ -78,6 +78,8 @@ body {
 }
 .control-inline { display: flex; align-items: center; gap: 8px; }
 .control-inline label { margin: 0; }
+.expert-toggle { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.expert-toggle label { font-weight: 600; color: var(--accent); cursor: pointer; }
 .summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

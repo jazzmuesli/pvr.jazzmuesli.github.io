@@ -8,6 +8,7 @@ import { CarParams, DEFAULT_CAR_PARAMS } from "../calc/car";
 export type Orientation = "south" | "east" | "west" | "east_west";
 
 export interface AppState {
+  expertMode: boolean;
   peakKWp: number;
   tiltDeg: number;
   orientation: Orientation;
@@ -58,6 +59,7 @@ export interface AppState {
 }
 
 export const DEFAULT_STATE: AppState = {
+  expertMode: false,
   peakKWp: 22,
   tiltDeg: 35,
   orientation: "east_west",
@@ -108,24 +110,38 @@ export const DEFAULT_STATE: AppState = {
 
 /** Map the UI state onto the pure simulation parameters. */
 export function toSimParams(s: AppState): SimParams {
+  // In simple mode, derive sensible battery defaults from capacity.
+  const cap = s.capacityKWh;
+  const maxPowerKW = s.expertMode ? s.maxPowerKW : Math.min(cap * 0.33, 20);
+  const minSOC = s.expertMode ? s.minSOC : 0.1;
+  const maxSOC = s.expertMode ? s.maxSOC : 0.95;
+  const efficiency = s.expertMode ? s.efficiency : 0.95;
+  const startSOC = s.expertMode ? s.startSOC : 0.5;
+  const chargeMode = s.expertMode ? s.chargeMode : "morning";
+  const dischargeEvening = s.expertMode ? s.dischargeEvening : true;
+  const dischargeMorning = s.expertMode ? s.dischargeMorning : true;
+  const eveningStart = s.expertMode ? s.eveningStart : 17;
+  const eveningEnd = s.expertMode ? s.eveningEnd : 23;
+  const morningStart = s.expertMode ? s.morningStart : 5;
+  const morningEnd = s.expertMode ? s.morningEnd : 12;
   return {
     peakKWp: s.peakKWp,
     tiltDeg: s.tiltDeg,
     orientation: s.orientation,
     location: s.location,
-    capacityKWh: s.capacityKWh,
-    maxPowerKW: s.maxPowerKW,
-    minSOC: s.minSOC,
-    maxSOC: s.maxSOC,
-    efficiency: s.efficiency,
-    startSOC: s.startSOC,
-    chargeMode: s.chargeMode,
-    dischargeEvening: s.dischargeEvening,
-    dischargeMorning: s.dischargeMorning,
-    eveningStart: s.eveningStart,
-    eveningEnd: s.eveningEnd,
-    morningStart: s.morningStart,
-    morningEnd: s.morningEnd,
+    capacityKWh: cap,
+    maxPowerKW,
+    minSOC,
+    maxSOC,
+    efficiency,
+    startSOC,
+    chargeMode,
+    dischargeEvening,
+    dischargeMorning,
+    eveningStart,
+    eveningEnd,
+    morningStart,
+    morningEnd,
     feedInCt: s.feedInCt,
     commissioningYear: s.commissioningYear,
     priceYear: s.priceYear,
@@ -146,9 +162,6 @@ export function toSimParams(s: AppState): SimParams {
     pvDegradationPct: s.pvDegradationPct,
     standbyWattage: s.standbyWattage,
     heatpumpJaz: s.heatpumpJaz,
-    // The heat pump pays the household Strompreis (so the heating comparison
-    // reacts to the "Strompreis" control). A dedicated `wpc` override can still
-    // be supplied via the API query string.
     heatpumpElectricCt: s.importFixedCt,
     car: { ...s.car },
   };

@@ -46,31 +46,34 @@ function renderSummary(r: SimReport): void {
   const s = r.summary;
   const eff = r.effectivePrice;
   const selfPct = s.totalLoadKWh > 0 ? (s.selfConsumptionKWh / s.totalLoadKWh) * 100 : 0;
+  const expert = state.expertMode;
   const cards: [string, string, string][] = [
     ["PV-Ertrag", `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
     ["Verbrauch", `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Eigenverbrauch", `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)} % des Verbrauchs`],
-    ["Netz-Import", `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, "Batterie + Verbrauch"],
+    ["Eigenverbrauch", `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% des Verbrauchs`],
+    ["Netz-Import", `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, ""],
     ["Export", `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, "ins Netz"],
-    ["Export-Erlös", fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? "Direktvermarktung" : "Feste Vergütung"],
-    ["Stromkosten", fmtEUR(s.importCostEUR), importSchemeLabel()],
     ["Netto-Bilanz", `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, "Export − Import"],
-    ["Marktprämie", `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
-    ["EEG Referenz", `${s.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
-    ["Eff. Strompreis (netto)", `${eff.overallCt.toFixed(1)} ct/kWh`, "Netto = (Import − Export) / Verbrauch"],
-    ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
-    ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
-    ["Eff. Preis Brauchw.-WP", `${eff.byConsumer.bwwp.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
-    ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, "nur Bezug (ohne Export)"],
-    ["Investition (gesamt)", fmtEUR(r.amortisation.totalInvestmentEUR), "einmalige Gesamtinvestition"],
-    ["Jahresersparnis", fmtEUR(r.amortisation.annualBenefitEUR), "ggü. Volleinspeisung aus dem Netz"],
-    ["Amortisation", r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} Jahre`, "einfache Amortisation"],
+    ["Eff. Strompreis", `${eff.overallCt.toFixed(1)} ct/kWh`, "netto"],
+    ["Amortisation", r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} J.`, "Jahresersparnis " + fmtEUR(r.amortisation.annualBenefitEUR)],
   ];
+  if (expert) {
+    cards.push(
+      ["Export-Erlös", fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? "Direktvermarktung" : "Feste Vergütung"],
+      ["Stromkosten", fmtEUR(s.importCostEUR), importSchemeLabel()],
+      ["Marktprämie", `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
+      ["EEG Referenz", `${s.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
+      ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, ""],
+      ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, ""],
+      ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, ""],
+      ["Investition", fmtEUR(r.amortisation.totalInvestmentEUR), ""],
+    );
+  }
   summaryHost.innerHTML = "";
   for (const [k, v, sub] of cards) {
     const card = document.createElement("div");
     card.className = "card";
-    card.innerHTML = `<div class="card-val">${v}</div><div class="card-key">${k}</div><div class="card-sub">${sub}</div>`;
+    card.innerHTML = `<div class="card-val">${v}</div><div class="card-key">${k}</div>${sub ? `<div class="card-sub">${sub}</div>` : ""}`;
     summaryHost.appendChild(card);
   }
 }

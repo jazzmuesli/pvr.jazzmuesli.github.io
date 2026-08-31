@@ -19,6 +19,7 @@ function bool(p: URLSearchParams, k: string, set: (v: boolean) => void): void {
 
 export function serializeState(s: AppState): string {
   const p = new URLSearchParams();
+  p.set("expert", s.expertMode ? "1" : "0");
   p.set("kwp", String(s.peakKWp));
   p.set("tilt", String(s.tiltDeg));
   p.set("o", s.orientation);
@@ -76,6 +77,7 @@ export function deserializeState(qs: string): AppState {
     },
   };
   const p = new URLSearchParams(qs);
+  bool(p, "expert", (v) => (s.expertMode = v));
   num(p, "kwp", (v) => (s.peakKWp = v));
   num(p, "tilt", (v) => (s.tiltDeg = v));
   str(p, "o", (v) => (s.orientation = v as AppState["orientation"]));

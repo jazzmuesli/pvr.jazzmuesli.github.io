@@ -1,0 +1,14 @@
+node_modules
+dist
+logs
+*.local
+.DS_Store
+.env
+.env.*
+
+# Build artifacts
+static.zip
+static_build/
+
+# Screenshots / images
+ui_full.png
