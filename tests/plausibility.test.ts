@@ -263,7 +263,6 @@ describe("self-consumption & autarky plausibility (TODO 4.1)", () => {
     // For various PV/battery sizes, the energy balance must always close.
     for (const [kwp, cap] of [[0.4, 19.353], [5, 5], [10, 10], [22, 19.353], [40, 30]]) {
       const res = simulate(baseConfig(load, cap, kwp));
-      const pv = annualSum(res.pv);
       const totalLoad = annualSum(res.load);
       const sc = annualSum(res.directUse) + annualSum(res.dischargeToLoadPV);
       const imp = totalLoad - sc;
