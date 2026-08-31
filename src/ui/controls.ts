@@ -122,12 +122,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section("Investition");
   host.appendChild(
-    slider({ label: "Gesamtinvestition", min: 5000, max: 80000, step: 1000, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+    slider({ label: "Gesamtinvestition", min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
   );
 
   section("PV-Anlage");
   host.appendChild(
-    slider({ label: "Peak-Leistung", min: 1, max: 50, step: 1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => String(v) }, state, onChange),
+    slider({ label: "Peak-Leistung", min: 0.4, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
   );
   host.appendChild(
     slider({ label: "Neigung", min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),

@@ -1,210 +1,247 @@
-# pv-calc — PV + Batterie Wirtschaftlichkeitsrechner
+# pv-calc -- PV + Battery Economics Simulator
 
-Ein deterministischer, reproduzierbarer Simulator für die Haus-Wirtschaftlichkeit
-einer PV- + Batterie-Anlage (Deutschland, EEG 2023–2026). Er berechnet
-Energieflüsse, das effektive Beschaffungspreis-Modell, die Amortisation und
-vergleicht die vier relevanten Vergütungs-/Bezugsszenarien.
+A deterministic, reproducible simulator for the economics of residential PV + battery systems in Germany (EEG 2023-2026). It calculates energy flows, effective electricity prices, amortisation, and compares the four relevant tariff/export scenarios.
 
-Die gesamte Logik steckt in **einer reinen Funktion**
-`runSimulation(params)` (`src/calc/report.ts`), die ein JSON-Serialisierbares
-`SimReport` zurückgibt. Dieses Report wird sowohl von der Oberfläche
-(`src/main.ts` + `src/ui/charts.ts`) als auch von der HTTP-API (`/api`, siehe
-unten) verwendet.
+The entire simulation logic lives in a single pure function `runSimulation(params)` (`src/calc/report.ts`) that returns a JSON-serialisable `SimReport`. This report is used by both the browser UI (`src/main.ts` + `src/ui/charts.ts`) and the HTTP API (`/api`).
 
-## Schnellstart
+## Quick Start
 
 ```bash
 npm install
-npm run dev       # Vite Dev-Server auf http://localhost:5173
-npm run build     # tsc + vite build nach dist/
-npm run preview   # dist/ lokal ausliefern (inkl. /api)
-npm test          # Vitest (alle Plausibilitäts- & Modelltests)
-npx tsc --noEmit  # reine Typprüfung
+npm run dev       # Vite dev server at http://localhost:5173
+npm run build     # tsc + vite build to dist/
+npm run preview   # Serve dist/ locally (includes /api)
+npm test          # Vitest (all plausibility & model tests)
+npx tsc --noEmit  # Type-check only
 ```
 
-Die Oberfläche ist eine einzelne Seite (`index.html`). Jede Einstellung ist
-über die Steuerleiste (links) einstellbar und wird über die URL
-(`?kwp=…&cap=…`) teibar gemacht – ein Konfigurationslink funktioniert also
-sowohl in der App als auch als `/api?…`-Aufruf.
+The UI is a single page (`index.html`). Every setting is adjustable via the sidebar (left) and shareable through URL parameters (`?kwp=...&cap=...`). Configuration links work both in the app and as `/api?...` calls.
 
-## Modell
+## Features
 
-Alle Profile sind **deterministisch** (kein Zufall), damit die Simulation
-vollständig reproduzierbar und per Unit-Test prüfbar ist.
+- **PV production** using a clear-sky analytical solar model calibrated to empirical kWh/kWp values for German cities (Hamburg, Berlin, Munich, Cologne, Boizenburg)
+- **Battery dispatch** at 15-minute resolution (self-consumption, strategic grid charging at negative prices, export during expensive windows)
+- **Consumer load profiles** for household (H0 standard), heat pump, domestic hot water heat pump (BWWP), and electric vehicle
+- **Revenue/cost analysis** under four tariff combinations: fixed feed-in vs. Direktvermarktung (market premium), and fixed import vs. dynamic (spot) vs. dynamic + section 14a/3 grid fees
+- **Multi-year discounted cashflow** with NPV, IRR, LCOE, battery degradation, PV degradation, O&M costs, replacement investments (inverter + battery), and price escalation
+- **Opportunity-cost comparisons**: heat pump vs. heating oil vs. natural gas, and EV vs. diesel car
+- **AI-powered Energiewende advisor** (chatbot) that lets users configure scenarios via natural language (backed by OpenRouter LLM with tool-calling, or a deterministic regex fallback)
 
-### PV-Erzeugung
-`src/calc/solar.ts` — Plane-of-Array Einstrahlung aus Neigung, Ausrichtung und
-Standort (`LOCATIONS`, inkl. Boizenburg). MONTHLY-Azimut-Modell + Tagbogen.
+## Simulation Model
 
-### Verbraucher (`src/calc/consumers.ts`)
-Vier Lastprofile, summiert zur Gesamtlast:
+All profiles are **deterministic** (no randomness), making the simulation fully reproducible and unit-testable.
 
-| Key      | Profil | Form |
-|----------|--------|------|
-| `household` | H0-Standardlastprofil | Morgen-/Abendspitzen |
-| `heatpump`  | Wärmepumpe | winter- & nachtschwer |
-| `bwwp`      | Brauchwasser-WP | 2-h-Block mittags (~40 kWh/Monat) |
-| `ev`        | E-Auto | `pvShare` mittags (PV), Rest abends |
+### PV Generation (`src/calc/solar.ts`)
 
-Jeder Verbraucher kann einzeln aktiviert/deaktiviert und in seinem Jahresverbrauch
-kalibriert werden. Für jeden Verbraucher wird die Last **getrennt** geführt, damit
-die Diagramme und der effektive Preis pro Verbraucher ausgewiesen werden können.
+Plane-of-array irradiation computed from tilt, orientation, and location (`LOCATIONS`). MONTHLY azimuth model + solar path. Calibrated to real-world yield data for German cities.
 
-### Batterie-Dispatch (`src/calc/simulation.ts`)
-Pro 15-Minuten-Schritt:
+### Consumers (`src/calc/consumers.ts`)
 
-1. PV deckt zuerst die lokale Last (direkte Eigenverbrauch).
-2. Überschuss-PV lädt den Speicher (bzw. bei negativen Preisen aus dem Netz).
-3. Rest-PV wird eingespeist (bei negativen Preisen gekappt).
-4. Nicht durch PV gedeckte Last wird aus dem Speicher, dann aus dem Netz bedient.
-5. In den teuersten Nicht-Negativpreis-Fenstern entlädt der Speicher zusätzlich
-   ins Netz (Direktvermarktung / strategischer Export).
+Four load profiles, summed to total load:
 
-Ist `capacityKWh = 0`, ist der Speicher deaktiv (alle Last wird aus dem Netz
-bezogen, Überschuss voll eingespeist).
+| Key | Profile | Shape |
+|-----|---------|-------|
+| `household` | H0 standard load profile | Morning/evening peaks |
+| `heatpump` | Heat pump | Winter & night heavy |
+| `bwwp` | Domestic hot water heat pump | 2h block around midday (~40 kWh/month) |
+| `ev` | Electric vehicle | `pvShare` at midday (PV), rest in evening |
 
-### Strompreise & Tarife (`src/calc/tariff.ts`, `priceData.ts`, `priceModel.ts`)
-- **Bezug:**
-  - `fixed` – konstanter Arbeitspreis (z. B. 24 ct/kWh).
-  - `dynamic` – Spot (EPEX) + Stadt-Netzentgelt + Steuern/Marge.
-  - `dynamic14a` – wie dynamic, aber Netzentgelt nach § 14a EnWG Modul 3
-    (günstig nachts, teuer in Winter-Abendspitzen).
-- **Einspeisung:**
-  - `fixed` – feste Vergütung (z. B. 7,2 ct/kWh, EEG-gestaffelt nach
-    Inbetriebnahme-Jahr).
-  - `market` – Direktvermarktung: Marktwert (Spot) + EEG-Marktprämie, verglichen
-    mit dem anzulegenden Wert (Referenzwert).
+Each consumer can be individually enabled/disabled and calibrated by annual consumption. Load is tracked separately per consumer so that charts and effective prices can be reported per consumer.
 
-### Effektiver Bezugspreis (`src/calc/vwap.ts`)
-Der „effektive Strompreis" ist definiert als
+### Battery Dispatch (`src/calc/simulation.ts`)
+
+Per 15-minute step:
+
+1. PV covers local load first (direct self-consumption).
+2. Surplus PV charges the battery (or from grid at negative prices).
+3. Remaining PV is exported (capped at negative prices).
+4. Load not covered by PV is served from battery, then from grid.
+5. In the most expensive non-negative-price windows, the battery additionally discharges to grid (Direktvermarktung / strategic export).
+
+When `capacityKWh = 0`, the battery is disabled (all load from grid, all surplus exported).
+
+### Electricity Prices & Tariffs (`src/calc/tariff.ts`, `priceData.ts`, `priceModel.ts`)
+
+- **Import:**
+  - `fixed` -- constant working price (e.g. 24 ct/kWh)
+  - `dynamic` -- spot (EPEX) + municipal grid fees + taxes/margin
+  - `dynamic14a` -- like dynamic, but grid fees per section 14a EnWG module 3 (cheaper at night, expensive in winter evening peaks)
+- **Export:**
+  - `fixed` -- fixed feed-in tariff (e.g. 7.2 ct/kWh, EEG-stepped by commissioning year)
+  - `market` -- Direktvermarktung: market value (spot) + EEG market premium, compared to the reference value (anzulegender Wert)
+
+### Effective Electricity Price (`src/calc/vwap.ts`)
+
+The "effective electricity price" is defined as:
 
 ```
-effPreis = (Importkosten − Exporterlös) / Gesamtverbrauch   [ct/kWh]
+effPrice = (import costs - export revenue) / total consumption   [ct/kWh]
 ```
 
-und wird pro Verbraucher separat ausgewiesen (nur Bezug, ohne Export).
+Reported separately per consumer (import only, excluding export).
 
 ### Amortisation (`src/calc/amortisation.ts`)
-Einfache Amortisation:
+
+Simple amortisation:
 
 ```
-Jahresersparnis = BaselineKosten − ImportKosten + ExportErlös
-                = BaselineKosten + SystemNettoEUR
-Amortisation    = Investition / Jahresersparnis
+annualSaving = baselineCost - importCost + exportRevenue
+             = baselineCost + systemNetEUR
+amortisation = investment / annualSaving
 ```
 
-`BaselineKosten` = Kosten, die anfielen, wenn der **gesamte** Verbrauch aus dem
-Netz bezogen würde („Volleinspeisung aus dem Netz").
+`baselineCost` = cost if the entire consumption were imported from the grid.
 
-#### Investition als ein einziger Parameter
-Die Investition ist **eine einzige Gesamtinvestition** (`investmentEUR`, Slider
-oben in der Steuerleiste, Default 32.000 €), unabhängig von kWp/kWh. Dadurch ist
-das Verhalten intuitiv:
+### Multi-Year Cashflow (`src/calc/cashflow.ts`)
 
-- Eine Anlage, die die Jahresersparnis erhöht (z. B. ein sinnvoller Speicher),
-  **verkürzt** die Amortisation – bei gleichbleibender Investition.
-- Eine höhere Investition (bei gleicher Anlage) **verlängert** die Amortisation.
+Discounted cashflow analysis over a configurable horizon (default 20 years) including:
 
-> Hinweis: In einer früheren Version war die Investition an kWp/kWh gekoppelt
-> (`PV-Investition €/kWp` + `Speicher-Investition €/kWh`). Dort verkürzte das
-> *Entfernen* des Speichers die Amortisation – ein Artefakt der gekoppelten
-> Kosten, nicht der Physik. Der aktuelle Ein-Investitions-Slider behebt das.
+- **NPV** (Net Present Value) at a configurable discount rate
+- **IRR** (Internal Rate of Return)
+- **LCOE** (Levelised Cost of Energy) in ct/kWh
+- Battery and PV degradation
+- O&M costs with inflation
+- Replacement investments (inverter at year ~13, battery at year ~13)
+- Price escalation for import electricity
 
-## HTTP-API
+### Heating Cost Comparison (`src/calc/heating.ts`)
 
-Der Dev-Server (`npm run dev`) und der Preview-Server (`npm run preview`)
-liefern unter `/api` dasselbe `SimReport` als JSON aus. Die Query-Parameter
-sind identisch mit den SPA-URL-Parametern:
+Compares the heat pump with fossil alternatives (heating oil, natural gas) for the same useful heat output. Includes chimney sweep costs, gas network fees, and boiler efficiency.
+
+### EV vs. Diesel (`src/calc/car.ts`)
+
+Compares electric vehicle operating costs with a diesel car for the same annual distance, including energy, maintenance, and vehicle tax.
+
+## Investment Slider
+
+The investment is a single total amount (`investmentEUR`, slider at the top of the sidebar), independent of kWp/kWh. The slider range starts at 100 EUR, allowing configurations from small balcony systems to full rooftop installations.
+
+The PV peak power slider starts at 0.4 kWp (400 W), covering balcony power stations through large commercial arrays.
+
+## HTTP API
+
+The dev server (`npm run dev`) and preview server (`npm run preview`) serve the same `SimReport` as JSON at `/api`. Query parameters match the SPA URL parameters:
 
 ```bash
 curl "http://localhost:5173/api?kwp=22&cap=19.353&inv=32000&ex=market&im=dynamic14a"
 ```
 
-Wichtige Parameter (alle optional, Defaults siehe `DEFAULT_SIM_PARAMS` in
-`src/calc/report.ts`):
+Key parameters (all optional, defaults in `DEFAULT_SIM_PARAMS` in `src/calc/report.ts`):
 
-| Param | Bedeutung | Default |
-|-------|-----------|---------|
-| `kwp` | Peak-Leistung (kWp) | 10 |
-| `tilt` | Neigung (°) | 35 |
-| `o` | Ausrichtung `south/east/west/east_west` | south |
-| `loc` | Standort `hamburg/berlin/munich/cologne/boizenburg` | hamburg |
-| `cap` | Batterie-Kapazität (kWh, 0 = kein Speicher) | 10 |
-| `pwr` | Batterie-Maximalleistung (kW) | 5 |
-| `minsoc`/`maxsoc` | SOC-Grenzen | 0.1 / 0.9 |
-| `eff` | Rundtauswirkungsgrad | 0.95 |
-| `soc0` | Start-SOC | 0.5 |
-| `charge` | Ladestrategie `morning/midday/gridNegative` | morning |
-| `de`/`dm` | Entladung abends/morgens (0/1) | 1 / 0 |
-| `evs`/`eve` | Abend-Fenster (Stunden) | 17 / 21 |
-| `mns`/`mne` | Morgen-Fenster (Stunden) | 6 / 9 |
-| `fi` | Einspeisevergütung (ct/kWh) | 7.2 |
-| `yr` | Inbetriebnahme-Jahr (EEG) | 2025 |
-| `py` | Spot-Preisjahr (`priceData.ts`) | 2025 |
-| `hh`/`hk`, `wp`/`wk`, `bw`, `ev`/`ek`, `es` | Verbraucher an/aus, kWh, EV-PV-Anteil | s. `DEFAULT_SIM_PARAMS` |
-| `ex` | Einspeisung `fixed`/`market` | fixed |
-| `im` | Bezug `fixed`/`dynamic`/`dynamic14a` | fixed |
-| `ict` | Fester Bezugspreis (ct/kWh) | 24 |
-| `inv` | **Gesamtinvestition (€)** | 32000 |
-| `jaz` | Jahresarbeitszahl (Wärme/Elektr.) der Wärmepumpe | 3 |
-| `wpc` | Wärmepumpen-Strompreis (ct/kWh) | 24 |
+| Param | Description | Default |
+|-------|-------------|---------|
+| `kwp` | Peak power (kWp) | 10 |
+| `tilt` | Tilt (degrees) | 35 |
+| `o` | Orientation `south/east/west/east_west` | south |
+| `loc` | Location `hamburg/berlin/munich/cologne/boizenburg` | hamburg |
+| `cap` | Battery capacity (kWh, 0 = no battery) | 10 |
+| `pwr` | Battery max power (kW) | 5 |
+| `minsoc`/`maxsoc` | SOC limits | 0.1 / 0.9 |
+| `eff` | Round-trip efficiency | 0.95 |
+| `soc0` | Start SOC | 0.5 |
+| `charge` | Charge strategy `morning/midday/gridNegative` | morning |
+| `de`/`dm` | Discharge evening/morning (0/1) | 1 / 0 |
+| `evs`/`eve` | Evening window (hours) | 17 / 21 |
+| `mns`/`mne` | Morning window (hours) | 6 / 9 |
+| `fi` | Feed-in tariff (ct/kWh) | 7.2 |
+| `yr` | Commissioning year (EEG) | 2025 |
+| `py` | Spot price year (`priceData.ts`) | 2025 |
+| `hh`/`hk`, `wp`/`wk`, `bw`, `ev`/`ek`, `es` | Consumer on/off, kWh, EV PV-share | see `DEFAULT_SIM_PARAMS` |
+| `ex` | Export `fixed`/`market` | fixed |
+| `im` | Import `fixed`/`dynamic`/`dynamic14a` | fixed |
+| `ict` | Fixed import price (ct/kWh) | 24 |
+| `inv` | **Total investment (EUR)** | 32000 |
+| `jaz` | Heat pump seasonal COP | 3 |
+| `wpc` | Heat pump electricity price (ct/kWh) | 24 |
+| `hor` | Analysis horizon (years) | 20 |
+| `d` | Discount rate (%) | 3 |
+| `esc` | Price escalation (%/year) | 2 |
+| `om` | O&M (% of investment/year) | 1.5 |
 
-Das zurückgegebene `SimReport` enthält: `summary`, `amortisation`,
-`effectivePrice`, `monthly[]` (12 Einträge), `daily[][]` (12 Monate × 24 Stunden)
-und `scenario[]` (4 Varianten) sowie `heating` (Heizkosten-Vergleich, siehe
-unten).
+The returned `SimReport` contains: `summary`, `amortisation`, `cashflow`, `effectivePrice`, `monthly[]` (12 entries), `daily[][]` (12 months x 24 hours), `scenario[]` (4 variants), `tariffCombinations`, and `opportunityCosts` (heating + EV comparisons).
 
-### Heizkosten-Vergleich (`heating`)
-
-Zusätzlich zur Stromwirtschaftlichkeit vergleicht der Report die **Heizkosten**
-der Wärmepumpe mit den fossilen Alternativen **Heizöl** und **Erdgas** – für
-dieselbe Nutzwärmemenge. Die Wärmepumpe liefert `Wärme = Strom × JAZ`
-(Jahresarbeitszahl, Default 3). Für die gleiche Wärmemenge werden Öl- und
-Gaskosten inkl. Kesselwirkungsgrad, Schornsteinfeger (200 €/Jahr) und – bei Gas –
-Gasnetzentgelt (2 ct/kWh) plus Nebenkosten/Grundgebühr (120 €/Jahr) berechnet.
-
-Die reine Funktion `computeHeating(params)` (`src/calc/heating.ts`) ist DOM-frei
-und einzeln testbar (`tests/heating.test.ts`). Die Sektion wird nur angezeigt,
-wenn die Wärmepumpe aktiviert ist.
-
-| Param | Bedeutung | Default |
-|-------|-----------|---------|
-| `jaz` | Jahresarbeitszahl der Wärmepumpe | 3 |
-| `wpc` | WP-Strompreis (ct/kWh) | 24 |
-
-## Architektur
+## Architecture
 
 ```
-src/calc/                 # reine, DOM-freie Simulation
-  solar.ts                 # PV-Erzeugung
-  consumers.ts             # Lastprofile + Summen
-  simulation.ts            # Dispatch PV/Batterie/Netz (15-Min-Schritte)
-  priceModel.ts, priceData.ts, tariff.ts   # Spot-Preise & Tarife
-  revenue.ts               # EEG/DV-Abrechnung, Marktprämie
-  vwap.ts                  # effektiver Bezugspreis
-  amortisation.ts          # einfache Amortisation
-  report.ts                # runSimulation(params) -> SimReport  (Einstiegspunkt)
+src/calc/                 # Pure, DOM-free simulation engine
+  solar.ts                # PV generation
+  consumers.ts            # Load profiles + summation
+  simulation.ts           # Dispatch PV/battery/grid (15-min steps)
+  priceModel.ts           # Synthetic spot-price generator
+  priceData.ts            # Real spot-price loader (energy-charts.info)
+  tariff.ts               # Import tariff models (fixed/dynamic/14a)
+  revenue.ts              # EEG/DV billing, market premium
+  vwap.ts                 # Effective procurement price
+  amortisation.ts         # Simple payback period
+  cashflow.ts             # Multi-year discounted cashflow (NPV, IRR, LCOE)
+  heating.ts              # Heat pump vs. oil vs. gas cost comparison
+  car.ts                  # EV vs. diesel cost comparison
+  opportunity.ts          # Combined opportunity-cost module
+  report.ts               # runSimulation(params) -> SimReport (entry point)
+  types.ts                # Core types and constants
 src/ui/
-  state.ts                 # AppState + toSimParams()
-  url.ts                   # teilbare URL (serialize/deserialize)
-  controls.ts              # Steuerleiste
-  charts.ts                # handgemachte SVG-Diagramme (kein Charting-Dep)
-src/main.ts                # verdrahtet State -> runSimulation -> Charts
-vite.config.ts             # + /api Middleware-Plugin
-tests/                     # Vitest: Modell-, Plausibilitäts- & Report-Tests
+  state.ts                # AppState + toSimParams()
+  url.ts                  # Shareable URL (serialize/deserialize)
+  controls.ts             # Sidebar controls (sliders, selects, checkboxes)
+  charts.ts               # Hand-rolled SVG charts (no charting library)
+src/wizard/
+  wizard.ts               # Interactive step-by-step wizard UI
+src/chatbot/
+  chatbot.ts              # ChatBot class (wires store + interpreter + advisor)
+  chat-ui.ts              # Chat panel DOM rendering
+  openrouter.ts           # Browser-side OpenRouter proxy adapter
+  advisor.ts              # Deterministic regex-based advisor state machine
+  logger.ts               # Client-side conversation logger
+src/main.ts               # Wires State -> runSimulation -> Charts
+vite.config.ts            # Vite build + /api + /chat middleware plugin
+tests/                    # ~140 Vitest tests (model, plausibility, report)
 ```
+
+## Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| Language | TypeScript (ES2020, strict mode) |
+| Build | Vite 5 |
+| Test | Vitest 2 |
+| Runtime | Vanilla TypeScript (no framework) |
+| Charts | Hand-rolled SVG (zero dependencies) |
+| State | Custom minimal observable store |
+| AI | OpenRouter API (server-side proxy, key in `OR_PV_KEY` env var) |
+| Data | energy-charts.info (Bundesnetzagentur/SMARD spot prices, CC BY 4.0) |
+
+**Zero runtime dependencies.** The entire bundle is self-contained TypeScript.
 
 ## Tests
 
-`npm test` führt ~140 Tests aus, u. a.:
+`npm test` runs ~140 tests including:
 
-- **`report.test.ts`** — Struktur des `SimReport`, Monats-/Tages-Summen stimmen
-  mit den Jahrestotalen überein, Szenario-`netEUR = exportEUR − importEUR`,
-  Amortisation = Investition / Jahresersparnis, größere Investition → längere
-  Amortisation, Parameter-Parsing (`simParamsFromQuery`).
-- **`plausibility.test.ts` / `assumptions.test.ts`** — PV-Ertrag, Lasten und
-  Verbraucheranteile in realistischen Bändern (kalibriert an echten
-  Haushaltsdaten); Schema-Reihenfolge DV ≥ fest, §14a/3 ≥ dynamisch.
-- **`economic_model.test.ts`** — Semantik des effektiven Preises (ohne PV/Batterie
-  = Tarif), PV-Eigenverbrauchs-Invarianten.
-- **`amortisation.test.ts`** — Payback-Identitäten und Sensitivitäten.
+- **`report.test.ts`** -- SimReport structure, monthly/daily sums match annual totals, scenario `netEUR = exportEUR - importEUR`, amortisation = investment / annual saving, parameter parsing (`simParamsFromQuery`)
+- **`plausibility.test.ts` / `assumptions.test.ts`** -- PV yield, loads, and consumer shares in realistic bands (calibrated to real household data); scheme ordering DV >= fixed, 14a/3 >= dynamic
+- **`cashflow.test.ts`** -- NPV monotonicity with discount rate, IRR/NPV consistency, price escalation sensitivity, battery replacement impact
+- **`economic_model.test.ts`** -- Effective price semantics (no PV/battery = tariff), PV self-consumption invariants
+- **`amortisation.test.ts`** -- Payback identities and sensitivities
+- **`chatbot.test.ts`** -- Advisor regex interpretation, scenario patching
+
+## Environment Variables
+
+The chatbot feature requires an OpenRouter API key. Set it in a `.env` file (git-ignored):
+
+```bash
+OR_PV_KEY=your_openrouter_api_key_here
+OR_MODEL=nvidia/nemotron-3-super-120b-a12b:free  # optional
+```
+
+**No API keys are hardcoded in source code.** The key is read server-side only and proxied through the dev server's `/chat` endpoint.
+
+## Price Data
+
+Real German day-ahead spot prices (2023-2026) sourced from [energy-charts.info](https://energy-charts.info) (Bundesnetzagentur/SMARD data, CC BY 4.0). Fetch updated data with:
+
+```bash
+node scripts/fetch_prices.mjs
+```
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
