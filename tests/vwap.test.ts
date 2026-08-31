@@ -36,14 +36,23 @@ describe("effective net price (Import − Export) / Verbrauch", () => {
   const result = simulate(baseConfig(load, 19.353));
   const loads = loadByConsumer(consumers);
 
-  it("equals (Importkosten − Exporterlös) / Gesamtverbrauch", () => {
+  it("equals (Importkosten − Exporterlös) / Gesamtverbrauch when positive", () => {
     const imp = importPriceArray("fixed", city, prices);
-    const exportEUR = 1234;
+    const exportEUR = 100;
     const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, exportEUR);
     let importCost = 0;
     for (let i = 0; i < result.load.length; i++) importCost += (result.gridImport[i] * imp[i]) / 100;
     const totalKWh = load.reduce((a, b) => a + b, 0);
     expect(eff.overallCt).toBeCloseTo(((importCost - exportEUR) / totalKWh) * 100, 6);
+  });
+
+  it("is capped at zero when export revenue exceeds import cost", () => {
+    const imp = importPriceArray("fixed", city, prices);
+    let importCost = 0;
+    for (let i = 0; i < result.load.length; i++) importCost += (result.gridImport[i] * imp[i]) / 100;
+    const exportEUR = importCost + 1000;
+    const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, exportEUR);
+    expect(eff.overallCt).toBe(0);
   });
 
   it("under a fixed tariff the effective price is well below the flat rate", () => {

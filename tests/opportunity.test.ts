@@ -56,9 +56,9 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
     // function directly with the same inputs that `runSimulation` derives
     // (PV-aware effective prices + EV distance from the E-Auto consumption).
     const evKWh = r.inputs.consumers.ev.enabled ? r.inputs.consumers.ev.annualKWh : 0;
-    const annualKm = evKWh > 0
+    const annualKm = r.inputs.consumers.ev.enabled && evKWh > 0
       ? Math.round((evKWh * 100) / r.inputs.car.evKwhPer100km)
-      : r.inputs.car.annualKm;
+      : 0;
     const evCt = r.inputs.consumers.ev.enabled ? r.effectivePrice.byConsumer.ev : r.inputs.importFixedCt;
     const hpCt = r.inputs.consumers.heatpump.enabled ? r.effectivePrice.byConsumer.heatpump : r.inputs.heatpumpElectricCt;
     const direct = computeOpportunityCosts({
@@ -78,15 +78,16 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
   it("respects the /api query parameters (km, dl)", () => {
     const r = runSimulation({
       ...DEFAULT_SIM_PARAMS,
-      consumers: { ...DEFAULT_SIM_PARAMS.consumers, heatpump: { enabled: false, annualKWh: 0 }, ev: { enabled: false, annualKWh: 0, pvShare: 0.8 } },
+      consumers: { ...DEFAULT_SIM_PARAMS.consumers, heatpump: { enabled: false, annualKWh: 0 }, ev: { enabled: true, annualKWh: 5000, pvShare: 0.8 } },
       car: { ...DEFAULT_SIM_PARAMS.car, annualKm: 30000, dieselEurPerL: 1.8 },
     });
-    expect(r.opportunityCosts.car.annualKm).toBe(30000);
+    // When ev is enabled with annualKWh > 0, the annualKm is derived from consumption
+    expect(r.opportunityCosts.car.annualKm).toBe(Math.round((5000 * 100) / r.inputs.car.evKwhPer100km));
     // Cheaper diesel pulls the diesel total down (but EV stays cheaper).
     expect(r.opportunityCosts.car.diesel.energyCostEUR).toBeLessThan(
       computeOpportunityCosts({
         heating: { ...DEFAULT_HEATING_PARAMS, heatpumpElectricKWh: 0, jaz: 3 },
-        car: { ...CAR, annualKm: 30000, dieselEurPerL: 2.15 },
+        car: { ...CAR, annualKm: Math.round((5000 * 100) / CAR.evKwhPer100km), dieselEurPerL: 2.15 },
       }).car.diesel.energyCostEUR,
     );
   });
@@ -125,12 +126,12 @@ describe("opportunity costs inside runSimulation (the shared /api + client funct
       .toBeGreaterThan(low.opportunityCosts.car.diesel.energyCostEUR);
   });
 
-  it("disabling the EV keeps the default annual distance", () => {
+  it("disabling the EV hides the EV comparison (annualKm = 0)", () => {
     const r = runSimulation({
       ...DEFAULT_SIM_PARAMS,
       consumers: { ...DEFAULT_SIM_PARAMS.consumers, ev: { enabled: false, annualKWh: 0, pvShare: 0.8 } },
     });
-    expect(r.opportunityCosts.car.annualKm).toBe(15000);
+    expect(r.opportunityCosts.car.annualKm).toBe(0);
   });
 
   it("a bigger battery lowers the heat-pump effective price and raises the saving", () => {

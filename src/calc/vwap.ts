@@ -53,7 +53,7 @@ export function effectiveNetPrice(
 
   let totalImportCost = 0;
   for (let i = 0; i < n; i++) totalImportCost += gridImport[i] * (importCt[i] / 100);
-  const overallCt = totalLoadKWh > 0 ? ((totalImportCost - exportRevenueEUR) / totalLoadKWh) * 100 : 0;
+  const overallCt = totalLoadKWh > 0 ? Math.max(0, ((totalImportCost - exportRevenueEUR) / totalLoadKWh) * 100) : 0;
 
   return { overallCt, byConsumer };
 }

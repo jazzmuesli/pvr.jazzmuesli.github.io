@@ -651,7 +651,7 @@ export function runSimulation(p: SimParams): SimReport {
   const carParams: CarParams = {
     ...p.car,
     evElectricCtPerKwh: evCt,
-    annualKm: evKWh > 0 ? Math.round((evKWh * 100) / p.car.evKwhPer100km) : p.car.annualKm,
+    annualKm: p.consumers.ev.enabled && evKWh > 0 ? Math.round((evKWh * 100) / p.car.evKwhPer100km) : 0,
   };
 
   // Opportunity-cost comparison (heating + EV vs. diesel) — the single shared
