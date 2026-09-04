@@ -96,6 +96,22 @@ export interface HeatingAlternative {
   deltaVsHeatpumpEUR: number;
 }
 
+/** How much of the heat pump's electricity is covered by own PV+battery. */
+export interface ConsumerCoverageInfo {
+  /** kWh served from own PV+battery (self-consumption). */
+  pvCoveredKWh: number;
+  /** kWh drawn from the grid. */
+  gridKWh: number;
+  /** Share of consumption covered by PV+battery (%). */
+  pvSharePct: number;
+  /** Grid-only price (ct/kWh) — VWAP of the grid-import hours for dynamic tariffs. */
+  gridPriceCt: number;
+  /** Blended effective price over the whole consumption (ct/kWh). */
+  effectiveCt: number;
+  /** True when the import tariff is dynamic/§14a (price is a VWAP), else fixed. */
+  dynamic: boolean;
+}
+
 export interface HeatingReport {
   jaz: number;
   heatpumpElectricKWh: number;
@@ -103,6 +119,8 @@ export interface HeatingReport {
   heatpump: HeatingAlternative;
   oil: HeatingAlternative;
   gas: HeatingAlternative;
+  /** PV+battery coverage of the heat pump's electricity (optional). */
+  coverage?: ConsumerCoverageInfo;
 }
 
 /** Useful heat delivered by the heat pump: electricity × JAZ. */

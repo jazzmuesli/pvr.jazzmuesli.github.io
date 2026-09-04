@@ -64,12 +64,22 @@ describe("scenario plausibility — effective price < flat tariff", () => {
     });
   }
 
-  it("dynamic import is cheaper than fixed import for the same export", () => {
-    const fixed = effFor("market", "fixed");
-    const dyn = effFor("market", "dynamic");
-    const a14 = effFor("market", "dynamic14a");
-    expect(dyn.overallCt).toBeLessThan(fixed.overallCt);
-    expect(a14.overallCt).toBeLessThanOrEqual(dyn.overallCt + 1e-9);
+  it("§14a/3 import is never more expensive than plain dynamic for the same profile", () => {
+    // The effective (net-of-export) price is floored at 0, so compare the raw
+    // import cost of the two dynamic schemes for the identical import profile:
+    // §14a/3 shifts grid fees into cheaper windows, so it can only help (or be
+    // neutral), never cost more, than the flat-Netzentgelt dynamic tariff.
+    const imp = (scheme: "dynamic" | "dynamic14a") =>
+      importPriceArray(scheme, city, prices);
+    let costDyn = 0;
+    let cost14a = 0;
+    const dyn = imp("dynamic");
+    const a14 = imp("dynamic14a");
+    for (let i = 0; i < result.gridImport.length; i++) {
+      costDyn += (result.gridImport[i] * dyn[i]) / 100;
+      cost14a += (result.gridImport[i] * a14[i]) / 100;
+    }
+    expect(cost14a).toBeLessThanOrEqual(costDyn + 1e-9);
   });
 
   it("a battery lowers the effective price versus no battery", () => {

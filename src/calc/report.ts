@@ -198,7 +198,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   consumers: {
     household: { enabled: true, annualKWh: 2400 },
     heatpump: { enabled: true, annualKWh: 6500 },
-    bwwp: { enabled: true },
+    bwwp: { enabled: true, annualKWh: 480 },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },
   exportScheme: "fixed",
@@ -254,6 +254,7 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.consumers.heatpump.enabled = str("wp", p.consumers.heatpump.enabled ? "1" : "0") === "1";
   p.consumers.heatpump.annualKWh = num("wk", p.consumers.heatpump.annualKWh);
   p.consumers.bwwp.enabled = str("bw", p.consumers.bwwp.enabled ? "1" : "0") === "1";
+  p.consumers.bwwp.annualKWh = num("bwk", p.consumers.bwwp.annualKWh ?? 480);
   p.consumers.ev.enabled = str("ev", p.consumers.ev.enabled ? "1" : "0") === "1";
   p.consumers.ev.annualKWh = num("ek", p.consumers.ev.annualKWh);
   p.consumers.ev.pvShare = num("es", p.consumers.ev.pvShare);
@@ -661,6 +662,34 @@ export function runSimulation(p: SimParams): SimReport {
     car: carParams,
   });
 
+  // Attach the PV+battery coverage split (how much of each consumer's load is
+  // served from own solar vs. the grid, and at what grid price). For a dynamic
+  // tariff the grid price is the volume-weighted average of the import hours —
+  // naturally cheaper for the EV, which charges mostly at night.
+  const dynamicImport = p.importScheme !== "fixed";
+  if (p.consumers.heatpump.enabled && effectivePrice.coverage.heatpump) {
+    const c = effectivePrice.coverage.heatpump;
+    opportunityCosts.heating.coverage = {
+      pvCoveredKWh: round2(c.pvCoveredKWh),
+      gridKWh: round2(c.gridKWh),
+      pvSharePct: round2(c.pvSharePct),
+      gridPriceCt: round2(c.gridPriceCt),
+      effectiveCt: round2(c.effectiveCt),
+      dynamic: dynamicImport,
+    };
+  }
+  if (p.consumers.ev.enabled && effectivePrice.coverage.ev) {
+    const c = effectivePrice.coverage.ev;
+    opportunityCosts.car.coverage = {
+      pvCoveredKWh: round2(c.pvCoveredKWh),
+      gridKWh: round2(c.gridKWh),
+      pvSharePct: round2(c.pvSharePct),
+      gridPriceCt: round2(c.gridPriceCt),
+      effectiveCt: round2(c.effectiveCt),
+      dynamic: dynamicImport,
+    };
+  }
+
   // Calculate multi-year cashflow analysis
   const cashflowInput: CashflowInput = {
     annualBenefitEUR: amortisation.annualBenefitEUR,
@@ -669,6 +698,7 @@ export function runSimulation(p: SimParams): SimReport {
     peakKWp: p.peakKWp,
     capacityKWh: p.capacityKWh,
     feedInCt: p.feedInCt,
+    importPriceCt: p.importFixedCt,
     horizonYears: p.horizonYears,
     discountRatePct: p.discountRatePct,
     priceEscalationPct: p.priceEscalationPct,

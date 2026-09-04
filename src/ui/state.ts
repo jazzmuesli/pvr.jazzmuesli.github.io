@@ -85,7 +85,7 @@ export const DEFAULT_STATE: AppState = {
     // heat pump ~6.6 MWh/yr (temp-driven, winter-heavy), base load ~2.4 MWh/yr.
     household: { enabled: true, annualKWh: 2400 },
     heatpump: { enabled: true, annualKWh: 6500 },
-    bwwp: { enabled: true },
+    bwwp: { enabled: true, annualKWh: 480 },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },
   exportScheme: "fixed",

@@ -25,6 +25,8 @@ const heatingHost = document.getElementById("heating") as HTMLElement;
 const heatingBody = document.getElementById("heating-body") as HTMLElement;
 const carHost = document.getElementById("car") as HTMLElement;
 const carBody = document.getElementById("car-body") as HTMLElement;
+const bwwpHost = document.getElementById("bwwp") as HTMLElement;
+const bwwpBody = document.getElementById("bwwp-body") as HTMLElement;
 const combosHost = document.getElementById("tarif-combos") as HTMLElement;
 const combosBody = document.getElementById("tarif-combos-body") as HTMLElement;
 
@@ -85,8 +87,38 @@ function renderHourly(): void {
   renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
 }
 
-function renderHeating(r: SimReport): void {
-  const h = r.opportunityCosts.heating;
+/** One-line PV+battery coverage summary for a consumer (heat pump / EV).
+ *  Shows the PV-covered share (% and kWh), the grid share, and the grid price:
+ *  for a dynamic tariff this is the volume-weighted average of the import hours
+ *  (label "Ø"), for a fixed tariff it is the fixed price. */
+function coverageLine(
+  cov:
+    | {
+        pvCoveredKWh: number;
+        gridKWh: number;
+        pvSharePct: number;
+        gridPriceCt: number;
+        effectiveCt: number;
+        dynamic: boolean;
+      }
+    | undefined,
+  _label: string,
+): string {
+  if (!cov) return "";
+  const kwh = (v: number) => Math.round(v).toLocaleString("de-DE");
+  const gridLabel = cov.dynamic ? "Ø dynamischer Netzpreis" : "fester Netzpreis";
+  const gridSharePct = Math.max(0, 100 - cov.pvSharePct);
+  return `
+    <div class="heat-cov">
+      <span class="cov-pv">PV+Speicher: <b>${cov.pvSharePct.toFixed(0)}%</b>
+        (${kwh(cov.pvCoveredKWh)} kWh · 0 ct/kWh)</span>
+      <span class="cov-grid">Netz: <b>${gridSharePct.toFixed(0)}%</b>
+        (${kwh(cov.gridKWh)} kWh · ${gridLabel} ${cov.gridPriceCt.toFixed(1)} ct/kWh)</span>
+      <span class="cov-eff">Effektiv: <b>${cov.effectiveCt.toFixed(1)} ct/kWh</b></span>
+    </div>`;
+}
+
+function renderHeating(r: SimReport): void {  const h = r.opportunityCosts.heating;
   heatingHost.style.display = h.heatpumpElectricKWh > 0 ? "" : "none";
   if (h.heatpumpElectricKWh <= 0) return;
 
@@ -100,7 +132,7 @@ function renderHeating(r: SimReport): void {
     <div class="heat-head">
       <span>Wärmepumpe: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh Strom →
       ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</span>
-    </div>`;
+    </div>${coverageLine(h.coverage, "Wärmepumpe")}`;
   const cards = rows
     .map(({ a, highlight }) => {
       const delta =
@@ -144,7 +176,7 @@ function renderOpportunityCar(r: SimReport): void {
   const head = `
     <div class="heat-head">
       <span>E-Auto vs. Diesel: ${fmtKm(c.annualKm)} pro Jahr</span>
-    </div>`;
+    </div>${coverageLine(c.coverage, "E-Auto")}`;
   const cards = rows
     .map(({ a, highlight }) => {
       const delta =
@@ -163,6 +195,39 @@ function renderOpportunityCar(r: SimReport): void {
   carBody.innerHTML = head + `<div class="summary">${cards}</div>` + opportunityNote(r, "car");
 }
 
+function renderBwwp(r: SimReport): void {
+  const enabled = r.inputs.consumers.bwwp.enabled;
+  const cov = r.effectivePrice.coverage?.bwwp;
+  bwwpHost.style.display = enabled && cov && cov.consumptionKWh > 0 ? "" : "none";
+  if (!enabled || !cov || cov.consumptionKWh <= 0) return;
+
+  const dynamic = r.inputs.importScheme !== "fixed";
+  const kwh = (v: number) => Math.round(v).toLocaleString("de-DE");
+  const gridSharePct = Math.max(0, 100 - cov.pvSharePct);
+  const gridLabel = dynamic ? "Ø dynamischer Netzpreis" : "fester Netzpreis";
+  const covInfo = {
+    pvCoveredKWh: cov.pvCoveredKWh,
+    gridKWh: cov.gridKWh,
+    pvSharePct: cov.pvSharePct,
+    gridPriceCt: cov.gridPriceCt,
+    effectiveCt: cov.effectiveCt,
+    dynamic,
+  };
+  const head = `
+    <div class="heat-head">
+      <span>Brauchwasser: ${kwh(cov.consumptionKWh)} kWh Strom/Jahr (Mittags-PV-Block 11–15 Uhr)</span>
+    </div>${coverageLine(covInfo, "Brauchwasser-WP")}`;
+  const card = `
+    <div class="card card-hl">
+      <div class="card-val">${cov.pvSharePct.toFixed(0)}%<span class="card-unit"> PV</span></div>
+      <div class="card-key">Brauchwasser-WP</div>
+      <div class="card-sub">PV+Speicher ${kwh(cov.pvCoveredKWh)} kWh · 0 ct/kWh</div>
+      <div class="card-sub">Netz ${kwh(cov.gridKWh)} kWh (${gridSharePct.toFixed(0)}%) · ${gridLabel} ${cov.gridPriceCt.toFixed(1)} ct/kWh</div>
+      <div class="card-sub">Effektiver Preis ${cov.effectiveCt.toFixed(1)} ct/kWh</div>
+    </div>`;
+  bwwpBody.innerHTML = head + `<div class="summary">${card}</div>`;
+}
+
 function recompute(): void {
   report = runSimulation(toSimParams(state));
 
@@ -175,6 +240,7 @@ function recompute(): void {
   renderScenarioChart(scenarioHost, report.scenario);
   renderHeating(report);
   renderOpportunityCar(report);
+  renderBwwp(report);
   renderTariffCombinations(report);
 }
 

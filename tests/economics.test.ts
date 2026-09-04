@@ -79,4 +79,31 @@ describe("computeEconomics", () => {
     expect(e.totalImportKWh).toBeLessThan(eNoBat.totalImportKWh);
     expect(Number.isFinite(e.netSelectedEUR)).toBe(true);
   });
+
+  it("Marktprämie is based on the fleet solar market value (production-weighted), not the plant's export timing", () => {
+    // Recompute the expected Monatsmarktwert Solar = PV-production-weighted spot
+    // average (ct/kWh) directly from the raw series, then check the reported
+    // annual premium equals max(0, anzulegender Wert − MW_Solar).
+    let pvVal = 0;
+    let pvKWh = 0;
+    for (let i = 0; i < TOTAL_STEPS; i++) {
+      pvVal += (r.pv[i] * r.price[i]) / 1000; // EUR
+      pvKWh += r.pv[i];
+    }
+    const mwSolarCt = (pvVal / pvKWh) * 1000 * 0.1; // EUR/kWh → ct/kWh
+    const expectedPremiumCt = Math.max(0, e.referenceValueCt - mwSolarCt);
+    expect(e.marktPraemieCt).toBeCloseTo(expectedPremiumCt, 4);
+  });
+
+  it("strategic-export battery does NOT reduce the market premium vs a battery-free plant (fleet-based reference)", () => {
+    // The premium depends only on PV *production* timing (fleet MW_Solar), so a
+    // battery that shifts EXPORT into high-price windows keeps the same
+    // per-kWh premium — it is not eaten away by the plant's higher captured
+    // spot price (the pre-fix bug). Both plants have identical PV production, so
+    // their reported Marktprämie (ct/kWh) must match.
+    const cfgNoBat = cfg(totalLoad(consumers));
+    cfgNoBat.battery.capacityKWh = 0;
+    const eNoBat = computeEconomics(simulate(cfgNoBat), econOpts);
+    expect(e.marktPraemieCt).toBeCloseTo(eNoBat.marktPraemieCt, 4);
+  });
 });

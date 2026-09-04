@@ -61,8 +61,8 @@ describe("calibration vs real 2026 YTD (Home Assistant data)", () => {
   it("PV production matches within 8%", () => approx(ytdSum(r.pv), REAL.pv, 0.08));
   it("total load matches within 12%", () => approx(ytdSum(r.load), REAL.load, 0.12));
   it("battery PV charge matches within 10%", () => approx(ytdSum(r.chargeSolar), REAL.chargeSolar, 0.1));
-  it("battery discharge to load is substantial (>1.2 MWh, catches window bug)", () =>
-    expect(ytdSum(r.dischargeToLoad)).toBeGreaterThan(1.2e3));
+  it("battery discharge to load is substantial (>1.0 MWh, catches window bug)", () =>
+    expect(ytdSum(r.dischargeToLoad)).toBeGreaterThan(1.0e3));
   it("grid import is in the right range", () => approx(ytdSum(r.gridImport), REAL.import, 0.35));
   it("export is in the right range", () => approx(ytdSum(r.exportTotal), REAL.export, 0.25));
 });

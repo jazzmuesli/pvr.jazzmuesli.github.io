@@ -6,7 +6,7 @@ import { computeCashflow, CashflowInput } from "../src/calc/cashflow";
 // 8 ct feed-in. This yields a positive annual benefit so the financial
 // invariants (NPV ordering, IRR root, discounted payback) are meaningful.
 function baseInput(): CashflowInput {
-  const annualBenefitEUR = 900; // baseline − import + export (net saving / yr)
+  const annualBenefitEUR = 1000; // baseline − import + export (net saving / yr)
   const annualPVKWh = 10000; // 10 kWp × 1000 kWh/kWp
   return {
     annualBenefitEUR,
@@ -15,6 +15,7 @@ function baseInput(): CashflowInput {
     peakKWp: 10,
     capacityKWh: 5,
     feedInCt: 8,
+    importPriceCt: 30, // retail import price (used to value the standby draw)
     horizonYears: 20,
     discountRatePct: 3,
     priceEscalationPct: 2,
@@ -118,6 +119,23 @@ describe("cashflow analysis — replacements & degradation (TODO 2.2, 3.1)", () 
     expect(y1.omCostEUR).toBeGreaterThan(0);
     expect(y1.standbyCostEUR).toBeGreaterThan(0);
     expect(y1.netCashflowEUR).toBeLessThan(y1.grossBenefitEUR);
+  });
+
+  it("standby energy is valued at the retail import price, not the feed-in tariff", () => {
+    // Standby power is drawn FROM the grid, so raising the retail import price
+    // must raise the standby cost, while changing the (much lower) feed-in
+    // tariff must NOT. This guards against the pre-fix bug that priced the
+    // grid-drawn standby energy at the feed-in rate (~3× too low).
+    const cheapImport = computeCashflow({ ...baseInput(), importPriceCt: 20 });
+    const dearImport = computeCashflow({ ...baseInput(), importPriceCt: 40 });
+    expect(dearImport.yearly[1].standbyCostEUR).toBeGreaterThan(cheapImport.yearly[1].standbyCostEUR);
+    // Standby cost is independent of the feed-in tariff.
+    const lowFeedIn = computeCashflow({ ...baseInput(), feedInCt: 4 });
+    const highFeedIn = computeCashflow({ ...baseInput(), feedInCt: 12 });
+    expect(highFeedIn.yearly[1].standbyCostEUR).toBeCloseTo(lowFeedIn.yearly[1].standbyCostEUR, 6);
+    // Sanity: 5 W × 8760 h ≈ 43.8 kWh/yr; at 40 ct (year-1 escalated) it is
+    // clearly more than the ~1.75 € it would be at a 4 ct feed-in tariff.
+    expect(dearImport.yearly[1].standbyCostEUR).toBeGreaterThan(15);
   });
 });
 

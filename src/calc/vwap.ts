@@ -22,6 +22,27 @@ export interface EffectivePrice {
   overallCt: number;
   /** Per-consumer effective price = grid-import cost of that consumer / its consumption (ct/kWh). */
   byConsumer: Record<string, number>;
+  /** Per-consumer coverage split: how much of each consumer's load is served
+   *  from own PV+battery vs. from the grid, and at what grid price. */
+  coverage: Record<string, ConsumerCoverage>;
+}
+
+export interface ConsumerCoverage {
+  /** Total consumption of this consumer (kWh/year). */
+  consumptionKWh: number;
+  /** kWh served from own PV + battery (self-consumption). */
+  pvCoveredKWh: number;
+  /** kWh drawn from the grid. */
+  gridKWh: number;
+  /** Share of consumption covered by PV+battery (0..1). */
+  pvSharePct: number;
+  /** Grid-only price for this consumer's imports (ct/kWh) — for a dynamic
+   *  tariff this is the volume-weighted average spot price of the hours in
+   *  which it actually drew from the grid (e.g. cheap night hours for the EV). */
+  gridPriceCt: number;
+  /** Blended effective price over the whole consumption (grid cost only, PV
+   *  self-consumption valued at 0) = byConsumer[key] (ct/kWh). */
+  effectiveCt: number;
 }
 
 export function effectiveNetPrice(
@@ -36,24 +57,41 @@ export function effectiveNetPrice(
   for (let i = 0; i < n; i++) totalLoadKWh += totalLoad[i];
 
   const byConsumer: Record<string, number> = {};
+  const coverage: Record<string, ConsumerCoverage> = {};
   for (const key of Object.keys(loads)) {
     const arr = loads[key as keyof ConsumerLoads];
     let importCost = 0;
     let consKWh = 0;
+    let gridKWh = 0;
     for (let i = 0; i < n; i++) {
       consKWh += arr[i];
       if (totalLoad[i] > 0) {
         // This consumer's share of the grid energy serving the load this step.
-        importCost += (arr[i] / totalLoad[i]) * gridImport[i] * (importCt[i] / 100);
+        const share = arr[i] / totalLoad[i];
+        const gridPart = share * gridImport[i];
+        gridKWh += gridPart;
+        importCost += gridPart * (importCt[i] / 100);
       }
     }
     // Per-consumer effective price = pure cost of the grid electricity it drew.
     byConsumer[key] = consKWh > 0 ? (importCost / consKWh) * 100 : 0;
+    const pvCoveredKWh = Math.max(0, consKWh - gridKWh);
+    coverage[key] = {
+      consumptionKWh: consKWh,
+      pvCoveredKWh,
+      gridKWh,
+      pvSharePct: consKWh > 0 ? (pvCoveredKWh / consKWh) * 100 : 0,
+      // Grid-only price: cost of grid imports / grid kWh. For a dynamic tariff
+      // this is the volume-weighted average price of the hours the consumer
+      // actually imported (cheaper for the EV thanks to night charging).
+      gridPriceCt: gridKWh > 0 ? (importCost / gridKWh) * 100 : 0,
+      effectiveCt: byConsumer[key],
+    };
   }
 
   let totalImportCost = 0;
   for (let i = 0; i < n; i++) totalImportCost += gridImport[i] * (importCt[i] / 100);
   const overallCt = totalLoadKWh > 0 ? Math.max(0, ((totalImportCost - exportRevenueEUR) / totalLoadKWh) * 100) : 0;
 
-  return { overallCt, byConsumer };
+  return { overallCt, byConsumer, coverage };
 }

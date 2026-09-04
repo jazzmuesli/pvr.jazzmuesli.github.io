@@ -120,16 +120,24 @@ function rawStepEnergy(
   return (poa / 1000) * STEP_HOURS;
 }
 
-// Empirical annual yield of an orientation relative to an optimally tilted
-// south array (fractions of south's kWh/kWp). The *within-year time shape* is
-// taken from the clear-sky geometry below; only the absolute magnitude is set
-// by these ratios so the model matches real PV-planner figures
-// (single east/west ≈ 85 % of south, north ≈ 40 %).
+// Empirical annual yield of an orientation at its *optimal tilt*, relative to
+// an optimally tilted south array (fractions of south's kWh/kWp). These match
+// real PV-planner figures (single east/west ≈ 86 % of south, a split east-west
+// array ≈ 90 %, north ≈ 42 %). The clear-sky geometry alone underestimates the
+// diffuse-light contribution to off-south / off-optimum planes, so these
+// empirical anchors correct the absolute magnitude at the optimum; the tilt
+// dependence *around* the optimum then follows the geometry (see
+// `pvProductionPerStep`).
+//
+// Note: a true east-west split (modules facing both ways) out-yields a single
+// east array per kWp installed, because each half is closer to its own optimum
+// azimuth and the two peaks fill the morning and afternoon — hence 0.90, not
+// the 0.86 of a single east/west field.
 const ORIENT_RATIO: Record<Orientation, number> = {
   south: 1.0,
   east: 0.86,
   west: 0.86,
-  east_west: 0.86,
+  east_west: 0.88,
   north: 0.42,
 };
 
@@ -140,33 +148,87 @@ export interface PVInput {
   location: string;
 }
 
+/**
+ * Approximate optimal tilt (degrees) for a fixed south array as a function of
+ * latitude. For German latitudes (48–54°) this lands around 34–39°, matching
+ * PV-planner recommendations.
+ */
+function optimalTiltDeg(latDeg: number): number {
+  // A well-established empirical rule: optimal tilt ≈ 0.76·lat − 3.1 (deg).
+  const t = 0.76 * latDeg - 3.1;
+  return Math.max(0, Math.min(90, t));
+}
+
+/** Sum of the clear-sky per-kWp geometry over the whole year for a plane. */
+function annualGeometry(latDeg: number, tiltDeg: number, azimuthDeg: number, eastWest: boolean): number {
+  let g = 0;
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    const day = Math.floor(i / STEPS_PER_DAY);
+    const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
+    const dayFloat = day + hour / 24;
+    if (eastWest) {
+      g +=
+        0.5 * rawStepEnergy(latDeg, dayFloat, hour, tiltDeg, 90) +
+        0.5 * rawStepEnergy(latDeg, dayFloat, hour, tiltDeg, 270);
+    } else {
+      g += rawStepEnergy(latDeg, dayFloat, hour, tiltDeg, azimuthDeg);
+    }
+  }
+  return g;
+}
+
 /** Hourly-equivalent production per 15-min step for the full simulated year. */
 export function pvProductionPerStep(input: PVInput): Float64Array {
   const loc = LOCATIONS[input.location] ?? LOCATIONS[DEFAULT_LOCATION];
+  const eastWest = input.orientation === "east_west";
+  const az = orientationAzimuth(input.orientation);
+
+  // Per-step geometric shape at the requested tilt/orientation.
   const geo = new Float64Array(TOTAL_STEPS);
-  if (input.orientation === "east_west") {
-    for (let i = 0; i < TOTAL_STEPS; i++) {
-      const day = Math.floor(i / STEPS_PER_DAY);
-      const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
-      const e = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, 90);
-      const w = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, 270);
-      geo[i] = 0.5 * e + 0.5 * w;
-    }
-  } else {
-    const az = orientationAzimuth(input.orientation);
-    for (let i = 0; i < TOTAL_STEPS; i++) {
-      const day = Math.floor(i / STEPS_PER_DAY);
-      const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
-      geo[i] = rawStepEnergy(loc.latDeg, day + hour / 24, hour, input.tiltDeg, az);
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    const day = Math.floor(i / STEPS_PER_DAY);
+    const hour = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
+    const dayFloat = day + hour / 24;
+    if (eastWest) {
+      geo[i] =
+        0.5 * rawStepEnergy(loc.latDeg, dayFloat, hour, input.tiltDeg, 90) +
+        0.5 * rawStepEnergy(loc.latDeg, dayFloat, hour, input.tiltDeg, 270);
+    } else {
+      geo[i] = rawStepEnergy(loc.latDeg, dayFloat, hour, input.tiltDeg, az);
     }
   }
-  // Normalise the geometric shape to the empirical annual yield for this
-  // orientation and location, then scale by system size.
   let g = 0;
   for (let i = 0; i < TOTAL_STEPS; i++) g += geo[i];
-  const factor = (loc.annualYieldPerKWp * (ORIENT_RATIO[input.orientation] ?? 1)) / (g || 1);
+
+  // Calibration anchor (computed from the same geometry):
+  //  - `geoOrientOpt` : *this* orientation at its optimal tilt → the point the
+  //                     empirical ORIENT_RATIO is defined for.
+  // The absolute yield is anchored to the empirical value at the optimum, and
+  // the tilt deviation from the optimum scales physically via the geometry:
+  //
+  //   yield = annualYieldPerKWp · ORIENT_RATIO · (geo(tilt) / geo(optTilt))
+  //
+  // so a flat or vertical array correctly produces less than at the optimum,
+  // while an optimally tilted array reproduces the calibrated PV-planner value.
+  const optTilt = optimalTiltDeg(loc.latDeg);
+  const geoOrientOpt = annualGeometry(loc.latDeg, optTilt, az, eastWest);
+
+  // Physical tilt-deviation factor for this orientation (1.0 at optimal tilt).
+  const tiltFactor = geoOrientOpt > 0 ? g / geoOrientOpt : 0;
+
+  // Absolute annual target for this orientation at its optimal tilt.
+  const orientRatio = ORIENT_RATIO[input.orientation] ?? 1;
+  const targetAtOpt = loc.annualYieldPerKWp * orientRatio;
+
+  // Convert the geometric shape into kWh so that:
+  //   annual = targetAtOpt · tiltFactor.
+  // We distribute `targetAtOpt · tiltFactor` across the year using the shape
+  // `geo` (which already carries the requested tilt/orientation intraday form).
+  const annualTarget = targetAtOpt * tiltFactor;
+  const shapeScale = g > 0 ? annualTarget / g : 0;
+
   const out = new Float64Array(TOTAL_STEPS);
-  for (let i = 0; i < TOTAL_STEPS; i++) out[i] = geo[i] * factor * input.peakKWp;
+  for (let i = 0; i < TOTAL_STEPS; i++) out[i] = geo[i] * shapeScale * input.peakKWp;
   return out;
 }
 

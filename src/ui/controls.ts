@@ -241,7 +241,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       );
     }
   }
-  host.appendChild(checkbox("Brauchwasser-WP", (s) => s.consumers.bwwp.enabled, (s, v) => (s.consumers.bwwp.enabled = v), state, onChange));
+  host.appendChild(checkbox("Brauchwasser-WP", (s) => s.consumers.bwwp.enabled, (s, v) => { s.consumers.bwwp.enabled = v; buildControls(host, state, onChange); }, state, onChange));
+  if (state.consumers.bwwp.enabled) {
+    host.appendChild(
+      slider({ label: "  Verbrauch", min: 100, max: 1500, step: 20, unit: " kWh", get: (s) => s.consumers.bwwp.annualKWh ?? 480, set: (s, v) => (s.consumers.bwwp.annualKWh = v) }, state, onChange),
+    );
+  }
   host.appendChild(checkbox("E-Auto", (s) => s.consumers.ev.enabled, (s, v) => { s.consumers.ev.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.ev.enabled) {
     host.appendChild(

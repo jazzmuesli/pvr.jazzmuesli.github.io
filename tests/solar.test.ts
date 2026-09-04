@@ -88,15 +88,51 @@ describe("pv production", () => {
     expect(annual).toBeLessThan(10500);
   });
 
-  it("south outperforms east/west and east/west matches a single east array (symmetric)", () => {
+  it("south outperforms east/west, and an east-west split out-yields a single east array", () => {
     const south = sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: 35, orientation: "south", location: "hamburg" }));
     const east = sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: 35, orientation: "east", location: "hamburg" }));
+    const west = sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: 35, orientation: "west", location: "hamburg" }));
     const ew = sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: 35, orientation: "east_west", location: "hamburg" }));
     expect(south).toBeGreaterThan(ew);
-    expect(ew).toBeGreaterThan(0);
-    // east/west split is symmetric, so it equals a single east array of the same peak.
-    expect(ew).toBeGreaterThanOrEqual(east * 0.999);
-    expect(ew).toBeLessThanOrEqual(east * 1.001);
+    expect(east).toBeCloseTo(west, 0); // east and west are symmetric
+    // A real east-west split catches both the morning and afternoon sun, so it
+    // yields MORE per kWp than a single east (or west) array — but still less
+    // than an optimal south array.
+    expect(ew).toBeGreaterThan(east);
+    expect(ew).toBeLessThan(south);
+  });
+
+  it("annual yield depends on tilt: it peaks near the optimum and falls off for flat / vertical arrays", () => {
+    const y = (tilt: number) =>
+      sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: tilt, orientation: "south", location: "hamburg" }));
+    const flat = y(0);
+    const optimal = y(35);
+    const vertical = y(90);
+    // Flat and vertical both under-produce relative to the ~35–40° optimum.
+    expect(flat).toBeLessThan(optimal);
+    expect(vertical).toBeLessThan(optimal);
+    // A flat roof still captures a large share (~75–90 %) of the optimum.
+    expect(flat / optimal).toBeGreaterThan(0.7);
+    expect(flat / optimal).toBeLessThan(0.95);
+    // A vertical south façade is materially worse than the optimum.
+    expect(vertical / optimal).toBeLessThan(0.85);
+    // The optimum tilt (30–45°) beats both a shallow (15°) and a steep (60°) tilt.
+    expect(optimal).toBeGreaterThan(y(15));
+    expect(optimal).toBeGreaterThanOrEqual(y(60));
+  });
+
+  it("annual yield peaks near the latitude-dependent optimal tilt (~30–45° for Germany)", () => {
+    const yield_ = (tilt: number) =>
+      sum(pvProductionPerStep({ peakKWp: 10, tiltDeg: tilt, orientation: "south", location: "munich" }));
+    // Scan tilts and find the best; it should land in the German optimal band.
+    let bestTilt = 0;
+    let best = -1;
+    for (let t = 0; t <= 90; t += 5) {
+      const y = yield_(t);
+      if (y > best) { best = y; bestTilt = t; }
+    }
+    expect(bestTilt).toBeGreaterThanOrEqual(25);
+    expect(bestTilt).toBeLessThanOrEqual(50);
   });
 
   it("monthly totals sum to the annual production", () => {

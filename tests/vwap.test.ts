@@ -115,4 +115,52 @@ describe("effective net price (Import − Export) / Verbrauch", () => {
     // bigger battery => less grid import => cheaper effective price
     expect(effBig.overallCt).toBeLessThan(effSmall.overallCt);
   });
+
+  describe("per-consumer PV+battery coverage", () => {
+    const imp = importPriceArray("fixed", city, prices);
+    const eff = effectiveNetPrice(loads, result.load, result.gridImport, imp, 0);
+
+    it("coverage is present for every consumer", () => {
+      for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+        expect(eff.coverage[k]).toBeDefined();
+      }
+    });
+
+    it("pvCovered + grid = consumption, and shares in [0,100]", () => {
+      for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+        const c = eff.coverage[k];
+        expect(c.pvCoveredKWh + c.gridKWh).toBeCloseTo(c.consumptionKWh, 4);
+        expect(c.pvSharePct).toBeGreaterThanOrEqual(0);
+        expect(c.pvSharePct).toBeLessThanOrEqual(100);
+      }
+    });
+
+    it("effective price equals grid price weighted by grid share (PV valued at 0)", () => {
+      for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+        const c = eff.coverage[k];
+        // effective = gridPrice * (gridKWh / consumptionKWh)
+        const expected = c.consumptionKWh > 0 ? c.gridPriceCt * (c.gridKWh / c.consumptionKWh) : 0;
+        expect(c.effectiveCt).toBeCloseTo(expected, 4);
+      }
+    });
+
+    it("under a fixed tariff the grid price equals the flat rate for every consumer that imports", () => {
+      for (const k of ["household", "heatpump", "bwwp", "ev"] as const) {
+        const c = eff.coverage[k];
+        if (c.gridKWh > 0.01) expect(c.gridPriceCt).toBeCloseTo(fixedCt, 4);
+      }
+    });
+
+    it("the BWWP (midday-only) has a much higher PV share than the heat pump (winter/night)", () => {
+      expect(eff.coverage.bwwp.pvSharePct).toBeGreaterThan(eff.coverage.heatpump.pvSharePct);
+    });
+
+    it("under a dynamic tariff the EV grid price (night charging) is below the heat pump's grid price", () => {
+      const impDyn = importPriceArray("dynamic", city, prices);
+      const effDyn = effectiveNetPrice(loads, result.load, result.gridImport, impDyn, 0);
+      // EV charges the non-PV share overnight (cheap hours); the heat pump runs
+      // through expensive winter-evening peaks — so the EV's grid VWAP is lower.
+      expect(effDyn.coverage.ev.gridPriceCt).toBeLessThan(effDyn.coverage.heatpump.gridPriceCt);
+    });
+  });
 });

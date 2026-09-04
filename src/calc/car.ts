@@ -1,3 +1,4 @@
+import type { ConsumerCoverageInfo } from "./heating";
 // Driving-cost comparison for an electric vehicle (EV) vs. a diesel car.
 //
 // To make a fair comparison we ask: for the *same* annual distance (km), what
@@ -107,6 +108,8 @@ export interface CarReport {
   annualKm: number;
   ev: CarAlternative;
   diesel: CarAlternative;
+  /** PV+battery coverage of the EV's charging electricity (optional). */
+  coverage?: ConsumerCoverageInfo;
 }
 
 /** Energy input for the EV: kWh for the given distance. */

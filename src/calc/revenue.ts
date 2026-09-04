@@ -85,10 +85,11 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     month: m, pvKWh: 0, loadKWh: 0, selfConsumptionKWh: 0, importKWh: 0, exportKWh: 0,
     marketValueEUR: 0, premiumEUR: 0, exportRevenueMarketEUR: 0, exportRevenueFixedEUR: 0,
     importCostFixedEUR: 0, importCostDynamicEUR: 0, importCost14aEUR: 0, netSelectedEUR: 0,
-  });
+    pvMarketValueEUR: 0,
+  } as MonthlyEcon & { pvMarketValueEUR: number });
 
   let totalPV = 0, totalLoad = 0, selfConsumption = 0, totalExport = 0, totalImport = 0;
-  let marketValue = 0, premiumTotal = 0, exportRevFixed = 0;
+  let marketValue = 0, premiumTotal = 0, exportRevFixed = 0, pvMarketValueTotal = 0;
   let importCostFixed = 0, importCostDynamic = 0, importCost14a = 0;
 
   for (let i = 0; i < n; i++) {
@@ -103,6 +104,12 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     const stepMarket = (exp * result.price[i]) / 1000;
     const stepFixed = exp * (opts.feedInCt / 100);
     marketValue += stepMarket; exportRevFixed += stepFixed;
+    // Value of *generated* PV at the spot price — used to derive the monthly
+    // solar market value (Monatsmarktwert Solar), the EEG reference for the
+    // Marktprämie. This is fleet-wide by definition, so it is based on
+    // production, NOT on this plant's (battery-shifted) export timing.
+    pvMarketValueTotal += (result.pv[i] * result.price[i]) / 1000;
+    (row as MonthlyEcon & { pvMarketValueEUR: number }).pvMarketValueEUR += (result.pv[i] * result.price[i]) / 1000;
 
     const ipFixed = opts.importFixedCt / 100;
     const ipDyn = importPriceCtPerKWh("dynamic", opts.importCity, spotCt(i), i, opts.importFixedCt) / 100;
@@ -117,10 +124,19 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
   }
 
   for (const row of monthly) {
+    // EEG Marktprämie (§ 23a EEG 2023): MP = max(0, anzulegender Wert −
+    // Monatsmarktwert Solar). The Monatsmarktwert is the *fleet-wide* monthly
+    // market value of solar generation (production-weighted spot average), the
+    // SAME reference for every plant — it does NOT depend on how this plant
+    // times its exports. We approximate it by the PV-production-weighted spot
+    // average for the month. This correctly lets a battery that shifts exports
+    // into high-price windows keep its higher captured spot price on top of the
+    // (unchanged) premium, instead of having the premium eaten away.
+    const pvMv = (row as MonthlyEcon & { pvMarketValueEUR: number }).pvMarketValueEUR;
     let marktPraemieCt = 0;
-    if (row.exportKWh > 0) {
-      const vwapCt = (row.marketValueEUR / row.exportKWh) * 1000 * 0.1;
-      marktPraemieCt = Math.max(0, refCt - vwapCt);
+    if (row.pvKWh > 0) {
+      const mwSolarCt = (pvMv / row.pvKWh) * 1000 * 0.1; // EUR/kWh → ct/kWh
+      marktPraemieCt = Math.max(0, refCt - mwSolarCt);
     }
     row.premiumEUR = (row.exportKWh * marktPraemieCt) / 100;
     premiumTotal += row.premiumEUR;
@@ -135,9 +151,11 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
   const netSelected = (opts.exportScheme === "market" ? exportRevMarket : exportRevFixed) -
     (opts.importScheme === "fixed" ? importCostFixed
       : opts.importScheme === "dynamic" ? importCostDynamic : importCost14a);
-
-  const vwap = totalExport > 0 ? (marketValue / totalExport) * 1000 : 0;
-  const marktPraemieCt = Math.max(0, refCt - vwap * 0.1);
+  // Reported blended Marktprämie: based on the annual PV-production-weighted
+  // solar market value (Monatsmarktwert-Äquivalent), consistent with the
+  // monthly premium above.
+  const mwSolarAnnualCt = totalPV > 0 ? (pvMarketValueTotal / totalPV) * 1000 * 0.1 : 0;
+  const marktPraemieCt = Math.max(0, refCt - mwSolarAnnualCt);
 
   const typicalDay: TypicalDayPoint[] = [];
   const acc = new Map<string, { pv: number; load: number; sc: number; imp: number; exp: number }>();

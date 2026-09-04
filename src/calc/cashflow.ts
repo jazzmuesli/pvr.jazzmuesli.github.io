@@ -26,6 +26,10 @@ export interface CashflowInput {
   capacityKWh: number;
   /** EEG feed-in tariff (ct/kWh) — the fixed tariff paid for the first 20 years. */
   feedInCt: number;
+  /** Retail import price (ct/kWh) — what grid electricity costs, used to value
+   *  the battery standby draw (standby is consumed from the grid, not exported).
+   *  Defaults to a typical retail rate when omitted. */
+  importPriceCt?: number;
   /** Analysis horizon in years (default 20). */
   horizonYears: number;
   /** Discount / calculation interest rate in % p.a. (default 3). */
@@ -171,7 +175,11 @@ export function computeCashflow(input: CashflowInput): CashflowAnalysis {
     const omCostEUR = input.investmentEUR * omRate * omInflationFactor;
 
     const standbyKWhPerYear = (standbyWattage / 1000) * 24 * 365;
-    const standbyCostEUR = standbyKWhPerYear * (input.feedInCt / 100) * priceFactor;
+    // Standby power is drawn FROM the grid, so it is valued at the retail import
+    // price (not the much lower feed-in tariff). Fall back to a typical retail
+    // rate if no import price was supplied.
+    const standbyPriceCt = input.importPriceCt ?? 24;
+    const standbyCostEUR = standbyKWhPerYear * (standbyPriceCt / 100) * priceFactor;
 
     let replacementCostEUR = 0;
     if (year % inverterLifetimeYears === 0) replacementCostEUR += inverterReplacementCostEUR;

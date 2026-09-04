@@ -45,6 +45,7 @@ export function serializeState(s: AppState): string {
   p.set("wp", s.consumers.heatpump.enabled ? "1" : "0");
   p.set("wk", String(s.consumers.heatpump.annualKWh));
   p.set("bw", s.consumers.bwwp.enabled ? "1" : "0");
+  p.set("bwk", String(s.consumers.bwwp.annualKWh));
   p.set("ev", s.consumers.ev.enabled ? "1" : "0");
   p.set("ek", String(s.consumers.ev.annualKWh));
   p.set("es", String(s.consumers.ev.pvShare));
@@ -103,6 +104,7 @@ export function deserializeState(qs: string): AppState {
   bool(p, "wp", (v) => (s.consumers.heatpump.enabled = v));
   num(p, "wk", (v) => (s.consumers.heatpump.annualKWh = v));
   bool(p, "bw", (v) => (s.consumers.bwwp.enabled = v));
+  num(p, "bwk", (v) => (s.consumers.bwwp.annualKWh = v));
   bool(p, "ev", (v) => (s.consumers.ev.enabled = v));
   num(p, "ek", (v) => (s.consumers.ev.annualKWh = v));
   num(p, "es", (v) => (s.consumers.ev.pvShare = v));

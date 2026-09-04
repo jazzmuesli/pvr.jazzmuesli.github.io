@@ -33,7 +33,7 @@ All profiles are **deterministic** (no randomness), making the simulation fully 
 
 ### PV Generation (`src/calc/solar.ts`)
 
-Plane-of-array irradiation computed from tilt, orientation, and location (`LOCATIONS`). MONTHLY azimuth model + solar path. Calibrated to real-world yield data for German cities.
+Plane-of-array irradiation computed from tilt, orientation, and location (`LOCATIONS`). The absolute annual yield is anchored to empirical kWh/kWp figures at each orientation's *optimal* tilt, and the tilt deviation from that optimum then scales the yield physically from the clear-sky geometry — so a flat or vertical array correctly produces less than an optimally tilted one, and an east-west split out-yields a single east/west array. Calibrated to real-world yield data for German cities.
 
 ### Consumers (`src/calc/consumers.ts`)
 
@@ -42,11 +42,13 @@ Four load profiles, summed to total load:
 | Key | Profile | Shape |
 |-----|---------|-------|
 | `household` | H0 standard load profile | Morning/evening peaks |
-| `heatpump` | Heat pump | Winter & night heavy |
-| `bwwp` | Domestic hot water heat pump | 2h block around midday (~40 kWh/month) |
-| `ev` | Electric vehicle | `pvShare` at midday (PV), rest in evening |
+| `heatpump` | Heat pump (space heating only) | Winter-heavy, near-zero in summer; hourly demand peaks in the cold early morning, dips at midday |
+| `bwwp` | Domestic hot water heat pump | 4 h block 11:00–15:00 (mostly PV), default 480 kWh/year |
+| `ev` | Electric vehicle | `pvShare` at midday (10:00–15:00), the rest overnight (00:00–05:00, cheap tariff) |
 
 Each consumer can be individually enabled/disabled and calibrated by annual consumption. Load is tracked separately per consumer so that charts and effective prices can be reported per consumer.
+
+**Hot-water switch:** the `bwwp` slider is the annual hot-water electricity demand (default 480 kWh). When the BWWP is *enabled*, this energy is served by the dedicated BWWP in the midday PV block (so it is mostly self-consumed). When it is *disabled*, the identical energy is instead added to the space-heating heat pump as a year-round, night-heavy load — so the heat pump "consumes more" and draws far more of it from the grid. The total household demand is the same either way; only *who* serves the hot water (and how PV-friendly its timing is) changes.
 
 ### Battery Dispatch (`src/calc/simulation.ts`)
 
@@ -146,7 +148,7 @@ Key parameters (all optional, defaults in `DEFAULT_SIM_PARAMS` in `src/calc/repo
 | `fi` | Feed-in tariff (ct/kWh) | 7.2 |
 | `yr` | Commissioning year (EEG) | 2025 |
 | `py` | Spot price year (`priceData.ts`) | 2025 |
-| `hh`/`hk`, `wp`/`wk`, `bw`, `ev`/`ek`, `es` | Consumer on/off, kWh, EV PV-share | see `DEFAULT_SIM_PARAMS` |
+| `hh`/`hk`, `wp`/`wk`, `bw`/`bwk`, `ev`/`ek`, `es` | Consumer on/off, kWh (incl. BWWP hot-water kWh `bwk`, default 480), EV PV-share | see `DEFAULT_SIM_PARAMS` |
 | `ex` | Export `fixed`/`market` | fixed |
 | `im` | Import `fixed`/`dynamic`/`dynamic14a` | fixed |
 | `ict` | Fixed import price (ct/kWh) | 24 |
