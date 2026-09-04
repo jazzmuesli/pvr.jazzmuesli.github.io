@@ -26,6 +26,51 @@ The UI is a single page (`index.html`). Every setting is adjustable via the side
 - **Multi-year discounted cashflow** with NPV, IRR, LCOE, battery degradation, PV degradation, O&M costs, replacement investments (inverter + battery), and price escalation
 - **Opportunity-cost comparisons**: heat pump vs. heating oil vs. natural gas, and EV vs. diesel car
 - **AI-powered Energiewende advisor** (chatbot) that lets users configure scenarios via natural language (backed by OpenRouter LLM with tool-calling, or a deterministic regex fallback)
+- **Excel export (.xlsx) with live formulas** — a client-side download that reproduces every calculation as real, editable spreadsheet formulas (not baked-in numbers), so users can trace and even re-run the model in Excel / LibreOffice / Google Sheets
+
+## Excel Export (.xlsx) with Live Formulas
+
+A **📊 Excel-Export** button in the header generates an `.xlsx` workbook entirely
+client-side (no server round-trip) from the current scenario and downloads it.
+The purpose is transparency: instead of baking in pre-computed numbers, **every
+derived value is a real spreadsheet formula** that references input cells, so
+the user can open the file in Excel / LibreOffice / Google Sheets, trace exactly
+how each figure was produced, change any yellow input cell, and watch the whole
+model recompute.
+
+The **yellow cells are the same inputs as the website sidebar** (kWp, tilt,
+per-consumer kWh, tariff prices, JAZ, fuel prices, annual km, investment, …).
+Everything else is derived by formula. Two quantities genuinely require the
+15-minute time-series simulation and cannot be reduced to a spreadsheet
+formula — the **specific yield** (kWh/kWp, from the clear-sky solar model) and
+the **PV+battery self-consumption share** (from the battery dispatch). These
+are shown as clearly-labelled **orange calibration cells** ("aus 15-Min-
+Simulation, anpassbar"): the annual PV yield is then `kWp × specific yield`, the
+self-consumed kWh is `consumption × coverage %`, and so on down to the
+amortisation — all real formulas.
+
+Design conventions (inspired by the well-known German *Berechnungstools*):
+
+- **Colour legend** on every sheet: yellow = your input, orange = calibration
+  value from the simulation (adjustable), grey = calculated formula, green =
+  bottom-line result.
+- Separate **Eingaben** (inputs) and **Berechnung** (calculation) blocks, a
+  units column, right-aligned numbers, thin borders, and frozen header rows.
+
+Sheets: `Zusammenfassung` (summary + amortisation/NPV/IRR/LCOE), `PV-Produktion`
+(annual yield = `kWp × specific yield`, plus an editable monthly-share column
+whose derived kWh sum to the annual total), one sheet per active consumer
+(`Haushalt`, `Waermepumpe`, `E-Auto`, `Brauchwasser`) with PV coverage and
+effective price, `Aggregat` (energy + cost balance), `Heizung` (heat pump vs.
+oil vs. gas), and `Auto` (EV vs. diesel).
+
+The export module (`src/export/workbook.ts`) uses [ExcelJS](https://github.com/exceljs/exceljs),
+which is **lazy-loaded on click** (code-split into its own chunk) so it does not
+inflate the initial page load. `tests/excel_export.test.ts` builds the workbook,
+reads it back, and **evaluates the live formulas with an independent engine
+([HyperFormula](https://hyperformula.handsontable.com/))**, asserting the
+formula results reproduce the `SimReport` numbers — this guards against the
+exported formulas silently drifting from the app's model.
 
 ## Simulation Model
 
@@ -194,9 +239,11 @@ src/chatbot/
   openrouter.ts           # Browser-side OpenRouter proxy adapter
   advisor.ts              # Deterministic regex-based advisor state machine
   logger.ts               # Client-side conversation logger
+src/export/
+  workbook.ts             # Builds the .xlsx workbook with live formulas (ExcelJS)
 src/main.ts               # Wires State -> runSimulation -> Charts
 vite.config.ts            # Vite build + /api + /chat middleware plugin
-tests/                    # ~140 Vitest tests (model, plausibility, report)
+tests/                    # ~280 Vitest tests (model, plausibility, report, Excel export)
 ```
 
 ## Tech Stack
@@ -210,9 +257,10 @@ tests/                    # ~140 Vitest tests (model, plausibility, report)
 | Charts | Hand-rolled SVG (zero dependencies) |
 | State | Custom minimal observable store |
 | AI | OpenRouter API (server-side proxy, key in `OR_PV_KEY` env var) |
+| Excel export | [ExcelJS](https://github.com/exceljs/exceljs) (lazy-loaded on click) |
 | Data | energy-charts.info (Bundesnetzagentur/SMARD spot prices, CC BY 4.0) |
 
-**Zero runtime dependencies.** The entire bundle is self-contained TypeScript.
+The simulation engine, UI, charts, and state store have **no runtime dependencies** — they are self-contained TypeScript. The only runtime dependency is **ExcelJS**, used solely for the `.xlsx` export; it is code-split into its own chunk and loaded lazily the first time the user clicks the export button, so it does not weigh down the initial page load. Formula evaluation in tests uses **HyperFormula** (dev dependency only).
 
 ## Tests
 

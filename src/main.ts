@@ -282,3 +282,25 @@ const onChange = (): void => {
 buildControls(controlsHost, state, onChange);
 writeUrl(state);
 recompute();
+
+// Excel export: generate a fully-formula workbook from the current report and
+// download it client-side (no server round-trip).
+const downloadBtn = document.getElementById("download-xlsx") as HTMLButtonElement | null;
+if (downloadBtn) {
+  downloadBtn.addEventListener("click", async () => {
+    if (!report) return;
+    const prev = downloadBtn.textContent;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "⏳ Erzeuge…";
+    try {
+      const { downloadWorkbook } = await import("./export/workbook");
+      await downloadWorkbook(report);
+    } catch (err) {
+      console.error("Excel-Export fehlgeschlagen:", err);
+      alert("Excel-Export fehlgeschlagen. Details in der Konsole.");
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = prev;
+    }
+  });
+}

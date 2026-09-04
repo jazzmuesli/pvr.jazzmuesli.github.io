@@ -21,6 +21,28 @@ body {
 }
 .topbar h1 { margin: 0; font-size: 22px; }
 .topbar p { margin: 4px 0 0; color: #cbd5e1; font-size: 13px; }
+.topbar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.btn-download {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, transform 0.05s ease;
+}
+.btn-download:hover:not(:disabled) { background: #0284c7; }
+.btn-download:active:not(:disabled) { transform: translateY(1px); }
+.btn-download:disabled { opacity: 0.6; cursor: progress; }
 .layout {
   display: grid;
   grid-template-columns: 320px 1fr;
