@@ -2,6 +2,7 @@
 // recomputes the simulation client-side (no API calls) and keeps the URL in
 // sync so configurations are shareable and compatible with index.html.
 
+import { t, monthAbbrevs, fmtEUR as i18nFmtEUR } from "../i18n";
 import { Store } from "../store";
 import {
   Scenario,
@@ -30,7 +31,7 @@ export interface WizardOptions {
   scenarioEl: HTMLElement;
 }
 
-const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+function monthLabels(): string[] { return monthAbbrevs(); }
 const STANDARD_KWH = (n: number) => 1500 + (n - 1) * 1000;
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -47,9 +48,7 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-function fmtEUR(v: number): string {
-  return `${Math.round(v).toLocaleString("de-DE")} €`;
-}
+const fmtEUR = i18nFmtEUR;
 
 export function initWizard(opts: WizardOptions): void {
   const { store } = opts;
@@ -89,19 +88,19 @@ export function initWizard(opts: WizardOptions): void {
     ]);
     return { input, wrap };
   };
-  const wpToggle = mkToggle("wp", "Wärmepumpe", "~5.000 kWh/Jahr", "heatpump");
-  const evToggle = mkToggle("ev", "E-Auto", "~2.000 kWh/Jahr (80% PV)", "ev");
-  const bwToggle = mkToggle("bw", "Brauchwasser-WP", "~400 kWh/Jahr", "bwwp");
+  const wpToggle = mkToggle("wp", t("wizard.heatpump_label"), t("wizard.heatpump_sub"), "heatpump");
+  const evToggle = mkToggle("ev", t("wizard.ev_label"), t("wizard.ev_sub"), "ev");
+  const bwToggle = mkToggle("bw", t("wizard.bwwp_label"), t("wizard.bwwp_sub"), "bwwp");
 
   const pvSeg = el("div", { class: "seg", id: "pv-seg" });
   const pvButtons: Record<string, HTMLButtonElement> = {};
-  for (const [val, t, s] of [
-    ["none", "Kein PV", "Basis"],
-    ["balcony", "Balkonkraftwerk", "800 Wp · Süd"],
-    ["10", "10 kWp", "Süd · 35°"],
-    ["20", "20 kWp", "Ost/West · 35°"],
+  for (const [val, label, sub] of [
+    ["none", t("wizard.pv_none"), t("wizard.pv_none_sub")],
+    ["balcony", t("wizard.pv_balkon"), t("wizard.pv_balkon_sub")],
+    ["10", t("wizard.pv_10kw"), t("wizard.pv_10kw_sub")],
+    ["20", t("wizard.pv_20kw"), t("wizard.pv_20kw_sub")],
   ] as [Scenario["pv"], string, string][]) {
-    const b = el("button", { class: "seg-btn", "data-pv": val }, [el("span", { class: "t" }, [t]), el("span", { class: "s" }, [s])]) as HTMLButtonElement;
+    const b = el("button", { class: "seg-btn", "data-pv": val }, [el("span", { class: "t" }, [label]), el("span", { class: "s" }, [sub])]) as HTMLButtonElement;
     b.addEventListener("click", () => {
       const p = pvPreset(val);
       store.setState({
@@ -120,11 +119,11 @@ export function initWizard(opts: WizardOptions): void {
 
   const batSeg = el("div", { class: "seg", id: "bat-seg" });
   const batButtons: Record<string, HTMLButtonElement> = {};
-  for (const [val, t, s] of [
-    ["off", "Ohne Speicher", "einfach"],
-    ["on", "Mit Speicher", "mehr Eigenverbrauch"],
+  for (const [val, label, sub] of [
+    ["off", t("wizard.battery_none"), t("wizard.battery_none_sub")],
+    ["on", t("wizard.battery_with"), t("wizard.battery_with_sub")],
   ] as [Scenario["battery"], string, string][]) {
-    const b = el("button", { class: "seg-btn", "data-bat": val }, [el("span", { class: "t" }, [t]), el("span", { class: "s" }, [s])]) as HTMLButtonElement;
+    const b = el("button", { class: "seg-btn", "data-bat": val }, [el("span", { class: "t" }, [label]), el("span", { class: "s" }, [sub])]) as HTMLButtonElement;
     b.addEventListener("click", () => {
       const cur = store.getState();
       if (val === "on") {
@@ -155,15 +154,15 @@ export function initWizard(opts: WizardOptions): void {
 
   // assemble sidebar
   opts.sidebar.append(
-    step(1, "Haushalt & Strompreis", "Personenanzahl setzt das Standard-Lastprofil (1 → 1.500 … 2 → 2.500 kWh).", [
-      field("Personen im Haushalt", personsWrap),
-      sliderField("Jahresverbrauch Haushalt", hk, hkVal, "kWh"),
-      sliderField("Strompreis", ict, ictVal, "ct/kWh"),
-      field("Ort", loc),
+    step(1, t("wizard.step_household"), t("wizard.step_household_desc"), [
+      field(t("wizard.step_persons"), personsWrap),
+      sliderField(t("wizard.step_consumption"), hk, hkVal, "kWh"),
+      sliderField(t("wizard.step_price"), ict, ictVal, "ct/kWh"),
+      field(t("wizard.step_location"), loc),
     ]),
-    step(2, "Weitere Verbraucher", "Optional — erhöht den Eigenverbrauch.", [wpToggle.wrap, evToggle.wrap, bwToggle.wrap]),
-    step(3, "PV-Anlage wählen", "Vom Balkonkraftwerk bis Volldach.", [pvSeg, reco]),
-    step(4, "Speicher", "Hebt den Eigenverbrauch.", [batSeg]),
+    step(2, t("wizard.step_consumers"), t("wizard.step_consumers_desc"), [wpToggle.wrap, evToggle.wrap, bwToggle.wrap]),
+    step(3, t("wizard.step_pv"), t("wizard.step_pv_desc"), [pvSeg, reco]),
+    step(4, t("wizard.step_battery"), t("wizard.step_battery_desc"), [batSeg]),
   );
 
   function step(num: number, title: string, desc: string, rows: HTMLElement[]): HTMLElement {
@@ -205,8 +204,8 @@ export function initWizard(opts: WizardOptions): void {
     for (const v of Object.keys(batButtons)) batButtons[v].classList.toggle("active", v === s.battery);
     reco.textContent =
       s.pv === "none"
-        ? "Ausgangspunkt: deine reinen Bezugskosten."
-        : `${pvLabel(s)} — ${s.battery === "on" ? "mit" : "ohne"} Speicher.`;
+        ? t("wizard.rec_baseline")
+        : `${pvLabel(s)} — ${s.battery === "on" ? t("wizard.rec_with") : t("wizard.rec_without")} ${t("wizard.rec_battery")}`;
   }
 
   function personsFor(kwh: number): number {
@@ -217,13 +216,13 @@ export function initWizard(opts: WizardOptions): void {
   function renderSummary(s: Scenario): void {
     const m = computeMetrics(s);
     const cards: [string, string, string][] = [
-      ["PV-Ertrag", `${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-      ["Eigenverbrauch", `${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh`, `${m.selfPct.toFixed(0)} % des PV`],
-      ["Netz-Import", `${Math.round(m.importKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-      ["Netto (Export−Import)", `${m.netEUR >= 0 ? "+" : ""}${fmtEUR(m.netEUR)}`, "pro Jahr"],
-      ["Ersparnis ggü. Basis", m.savingsEUR > 0 ? fmtEUR(m.savingsEUR) : "—", "pro Jahr"],
-      ["Amortisation", m.investmentEUR > 0 && Number.isFinite(m.amortYears) ? `${m.amortYears.toFixed(1)} J.` : "—", `Inv. ${fmtEUR(m.investmentEUR)}`],
-      ["Eff. Strompreis", `${m.effCt.toFixed(1)} ct`, "gewichteter Ø"],
+      [t("wizard.sum_pv_yield"), `${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh`, t("wizard.sum_per_year")],
+      [t("wizard.sum_self_use"), `${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh`, `${m.selfPct.toFixed(0)} % ${t("wizard.sum_self_pv")}`],
+      [t("wizard.sum_grid_import"), `${Math.round(m.importKWh).toLocaleString("de-DE")} kWh`, t("wizard.sum_per_year")],
+      [t("wizard.sum_netto"), `${m.netEUR >= 0 ? "+" : ""}${fmtEUR(m.netEUR)}`, t("wizard.sum_per_year")],
+      [t("wizard.sum_savings"), m.savingsEUR > 0 ? fmtEUR(m.savingsEUR) : "—", t("wizard.sum_per_year")],
+      [t("wizard.sum_amortisation"), m.investmentEUR > 0 && Number.isFinite(m.amortYears) ? `${m.amortYears.toFixed(1)} J.` : "—", `Inv. ${fmtEUR(m.investmentEUR)}`],
+      [t("wizard.sum_eff_price"), `${m.effCt.toFixed(1)} ct`, t("wizard.sum_weighted")],
     ];
     opts.summary.innerHTML = "";
     for (const [k, v, sub] of cards) {
@@ -246,9 +245,9 @@ export function initWizard(opts: WizardOptions): void {
     opts.hourPanel.style.display = "block";
     const rep = runSimulationCache();
     const data = rep.daily[selectedMonth - 1];
-    opts.hourTitle.textContent = `Stundendetail — ${MONTH_LABELS[selectedMonth - 1]}`;
+    opts.hourTitle.textContent = `${t("wizard.hourly_detail")} ${monthLabels()[selectedMonth - 1]}`;
     const socMax = spec(s).capacityKWh;
-    renderHourlyChart(opts.hourly, data, MONTH_LABELS[selectedMonth - 1], socMax);
+    renderHourlyChart(opts.hourly, data, monthLabels()[selectedMonth - 1], socMax);
   }
 
   let cachedReport: ReturnType<typeof runScenario> | null = null;
@@ -287,16 +286,16 @@ export function initWizard(opts: WizardOptions): void {
       const h = oc.heating;
       const rows = [
         { a: h.heatpump, hl: true, d: "" },
-        { a: h.oil, hl: false, d: `${h.oil.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.oil.deltaVsHeatpumpEUR)} ggü. WP` },
-        { a: h.gas, hl: false, d: `${h.gas.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.gas.deltaVsHeatpumpEUR)} ggü. WP` },
+        { a: h.oil, hl: false, d: `${h.oil.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.oil.deltaVsHeatpumpEUR)} ${t("opportunity.vs_hp")}` },
+        { a: h.gas, hl: false, d: `${h.gas.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(h.gas.deltaVsHeatpumpEUR)} ${t("opportunity.vs_hp")}` },
       ];
-      html += `<div class="heat-head">Wärmepumpe: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh → ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</div>`;
+      html += `<div class="heat-head">${t("heating.heatpump")}: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh → ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</div>`;
       html += `<div class="summary">` + rows.map(({ a, hl, d }) => `
         <div class="card${hl ? " card-hl" : ""}">
           <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/J.</span></div>
           <div class="card-key">${a.label}</div>
-          <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · Netz ${fmt(a.gridFeeEUR)}` : ""}</div>
-          <div class="card-sub">Schornsteinfeger ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · Nebenk. ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
+          <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · ${t("opportunity.grid")} ${fmt(a.gridFeeEUR)}` : ""}</div>
+          <div class="card-sub">${t("opportunity.chimney")} ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · ${t("opportunity.other_costs")} ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
           ${d ? `<div class="card-sub">${d}</div>` : ""}
         </div>`).join("") + `</div>`;
       html += opportunityNote(r, "heating");
@@ -306,15 +305,15 @@ export function initWizard(opts: WizardOptions): void {
       const c = oc.car;
       const rows = [
         { a: c.ev, hl: true, d: "" },
-        { a: c.diesel, hl: false, d: `${c.diesel.deltaVsEvEUR > 0 ? "+" : ""}${fmt(c.diesel.deltaVsEvEUR)} ggü. E-Auto` },
+        { a: c.diesel, hl: false, d: `${c.diesel.deltaVsEvEUR > 0 ? "+" : ""}${fmt(c.diesel.deltaVsEvEUR)} ${t("opportunity.vs_ev")}` },
       ];
-      html += `<div class="heat-head">E-Auto vs. Diesel: ${Math.round(c.annualKm).toLocaleString("de-DE")} km/Jahr</div>`;
+      html += `<div class="heat-head">${t("car.comparison")} ${Math.round(c.annualKm).toLocaleString("de-DE")} km/${t("car.per_year")}</div>`;
       html += `<div class="summary">` + rows.map(({ a, hl, d }) => `
         <div class="card${hl ? " card-hl" : ""}">
           <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/J.</span></div>
           <div class="card-key">${a.label}</div>
-          <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
-          <div class="card-sub">Wartung ${fmt(a.maintenanceEUR)} · Steuer ${fmt(a.vehicleTaxEUR)}</div>
+          <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
+          <div class="card-sub">${t("opportunity.maintenance")} ${fmt(a.maintenanceEUR)} · ${t("opportunity.tax")} ${fmt(a.vehicleTaxEUR)}</div>
           ${d ? `<div class="card-sub">${d}</div>` : ""}
         </div>`).join("") + `</div>`;
       html += opportunityNote(r, "car");
@@ -330,7 +329,7 @@ export function initWizard(opts: WizardOptions): void {
     const financeable = kind === "heating" ? inv.financeableHeatpumpEUR : inv.financeableEvEUR;
     const label = kind === "heating" ? "Gas" : "Diesel";
     if (financeable == null) return "";
-    return `<div class="heat-foot">Ersparnis ggü. ${label}: ${fmtEUR(saving)}/Jahr · finanzierbar in ${inv.pvPaybackYears.toFixed(1)} J. (PV-Amortisation): ${fmtEUR(financeable)}</div>`;
+    return `<div class="heat-foot">${t("opportunity.savings")} ${label}: ${fmtEUR(saving)}${t("opportunity.per_year_finance")} ${inv.pvPaybackYears.toFixed(1)} ${t("opportunity.years_pv")} ${fmtEUR(financeable)}</div>`;
   }
 
   function scheduleRecompute(): void {

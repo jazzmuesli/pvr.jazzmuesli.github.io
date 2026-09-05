@@ -16,9 +16,21 @@
           <h1>PV-Erlösrechner</h1>
           <p>Direktvermarktung mit Batterie — Simulation von PV-Produktion, Speicher-Verschiebung und Spotmarkt-Erlösen.</p>
         </div>
-        <button id="download-xlsx" class="btn-download" type="button" title="Excel-Datei mit allen Berechnungen und Formeln herunterladen">
-          📊 Excel-Export (.xlsx)
-        </button>
+        <div class="topbar-actions">
+          <div class="lang-toggle" role="group" aria-label="Language">
+            <button id="lang-de" class="lang-btn active" type="button" title="Deutsch" aria-pressed="true">
+              <svg viewBox="0 0 60 40" width="22" height="15" aria-hidden="true"><rect width="60" height="13.33" fill="#000"/><rect y="13.33" width="60" height="13.34" fill="#DD0000"/><rect y="26.67" width="60" height="13.33" fill="#FFCC00"/></svg>
+              DE
+            </button>
+            <button id="lang-en" class="lang-btn" type="button" title="English" aria-pressed="false">
+              <svg viewBox="0 0 60 40" width="22" height="15" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="6"/><path d="M0 0L60 40M60 0L0 40" stroke="#C8102E" stroke-width="3"/><path d="M30 0v40M0 20h60" stroke="#fff" stroke-width="10"/><path d="M30 0v40M0 20h60" stroke="#C8102E" stroke-width="6"/></svg>
+              EN
+            </button>
+          </div>
+          <button id="download-xlsx" class="btn-download" type="button" title="Excel-Datei mit allen Berechnungen und Formeln herunterladen">
+            📊 Excel-Export (.xlsx)
+          </button>
+        </div>
       </div>
     </header>
     <main class="layout">

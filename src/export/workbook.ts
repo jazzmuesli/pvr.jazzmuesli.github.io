@@ -25,6 +25,7 @@ import ExcelJS from "exceljs";
 import type { SimReport } from "../calc/report";
 import { averageNetzentgeltCt, cityForLocation } from "../calc/tariff";
 import type { TariffScheme } from "../calc/tariff";
+import { t } from "../i18n";
 
 /** Round to 2 decimals (mirrors the calc modules' `round2`). */
 function r2(v: number): number {
@@ -89,13 +90,13 @@ class SheetBuilder {
 
   /** Header block: bold title + a colour legend, then a blank separator. */
   header(text: string, subtitle?: string): void {
-    const t = this.ws.getCell(this.row, 1);
-    t.value = text;
-    t.font = { bold: true, size: 14, color: { argb: "FFFFFFFF" } };
-    t.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.title } };
-    this.ws.getCell(this.row, 2).fill = t.fill;
-    this.ws.getCell(this.row, 3).fill = t.fill;
-    this.ws.getCell(this.row, 4).fill = t.fill;
+    const titleCell = this.ws.getCell(this.row, 1);
+    titleCell.value = text;
+    titleCell.font = { bold: true, size: 14, color: { argb: "FFFFFFFF" } };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.title } };
+    this.ws.getCell(this.row, 2).fill = titleCell.fill;
+    this.ws.getCell(this.row, 3).fill = titleCell.fill;
+    this.ws.getCell(this.row, 4).fill = titleCell.fill;
     this.row += 1;
 
     if (subtitle) {
@@ -107,20 +108,20 @@ class SheetBuilder {
 
     // Colour legend so the user knows which cells are editable.
     const legend = this.ws.getCell(this.row, 1);
-    legend.value = "Legende:";
+    legend.value = t("workbook.legend");
     legend.font = { bold: true, size: 9 };
     const inCell = this.ws.getCell(this.row, 2);
-    inCell.value = "Eingabe";
+    inCell.value = t("workbook.input");
     inCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.inputFill } };
     inCell.font = { size: 9 };
     inCell.alignment = { horizontal: "center" };
     const calibCell = this.ws.getCell(this.row, 3);
-    calibCell.value = "Kalibr.";
+    calibCell.value = t("workbook.calibration");
     calibCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
     calibCell.font = { size: 9 };
     calibCell.alignment = { horizontal: "center" };
     const noteCell = this.ws.getCell(this.row, 4);
-    noteCell.value = "gelb = Ihre Eingabe · orange = aus 15-Min-Simulation (anpassbar) · grau = Formel · grün = Ergebnis";
+    noteCell.value = t("workbook.legend_note");
     noteCell.font = { size: 9, italic: true, color: { argb: "FF595959" } };
     this.row += 1; // legend occupies row 4 (frozen split at 4)
   }
@@ -240,49 +241,49 @@ class SheetBuilder {
 // ---------------------------------------------------------------------------
 
 function buildPvSheet(wb: ExcelJS.Workbook, report: SimReport): void {
-  const s = new SheetBuilder(wb, "PV-Produktion");
-  s.header("PV-Produktion", "Ihre Anlagengröße bestimmt den Ertrag; der spezifische Ertrag kommt aus der Simulation.");
+  const s = new SheetBuilder(wb, t("sheet.pv"));
+  s.header(t("sheet.pv_title"), t("sheet.pv_subtitle"));
 
   const annualPV = report.summary.totalPVKWh;
   const specificYield = report.inputs.peakKWp > 0 ? annualPV / report.inputs.peakKWp : 0;
 
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "kwp", label: "PV-Spitzenleistung", value: report.inputs.peakKWp, unit: "kWp" },
-    { key: "tilt", label: "Neigung", value: report.inputs.tiltDeg, unit: "°" },
+    { key: "kwp", label: t("excel.pv_peak"), value: report.inputs.peakKWp, unit: "kWp" },
+    { key: "tilt", label: t("excel.tilt"), value: report.inputs.tiltDeg, unit: "°" },
   ]);
   s.text("Ausrichtung", report.inputs.orientation);
   s.text("Standort", report.inputs.location);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   s.calib([
     {
       key: "specificYield",
-      label: "Spezifischer Ertrag",
+      label: t("excel.specific_yield"),
       value: r2(specificYield),
       unit: "kWh/kWp",
-      note: "aus Solarmodell (Standort, Neigung, Ausrichtung); hier anpassbar",
+      note: t("excel.specific_yield_note"),
     },
   ]);
 
-  s.section("Berechnung");
+  s.section(t("excel.calculation"));
   s.formula(
     "pvYear",
-    "PV-Ertrag pro Jahr",
+    t("excel.pv_annual"),
     `=${s.addr.kwp}*${s.addr.specificYield}`,
     r2(annualPV),
     "kWh",
-    "Leistung × spezifischer Ertrag",
+    t("excel.pv_formula"),
     "result",
   );
 
   // Monthly breakdown: a yellow monthly-share column (%) that the user can
   // edit; each month's kWh is derived = annual × share. The shares come from
   // the simulation's monthly split and sum to 100 %.
-  s.section("Monatliche Verteilung (Anteil in % — editierbar)");
+  s.section(t("excel.monthly_distribution"));
   const ws = s.worksheet;
   let rowIdx = s.currentRow;
-  ["Monat", "Anteil %", "→ kWh"].forEach((h, i) => {
+  [t("excel.month"), t("excel.share_percent"), t("excel.kwh_arrow")].forEach((h, i) => {
     const c = ws.getCell(rowIdx, i + 1);
     c.value = h;
     c.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -313,7 +314,7 @@ function buildPvSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   }
   const lastShareRow = rowIdx - 1;
   const chkLabel = ws.getCell(rowIdx, 1);
-  chkLabel.value = "Summe (Kontrolle)";
+  chkLabel.value = t("excel.sum_check");
   chkLabel.font = { bold: true };
   chkLabel.border = THIN_BORDER;
   const shareSum = ws.getCell(rowIdx, 2);
@@ -345,174 +346,174 @@ function buildConsumerSheet(
   const effCt = report.effectivePrice.byConsumer[key] ?? 0;
 
   s.header(title, "Verbrauch und Tarif sind Ihre Eingaben; die PV-Deckung stammt aus der Simulation.");
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "annualKWh", label: "Jahresverbrauch", value: r2(cons?.annualKWh ?? 0), unit: "kWh", note: "eingestellter Verbrauch dieses Verbrauchers" },
-    { key: "gridPriceCt", label: "Netzpreis (Grid)", value: r2(cov?.gridPriceCt ?? 0), unit: "ct/kWh", note: report.inputs.importScheme === "fixed" ? "Ihr fester Tarif" : "Ø dynamischer Preis der Bezugsstunden" },
+    { key: "annualKWh", label: t("excel.annual_consumption"), value: r2(cons?.annualKWh ?? 0), unit: "kWh", note: t("excel.annual_consumption_note") },
+    { key: "gridPriceCt", label: t("excel.grid_price"), value: r2(cov?.gridPriceCt ?? 0), unit: "ct/kWh", note: report.inputs.importScheme === "fixed" ? t("excel.grid_price_fixed_note") : t("excel.grid_price_dynamic_note") },
   ]);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   const covPct = cov?.pvSharePct ?? 0;
   s.calib([
-    { key: "pvCovPct", label: "PV+Speicher-Deckung", value: r2(covPct), unit: "%", note: "Anteil des Verbrauchs aus eigener Sonne (Batterie-Dispatch)" },
+    { key: "pvCovPct", label: t("excel.pv_coverage"), value: r2(covPct), unit: "%", note: t("excel.pv_coverage_note") },
   ]);
 
-  s.section("Berechnung");
+  s.section(t("excel.calculation"));
   s.formula(
     "pvCovered",
-    "davon aus PV+Speicher gedeckt",
+    t("excel.pv_covered"),
     `=${s.addr.annualKWh}*${s.addr.pvCovPct}/100`,
     r2(cov?.pvCoveredKWh ?? 0),
     "kWh",
-    "Verbrauch × PV-Deckung%",
+    t("excel.pv_covered_formula"),
   );
   s.formula(
     "gridKWh",
-    "Netzbezug",
+    t("excel.grid_import"),
     `=${s.addr.annualKWh}-${s.addr.pvCovered}`,
     r2(cov?.gridKWh ?? Math.max(0, (cons?.annualKWh ?? 0) - (cov?.pvCoveredKWh ?? 0))),
     "kWh",
-    "Verbrauch − PV-gedeckt",
+    t("excel.grid_import_formula"),
   );
   s.formula(
     "gridCost",
-    "Netzkosten",
+    t("excel.grid_cost"),
     `=${s.addr.gridKWh}*${s.addr.gridPriceCt}/100`,
     r2(((cov?.gridKWh ?? 0) * (cov?.gridPriceCt ?? 0)) / 100),
     "€",
-    "Netzbezug × Netzpreis (PV = 0 ct/kWh)",
+    t("excel.grid_cost_formula"),
   );
   s.formula(
     "effectiveCt",
-    "Effektiver Strompreis",
+    t("excel.eff_price"),
     `=IF(${s.addr.annualKWh}=0,0,${s.addr.gridCost}/${s.addr.annualKWh}*100)`,
     r2(effCt),
     "ct/kWh",
-    "Netzkosten / Verbrauch (Eigenverbrauch gratis)",
+    t("excel.eff_price_formula"),
     "result",
   );
 }
 
 function buildHeatingSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const h = report.opportunityCosts.heating;
-  const s = new SheetBuilder(wb, "Heizung");
+  const s = new SheetBuilder(wb, t("sheet.heating"));
   s.header(
-    "Heizkostenvergleich — Wärmepumpe vs. Heizöl vs. Erdgas",
-    "Gleiche Nutzwärme für alle drei Optionen; alle Kosten als nachvollziehbare Formeln.",
+    t("sheet.heating_title"),
+    t("sheet.heating_subtitle"),
   );
 
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "hpElec", label: "Wärmepumpe: Strombedarf", value: r2(h.heatpumpElectricKWh), unit: "kWh", note: "= Verbrauch des WP-Verbrauchers" },
-    { key: "jaz", label: "Jahresarbeitszahl (JAZ)", value: h.jaz, unit: "", note: "Nutzwärme je kWh Strom" },
-    { key: "oilEurPer100L", label: "Heizöl-Preis", value: 130, unit: "€/100L", note: "Standardannahme" },
-    { key: "oilKWhPerL", label: "Heizöl Heizwert", value: 10, unit: "kWh/L" },
-    { key: "oilEff", label: "Ölkessel-Wirkungsgrad", value: 0.85, unit: "" },
-    { key: "oilSweep", label: "Schornsteinfeger (Öl)", value: r2(h.oil.chimneySweepEUR), unit: "€/Jahr" },
-    { key: "gasCt", label: "Gaspreis", value: 11, unit: "ct/kWh" },
-    { key: "gasEff", label: "Gaskessel-Wirkungsgrad", value: 0.92, unit: "" },
-    { key: "gasGridFeeCt", label: "Gas-Netzentgelt", value: 2.0, unit: "ct/kWh" },
-    { key: "gasNeben", label: "Gas-Nebenkosten (Grundgebühr)", value: r2(h.gas.otherNebenkostenEUR), unit: "€/Jahr" },
-    { key: "gasSweep", label: "Schornsteinfeger (Gas)", value: r2(h.gas.chimneySweepEUR), unit: "€/Jahr" },
+    { key: "hpElec", label: t("excel.hp_electricity"), value: r2(h.heatpumpElectricKWh), unit: "kWh", note: t("excel.hp_electricity_note") },
+    { key: "jaz", label: t("excel.jaz"), value: h.jaz, unit: "", note: t("excel.jaz_note") },
+    { key: "oilEurPer100L", label: t("excel.oil_price"), value: 130, unit: "€/100L", note: t("excel.oil_price_note") },
+    { key: "oilKWhPerL", label: t("excel.oil_heating_value"), value: 10, unit: "kWh/L" },
+    { key: "oilEff", label: t("excel.oil_efficiency"), value: 0.85, unit: "" },
+    { key: "oilSweep", label: t("excel.oil_chimney"), value: r2(h.oil.chimneySweepEUR), unit: "€/Jahr" },
+    { key: "gasCt", label: t("excel.gas_price"), value: 11, unit: "ct/kWh" },
+    { key: "gasEff", label: t("excel.gas_efficiency"), value: 0.92, unit: "" },
+    { key: "gasGridFeeCt", label: t("excel.gas_grid_fee"), value: 2.0, unit: "ct/kWh" },
+    { key: "gasNeben", label: t("excel.gas_fixed_costs"), value: r2(h.gas.otherNebenkostenEUR), unit: "€/Jahr" },
+    { key: "gasSweep", label: t("excel.gas_chimney"), value: r2(h.gas.chimneySweepEUR), unit: "€/Jahr" },
   ]);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   s.calib([
     {
       key: "hpCt",
-      label: "WP-Strompreis (effektiv)",
+      label: t("excel.hp_effective_price"),
       value: r2((h.heatpump.energyCostEUR / Math.max(h.heatpumpElectricKWh, 1e-9)) * 100),
       unit: "ct/kWh",
-      note: "PV-bewusster Effektivpreis der WP-Importe (Netz + gratis PV)",
+      note: t("excel.hp_effective_price_note"),
     },
   ]);
 
   s.section("Nutzwärme-Berechnung");
-  s.formula("usefulHeat", "Nutzwärme", `=${s.addr.hpElec}*${s.addr.jaz}`, r2(h.usefulHeatKWh), "kWh", "Strombedarf × JAZ");
+  s.formula("usefulHeat", t("excel.useful_heat"), `=${s.addr.hpElec}*${s.addr.jaz}`, r2(h.usefulHeatKWh), "kWh", t("excel.useful_heat_formula"));
 
   s.section("Wärmepumpe");
-  s.formula("hpTotal", "Wärmepumpe: Gesamtkosten", `=${s.addr.hpElec}*${s.addr.hpCt}/100`, r2(h.heatpump.totalEUR), "€/Jahr", "Strombedarf × Strompreis", "result");
+  s.formula("hpTotal", t("excel.hp_total_cost"), `=${s.addr.hpElec}*${s.addr.hpCt}/100`, r2(h.heatpump.totalEUR), "€/Jahr", t("excel.hp_total_cost_formula"), "result");
 
   s.section("Heizöl");
-  s.formula("oilPrimary", "Öl-Energiebedarf", `=${s.addr.usefulHeat}/${s.addr.oilEff}`, r2(h.oil.primaryEnergyKWh), "kWh", "Nutzwärme / Wirkungsgrad");
-  s.formula("oilLitres", "Öl-Menge", `=${s.addr.oilPrimary}/${s.addr.oilKWhPerL}`, r2(h.oil.primaryEnergyKWh / 10), "L", "Energiebedarf / Heizwert");
-  s.formula("oilEnergyCost", "Öl-Energiekosten", `=${s.addr.oilLitres}*${s.addr.oilEurPer100L}/100`, r2(h.oil.energyCostEUR), "€", "Menge × Preis/100L");
-  s.formula("oilTotal", "Heizöl: Gesamtkosten", `=${s.addr.oilEnergyCost}+${s.addr.oilSweep}`, r2(h.oil.totalEUR), "€/Jahr", "Energie + Schornsteinfeger", "result");
-  s.formula("oilDelta", "Mehrkosten ggü. Wärmepumpe", `=${s.addr.oilTotal}-${s.addr.hpTotal}`, r2(h.oil.deltaVsHeatpumpEUR), "€/Jahr");
+  s.formula("oilPrimary", t("excel.oil_energy_need"), `=${s.addr.usefulHeat}/${s.addr.oilEff}`, r2(h.oil.primaryEnergyKWh), "kWh", t("excel.oil_energy_need_formula"));
+  s.formula("oilLitres", t("excel.oil_amount"), `=${s.addr.oilPrimary}/${s.addr.oilKWhPerL}`, r2(h.oil.primaryEnergyKWh / 10), "L", t("excel.oil_amount_formula"));
+  s.formula("oilEnergyCost", t("excel.oil_energy_cost"), `=${s.addr.oilLitres}*${s.addr.oilEurPer100L}/100`, r2(h.oil.energyCostEUR), "€", t("excel.oil_energy_cost_formula"));
+  s.formula("oilTotal", t("excel.oil_total_cost"), `=${s.addr.oilEnergyCost}+${s.addr.oilSweep}`, r2(h.oil.totalEUR), "€/Jahr", t("excel.oil_total_cost_formula"), "result");
+  s.formula("oilDelta", t("excel.oil_extra_cost"), `=${s.addr.oilTotal}-${s.addr.hpTotal}`, r2(h.oil.deltaVsHeatpumpEUR), "€/Jahr");
 
   s.section("Erdgas");
-  s.formula("gasPrimary", "Gas-Energiebedarf", `=${s.addr.usefulHeat}/${s.addr.gasEff}`, r2(h.gas.primaryEnergyKWh), "kWh", "Nutzwärme / Wirkungsgrad");
-  s.formula("gasEnergyCost", "Gas-Energiekosten", `=${s.addr.gasPrimary}*${s.addr.gasCt}/100`, r2(h.gas.energyCostEUR), "€", "Energiebedarf × Preis");
-  s.formula("gasGridFee", "Gas-Netzentgelt", `=${s.addr.gasPrimary}*${s.addr.gasGridFeeCt}/100`, r2(h.gas.gridFeeEUR), "€", "Energiebedarf × Netzentgelt");
-  s.formula("gasTotal", "Erdgas: Gesamtkosten", `=${s.addr.gasEnergyCost}+${s.addr.gasGridFee}+${s.addr.gasNeben}+${s.addr.gasSweep}`, r2(h.gas.totalEUR), "€/Jahr", "Energie + Netz + Nebenk. + Schornsteinfeger", "result");
-  s.formula("gasDelta", "Mehrkosten ggü. Wärmepumpe", `=${s.addr.gasTotal}-${s.addr.hpTotal}`, r2(h.gas.deltaVsHeatpumpEUR), "€/Jahr");
+  s.formula("gasPrimary", t("excel.gas_energy_need"), `=${s.addr.usefulHeat}/${s.addr.gasEff}`, r2(h.gas.primaryEnergyKWh), "kWh", t("excel.gas_energy_need_formula"));
+  s.formula("gasEnergyCost", t("excel.gas_energy_cost"), `=${s.addr.gasPrimary}*${s.addr.gasCt}/100`, r2(h.gas.energyCostEUR), "€", t("excel.gas_energy_cost_formula"));
+  s.formula("gasGridFee", t("excel.gas_grid_cost"), `=${s.addr.gasPrimary}*${s.addr.gasGridFeeCt}/100`, r2(h.gas.gridFeeEUR), "€", t("excel.gas_grid_cost_formula"));
+  s.formula("gasTotal", t("excel.gas_total_cost"), `=${s.addr.gasEnergyCost}+${s.addr.gasGridFee}+${s.addr.gasNeben}+${s.addr.gasSweep}`, r2(h.gas.totalEUR), "€/Jahr", t("excel.gas_total_cost_formula"), "result");
+  s.formula("gasDelta", t("excel.gas_extra_cost"), `=${s.addr.gasTotal}-${s.addr.hpTotal}`, r2(h.gas.deltaVsHeatpumpEUR), "€/Jahr");
 }
 
 function buildCarSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const c = report.opportunityCosts.car;
-  const s = new SheetBuilder(wb, "Auto");
+  const s = new SheetBuilder(wb, t("sheet.car"));
   s.header(
-    "Fahrkostenvergleich — E-Auto vs. Diesel",
-    "Gleiche Jahresfahrleistung; alle Kosten als nachvollziehbare Formeln.",
+    t("sheet.car_title"),
+    t("sheet.car_subtitle"),
   );
 
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "km", label: "Jahresfahrleistung", value: r2(c.annualKm), unit: "km" },
-    { key: "evKwh100", label: "E-Auto Verbrauch", value: r2((c.ev.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "kWh/100km" },
-    { key: "evMaintCt", label: "E-Auto Wartung", value: r2((c.ev.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
-    { key: "evTax", label: "E-Auto Kfz-Steuer", value: r2(c.ev.vehicleTaxEUR), unit: "€/Jahr" },
-    { key: "evOther", label: "E-Auto Versicherung + TÜV", value: r2(c.ev.otherNebenkostenEUR), unit: "€/Jahr" },
-    { key: "dieselL100", label: "Diesel Verbrauch", value: r2((c.diesel.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "L/100km" },
-    { key: "dieselEurL", label: "Diesel-Preis", value: r2(c.diesel.energyCostEUR / Math.max(c.diesel.primaryEnergy, 1e-9)), unit: "€/L" },
-    { key: "dieselMaintCt", label: "Diesel Wartung", value: r2((c.diesel.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
-    { key: "dieselTax", label: "Diesel Kfz-Steuer", value: r2(c.diesel.vehicleTaxEUR), unit: "€/Jahr" },
-    { key: "dieselOther", label: "Diesel Versicherung + TÜV", value: r2(c.diesel.otherNebenkostenEUR), unit: "€/Jahr" },
+    { key: "km", label: t("excel.ev_annual_km"), value: r2(c.annualKm), unit: "km" },
+    { key: "evKwh100", label: t("excel.ev_consumption"), value: r2((c.ev.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "kWh/100km" },
+    { key: "evMaintCt", label: t("excel.ev_maintenance"), value: r2((c.ev.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
+    { key: "evTax", label: t("excel.ev_tax"), value: r2(c.ev.vehicleTaxEUR), unit: "€/Jahr" },
+    { key: "evOther", label: t("excel.ev_insurance"), value: r2(c.ev.otherNebenkostenEUR), unit: "€/Jahr" },
+    { key: "dieselL100", label: t("excel.diesel_consumption"), value: r2((c.diesel.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "L/100km" },
+    { key: "dieselEurL", label: t("excel.diesel_price"), value: r2(c.diesel.energyCostEUR / Math.max(c.diesel.primaryEnergy, 1e-9)), unit: "€/L" },
+    { key: "dieselMaintCt", label: t("excel.diesel_maintenance"), value: r2((c.diesel.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
+    { key: "dieselTax", label: t("excel.diesel_tax"), value: r2(c.diesel.vehicleTaxEUR), unit: "€/Jahr" },
+    { key: "dieselOther", label: t("excel.diesel_insurance"), value: r2(c.diesel.otherNebenkostenEUR), unit: "€/Jahr" },
   ]);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   s.calib([
-    { key: "evCt", label: "E-Auto Strompreis (effektiv)", value: r2((c.ev.energyCostEUR / Math.max(c.ev.primaryEnergy, 1e-9)) * 100), unit: "ct/kWh", note: "PV-bewusster Effektivpreis des Ladestroms (Nachtladen + PV)" },
+    { key: "evCt", label: t("excel.ev_effective_price"), value: r2((c.ev.energyCostEUR / Math.max(c.ev.primaryEnergy, 1e-9)) * 100), unit: "ct/kWh", note: t("excel.ev_effective_price_note") },
   ]);
 
   s.section("E-Auto");
-  s.formula("evEnergy", "E-Auto: Energiebedarf", `=${s.addr.km}/100*${s.addr.evKwh100}`, r2(c.ev.primaryEnergy), "kWh", "km/100 × Verbrauch");
-  s.formula("evEnergyCost", "E-Auto: Energiekosten", `=${s.addr.evEnergy}*${s.addr.evCt}/100`, r2(c.ev.energyCostEUR), "€");
-  s.formula("evMaint", "E-Auto: Wartung", `=${s.addr.km}*${s.addr.evMaintCt}/100`, r2(c.ev.maintenanceEUR), "€");
-  s.formula("evTotal", "E-Auto: Gesamtkosten", `=${s.addr.evEnergyCost}+${s.addr.evMaint}+${s.addr.evTax}+${s.addr.evOther}`, r2(c.ev.totalEUR), "€/Jahr", "Energie + Wartung + Steuer + Nebenk.", "result");
+  s.formula("evEnergy", t("excel.ev_energy_need"), `=${s.addr.km}/100*${s.addr.evKwh100}`, r2(c.ev.primaryEnergy), "kWh", t("excel.ev_energy_need_formula"));
+  s.formula("evEnergyCost", t("excel.ev_energy_cost"), `=${s.addr.evEnergy}*${s.addr.evCt}/100`, r2(c.ev.energyCostEUR), "€");
+  s.formula("evMaint", t("excel.ev_maintenance_cost"), `=${s.addr.km}*${s.addr.evMaintCt}/100`, r2(c.ev.maintenanceEUR), "€");
+  s.formula("evTotal", t("excel.ev_total_cost"), `=${s.addr.evEnergyCost}+${s.addr.evMaint}+${s.addr.evTax}+${s.addr.evOther}`, r2(c.ev.totalEUR), "€/Jahr", t("excel.ev_total_cost_formula"), "result");
 
   s.section("Diesel");
-  s.formula("dieselLitres", "Diesel: Kraftstoffmenge", `=${s.addr.km}/100*${s.addr.dieselL100}`, r2(c.diesel.primaryEnergy), "L", "km/100 × Verbrauch");
-  s.formula("dieselEnergyCost", "Diesel: Kraftstoffkosten", `=${s.addr.dieselLitres}*${s.addr.dieselEurL}`, r2(c.diesel.energyCostEUR), "€");
-  s.formula("dieselMaint", "Diesel: Wartung", `=${s.addr.km}*${s.addr.dieselMaintCt}/100`, r2(c.diesel.maintenanceEUR), "€");
-  s.formula("dieselTotal", "Diesel: Gesamtkosten", `=${s.addr.dieselEnergyCost}+${s.addr.dieselMaint}+${s.addr.dieselTax}+${s.addr.dieselOther}`, r2(c.diesel.totalEUR), "€/Jahr", "Kraftstoff + Wartung + Steuer + Nebenk.", "result");
-  s.formula("dieselDelta", "Mehrkosten ggü. E-Auto", `=${s.addr.dieselTotal}-${s.addr.evTotal}`, r2(c.diesel.deltaVsEvEUR), "€/Jahr");
+  s.formula("dieselLitres", t("excel.diesel_fuel_amount"), `=${s.addr.km}/100*${s.addr.dieselL100}`, r2(c.diesel.primaryEnergy), "L", t("excel.diesel_fuel_amount_formula"));
+  s.formula("dieselEnergyCost", t("excel.diesel_fuel_cost"), `=${s.addr.dieselLitres}*${s.addr.dieselEurL}`, r2(c.diesel.energyCostEUR), "€");
+  s.formula("dieselMaint", t("excel.diesel_maintenance_cost"), `=${s.addr.km}*${s.addr.dieselMaintCt}/100`, r2(c.diesel.maintenanceEUR), "€");
+  s.formula("dieselTotal", t("excel.diesel_total_cost"), `=${s.addr.dieselEnergyCost}+${s.addr.dieselMaint}+${s.addr.dieselTax}+${s.addr.dieselOther}`, r2(c.diesel.totalEUR), "€/Jahr", t("excel.diesel_total_cost_formula"), "result");
+  s.formula("dieselDelta", t("excel.diesel_extra_cost"), `=${s.addr.dieselTotal}-${s.addr.evTotal}`, r2(c.diesel.deltaVsEvEUR), "€/Jahr");
 }
 
 function buildAggregateSheet(wb: ExcelJS.Workbook, report: SimReport): void {
-  const s = new SheetBuilder(wb, "Aggregat");
+  const s = new SheetBuilder(wb, t("sheet.aggregate"));
   const sum = report.summary;
-  s.header("Aggregierte Energie- und Kostenbilanz", "Verbrauch ist Ihre Eingabe; Energieflüsse & Erlöse stammen aus der Simulation.");
+  s.header(t("sheet.aggregate_title"), t("sheet.aggregate_subtitle"));
 
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "load", label: "Gesamtverbrauch", value: r2(sum.totalLoadKWh), unit: "kWh", note: "Summe aller Verbraucher" },
+    { key: "load", label: t("excel.total_consumption"), value: r2(sum.totalLoadKWh), unit: "kWh", note: t("excel.total_consumption_note") },
   ]);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   s.calib([
-    { key: "pvYear", label: "PV-Ertrag", value: r2(sum.totalPVKWh), unit: "kWh" },
-    { key: "selfCons", label: "Eigenverbrauch", value: r2(sum.selfConsumptionKWh), unit: "kWh", note: "PV+Speicher, der die Last deckt" },
-    { key: "export", label: "Netz-Einspeisung", value: r2(sum.totalExportKWh), unit: "kWh" },
-    { key: "exportRev", label: "Export-Erlös", value: r2(sum.exportRevenueEUR), unit: "€" },
-    { key: "importCost", label: "Import-Kosten", value: r2(sum.importCostEUR), unit: "€" },
+    { key: "pvYear", label: t("excel.pv_yield"), value: r2(sum.totalPVKWh), unit: "kWh" },
+    { key: "selfCons", label: t("excel.self_consumption"), value: r2(sum.selfConsumptionKWh), unit: "kWh", note: t("excel.self_consumption_note") },
+    { key: "export", label: t("excel.grid_export"), value: r2(sum.totalExportKWh), unit: "kWh" },
+    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€" },
+    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€" },
   ]);
 
-  s.section("Berechnung");
-  s.formula("importKWh", "Netz-Import", `=${s.addr.load}-${s.addr.selfCons}`, r2(sum.totalImportKWh), "kWh", "Verbrauch − Eigenverbrauch");
-  s.formula("selfConsRate", "Eigenverbrauchsquote", `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", "Eigenverbrauch / PV-Ertrag");
-  s.formula("selfSuff", "Autarkiegrad", `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", "Eigenverbrauch / Verbrauch");
-  s.formula("netEUR", "Netto-Bilanz", `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", "Export-Erlös − Import-Kosten", "result");
+  s.section(t("excel.calculation"));
+  s.formula("importKWh", t("excel.net_import"), `=${s.addr.load}-${s.addr.selfCons}`, r2(sum.totalImportKWh), "kWh", t("excel.net_import_formula"));
+  s.formula("selfConsRate", t("excel.self_consumption_rate"), `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", t("excel.self_consumption_rate_formula"));
+  s.formula("selfSuff", t("excel.autarky"), `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", t("excel.autarky_formula"));
+  s.formula("netEUR", t("excel.net_balance"), `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", t("excel.net_balance_formula"), "result");
 }
 
 /**
@@ -525,17 +526,17 @@ function buildAggregateSheet(wb: ExcelJS.Workbook, report: SimReport): void {
  * so the parts provably add up to the whole.
  */
 function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
-  const s = new SheetBuilder(wb, "Gesamtkalkulation");
+  const s = new SheetBuilder(wb, t("sheet.overview"));
   const sum = report.summary;
   const cov = report.effectivePrice.coverage;
   s.header(
-    "Gesamtkalkulation",
-    "Produktion, Import, Export und alle Verbraucher (Haushalt, WP, BWWP, E-Auto) in einer Übersicht.",
+    t("sheet.overview_title"),
+    t("sheet.overview_subtitle"),
   );
 
   // --- Consumer table: label | consumption (input) | PV-share % (calib) |
   //     PV-covered kWh (formula) | grid kWh (formula) | eff. price (formula) ---
-  s.section("Verbraucher (Verbrauch = Eingabe · PV-Anteil = aus Simulation)");
+  s.section(t("excel.consumer_table"));
   const ws = s.worksheet;
   // Give the extra data columns sensible widths.
   ws.getColumn(3).width = 16;
@@ -544,7 +545,7 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   ws.getColumn(6).width = 16;
 
   let rowIdx = s.currentRow;
-  const headers = ["Verbraucher", "Verbrauch kWh", "PV-Anteil %", "PV-gedeckt kWh", "Netzbezug kWh", "Eff. ct/kWh"];
+  const headers = [t("excel.consumer"), t("excel.consumption_kwh"), t("excel.pv_share_percent"), t("excel.pv_covered_kwh"), t("excel.grid_import_kwh"), t("excel.eff_ct_kwh")];
   headers.forEach((h, i) => {
     const c = ws.getCell(rowIdx, i + 1);
     c.value = h;
@@ -555,10 +556,10 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   rowIdx += 1;
 
   const consumerDefs: { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[] = [
-    { key: "household", label: "Haushalt" },
-    { key: "heatpump", label: "Wärmepumpe" },
-    { key: "bwwp", label: "Brauchwasser-WP (BWWP)" },
-    { key: "ev", label: "E-Auto" },
+    { key: "household", label: t("consumer.household") },
+    { key: "heatpump", label: t("consumer.heatpump") },
+    { key: "bwwp", label: t("consumer.bwwp.full") },
+    { key: "ev", label: t("consumer.ev") },
   ];
   const active = consumerDefs.filter((d) => report.inputs.consumers[d.key].enabled);
   const firstConsRow = rowIdx;
@@ -622,7 +623,7 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const lastConsRow = rowIdx - 1;
   // Totals row: SUM of each numeric column.
   const tl = ws.getCell(rowIdx, 1);
-  tl.value = "Summe Verbraucher";
+  tl.value = t("excel.total_consumers");
   tl.font = { bold: true };
   tl.border = THIN_BORDER;
   for (const col of [2, 4, 5]) {
@@ -649,22 +650,22 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   s.currentRow = rowIdx + 1;
 
   // --- Energy balance: PV production, self-consumption, export, import ---
-  s.section("Energiebilanz (Produktion · Import · Export)");
+  s.section(t("excel.energy_balance"));
   s.calib([
-    { key: "pvYear", label: "PV-Produktion", value: r2(sum.totalPVKWh), unit: "kWh", note: "Jahresertrag der Anlage (aus Simulation)" },
-    { key: "exportKWh", label: "Netz-Einspeisung (Export)", value: r2(sum.totalExportKWh), unit: "kWh" },
-    { key: "exportRev", label: "Export-Erlös", value: r2(sum.exportRevenueEUR), unit: "€" },
-    { key: "importCost", label: "Import-Kosten", value: r2(sum.importCostEUR), unit: "€" },
+    { key: "pvYear", label: t("excel.pv_production"), value: r2(sum.totalPVKWh), unit: "kWh", note: t("excel.pv_production_note") },
+    { key: "exportKWh", label: t("excel.grid_export_label"), value: r2(sum.totalExportKWh), unit: "kWh" },
+    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€" },
+    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€" },
   ]);
   // Self-consumption and import tie back to the consumer-table totals.
-  s.formula("selfCons", "Eigenverbrauch (PV+Speicher)", `=${selfTotalAddr}`, r2(sum.selfConsumptionKWh), "kWh", "Summe PV-gedeckt aller Verbraucher");
-  s.formula("importKWh", "Netz-Import", `=${gridTotalAddr}`, r2(sum.totalImportKWh), "kWh", "Summe Netzbezug aller Verbraucher");
-  s.formula("load", "Gesamtverbrauch", `=${loadTotalAddr}`, r2(sum.totalLoadKWh), "kWh", "Summe Verbrauch aller Verbraucher");
+  s.formula("selfCons", t("excel.self_consumption_total"), `=${selfTotalAddr}`, r2(sum.selfConsumptionKWh), "kWh", t("excel.self_consumption_total_note"));
+  s.formula("importKWh", t("excel.grid_import_total"), `=${gridTotalAddr}`, r2(sum.totalImportKWh), "kWh", t("excel.grid_import_total_note"));
+  s.formula("load", t("excel.total_consumption_label"), `=${loadTotalAddr}`, r2(sum.totalLoadKWh), "kWh", t("excel.total_consumption_note"));
 
-  s.section("Kennzahlen");
-  s.formula("selfConsRate", "Eigenverbrauchsquote", `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", "Eigenverbrauch / PV-Produktion");
-  s.formula("selfSuff", "Autarkiegrad", `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", "Eigenverbrauch / Verbrauch");
-  s.formula("netEUR", "Netto-Bilanz", `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", "Export-Erlös − Import-Kosten", "result");
+  s.section(t("excel.summary_controls"));
+  s.formula("selfConsRate", t("excel.self_consumption_rate_label"), `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", t("excel.self_consumption_rate_note"));
+  s.formula("selfSuff", t("excel.autarky_label"), `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", t("excel.autarky_note"));
+  s.formula("netEUR", t("excel.net_balance_label"), `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", t("excel.net_balance_note"), "result");
 }
 
 /**
@@ -694,7 +695,7 @@ function buildExampleDaysSheet(
   const s = new SheetBuilder(wb, sheetName);
   s.header(
     title,
-    "Durchschnittlicher Tagesverlauf (24 h) je Monat aus der 15-Min-Simulation. Netzbezug = Last − Eigenverbrauch; Ø-Preis & Ø-Netzentgelt = Mittel dieser Tages-/Jahreszeit.",
+    t("sheet.example_days_subtitle"),
   );
   const ws = s.worksheet;
 
@@ -707,14 +708,14 @@ function buildExampleDaysSheet(
       { key: "ev", label: "E-Auto kWh" },
     ] as { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[]
   ).filter((c) => report.inputs.consumers[c.key].enabled);
-  const headers: string[] = ["Stunde", "PV kWh", "Last kWh"];
+  const headers: string[] = [t("excel.hour"), t("excel.pv_kwh"), t("excel.load_kwh")];
   consumerCols.forEach((c) => headers.push(c.label));
-  const idxSelf = headers.push("Eigenverbr. kWh"); // 1-based col of self-use
-  const idxGrid = headers.push("Netzbezug kWh"); // grid import (formula)
-  const idxExport = headers.push("Einspeisung kWh");
-  const idxPrice = headers.push("Ø Strompreis ct/kWh");
-  const idxNet = headers.push("Ø Netzentgelt ct/kWh");
-  const idxSoc = headers.push("SoC kWh");
+  const idxSelf = headers.push(t("excel.self_use_kwh"));
+  const idxGrid = headers.push(t("excel.grid_import_kwh2"));
+  const idxExport = headers.push(t("excel.grid_export_kwh"));
+  const idxPrice = headers.push(t("excel.avg_price"));
+  const idxNet = headers.push(t("excel.avg_grid_fee"));
+  const idxSoc = headers.push(t("excel.soc_kwh"));
   const idxLoad = 3; // "Last kWh"
   const colLetter = (i: number) => String.fromCharCode(64 + i);
 
@@ -786,7 +787,7 @@ function buildExampleDaysSheet(
     // Daily totals row: SUM each kWh column (skip the two price columns, which
     // are averages, not sums — show the day-average there instead).
     const tl = ws.getCell(rowIdx, 1);
-    tl.value = "Tagessumme";
+    tl.value = t("excel.day_total");
     tl.font = { bold: true };
     tl.border = THIN_BORDER;
     const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport];
@@ -830,10 +831,10 @@ function buildExampleDaysSheet(
  * kWh / € columns and averages the two price columns.
  */
 function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
-  const s = new SheetBuilder(wb, "Monatsuebersicht");
+  const s = new SheetBuilder(wb, t("sheet.monthly_overview"));
   s.header(
-    "Monatsübersicht — ganzes Jahr (eine Zeile = ein Monat)",
-    "Produktion, Verbrauch je Verbraucher, Eigenverbrauch, Netzbezug/Einspeisung sowie Ø-Strompreis & Ø-Netzentgelt pro Monat. Netzbezug = Verbrauch − Eigenverbrauch.",
+    t("sheet.monthly_overview_title"),
+    t("sheet.monthly_overview_subtitle"),
   );
   const ws = s.worksheet;
 
@@ -845,14 +846,14 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
       { key: "ev", label: "E-Auto kWh" },
     ] as { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[]
   ).filter((c) => report.inputs.consumers[c.key].enabled);
-  const headers: string[] = ["Monat", "PV kWh", "Verbrauch kWh"];
+  const headers: string[] = [t("excel.month"), t("excel.pv_kwh"), t("excel.consumption_kwh")];
   consumerCols.forEach((c) => headers.push(c.label));
-  const idxSelf = headers.push("Eigenverbr. kWh");
-  const idxGrid = headers.push("Netzbezug kWh");
-  const idxExport = headers.push("Einspeisung kWh");
-  const idxPrice = headers.push("Ø Strompreis ct/kWh");
-  const idxNet = headers.push("Ø Netzentgelt ct/kWh");
-  const idxNetto = headers.push("Netto €");
+  const idxSelf = headers.push(t("excel.self_use_kwh"));
+  const idxGrid = headers.push(t("excel.grid_import_kwh2"));
+  const idxExport = headers.push(t("excel.grid_export_kwh"));
+  const idxPrice = headers.push(t("excel.avg_price"));
+  const idxNet = headers.push(t("excel.avg_grid_fee"));
+  const idxNetto = headers.push(t("excel.net_balance_short"));
   const idxLoad = 3; // "Verbrauch kWh"
   const colLetter = (i: number) => String.fromCharCode(64 + i);
 
@@ -862,7 +863,7 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const city = cityForLocation(report.inputs.location);
   const scheme = report.inputs.importScheme as TariffScheme;
 
-  s.section("Monatswerte");
+  s.section(t("excel.monthly_values"));
   let rowIdx = s.currentRow;
   headers.forEach((h, i) => {
     const c = ws.getCell(rowIdx, i + 1);
@@ -922,7 +923,7 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
 
   // "Jahr" totals row: SUM the kWh / € columns, AVERAGE the two price columns.
   const tl = ws.getCell(rowIdx, 1);
-  tl.value = "Jahr";
+  tl.value = t("excel.year");
   tl.font = { bold: true };
   tl.border = THIN_BORDER;
   const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport, idxNetto];
@@ -950,57 +951,57 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
 }
 
 function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
-  const s = new SheetBuilder(wb, "Zusammenfassung");
+  const s = new SheetBuilder(wb, t("sheet.summary"));
   const sum = report.summary;
   const am = report.amortisation;
-  s.header("Zusammenfassung", "Ihre Investition ist die Eingabe; Bilanz und Amortisation ergeben sich per Formel.");
+  s.header(t("sheet.summary_title"), t("sheet.summary_subtitle"));
 
   const net = sum.netSelectedEUR;
   const annualBenefit = am.annualBenefitEUR;
   const baselineCost = annualBenefit - net; // baseline = benefit − net (identity)
 
-  s.section("Eingaben (wie auf der Webseite)");
+  s.section(t("excel.inputs"));
   s.input([
-    { key: "invest", label: "Investition (gesamt)", value: r2(am.totalInvestmentEUR), unit: "€" },
+    { key: "invest", label: t("excel.investment_total"), value: r2(am.totalInvestmentEUR), unit: "€" },
   ]);
 
-  s.section("Kalibrierung (aus 15-Minuten-Simulation)");
+  s.section(t("excel.calibration_section"));
   s.calib([
-    { key: "baseline", label: "Baseline-Stromkosten (ohne PV)", value: r2(baselineCost), unit: "€/Jahr", note: "Kosten, wenn der ganze Verbrauch aus dem Netz käme" },
-    { key: "exportRev", label: "Export-Erlös", value: r2(sum.exportRevenueEUR), unit: "€" },
-    { key: "importCost", label: "Import-Kosten", value: r2(sum.importCostEUR), unit: "€" },
+    { key: "baseline", label: t("excel.baseline_cost"), value: r2(baselineCost), unit: "€/Jahr", note: t("excel.baseline_cost_note") },
+    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€" },
+    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€" },
   ]);
 
-  s.section("Kennzahlen");
-  s.formula("netEUR", "Netto-Bilanz", `=${s.addr.exportRev}-${s.addr.importCost}`, r2(net), "€", "Export − Import");
-  s.formula("annualBenefit", "Jahresersparnis", `=${s.addr.baseline}+${s.addr.netEUR}`, r2(annualBenefit), "€/Jahr", "Baseline-Kosten + Netto-Bilanz");
+  s.section(t("excel.summary_controls"));
+  s.formula("netEUR", t("excel.net_balance_short"), `=${s.addr.exportRev}-${s.addr.importCost}`, r2(net), "€", t("excel.net_balance_short_note"));
+  s.formula("annualBenefit", t("excel.annual_savings"), `=${s.addr.baseline}+${s.addr.netEUR}`, r2(annualBenefit), "€/Jahr", t("excel.annual_savings_note"));
   s.formula(
     "payback",
-    "Amortisationszeit",
+    t("excel.payback"),
     `=IF(${s.addr.annualBenefit}<=0,"n/a",${s.addr.invest}/${s.addr.annualBenefit})`,
     Number.isFinite(am.paybackYears) ? r2(am.paybackYears) : "n/a",
     "Jahre",
-    "Investition / Jahresersparnis",
+    t("excel.payback_formula"),
     "result",
   );
 
   s.section("Weitere Kennzahlen (aus Simulation)");
   s.calib([
-    { key: "effOverall", label: "Effektiver Strompreis (gesamt)", value: r2(report.effectivePrice.overallCt), unit: "ct/kWh" },
-    { key: "npv", label: "Kapitalwert (NPV)", value: r2(report.cashflow.npvEUR), unit: "€" },
-    { key: "irr", label: "Interne Rendite (IRR)", value: r2(report.cashflow.irrPercent), unit: "%" },
-    { key: "lcoe", label: "Stromgestehungskosten (LCOE)", value: r2(report.cashflow.lcoeCtPerKWh), unit: "ct/kWh" },
+    { key: "effOverall", label: t("excel.eff_price_total"), value: r2(report.effectivePrice.overallCt), unit: "ct/kWh" },
+    { key: "npv", label: t("excel.npv"), value: r2(report.cashflow.npvEUR), unit: "€" },
+    { key: "irr", label: t("excel.irr"), value: r2(report.cashflow.irrPercent), unit: "%" },
+    { key: "lcoe", label: t("excel.lcoe"), value: r2(report.cashflow.lcoeCtPerKWh), unit: "ct/kWh" },
   ]);
 
-  s.section("Enthaltene Blätter");
-  s.text("PV-Produktion", "Leistung × spezifischer Ertrag, monatliche Verteilung");
-  s.text("Haushalt / Wärmepumpe / E-Auto / Brauchwasser", "Verbrauch, PV-Deckung, effektiver Preis");
-  s.text("Heizung", "Wärmepumpe vs. Heizöl vs. Erdgas");
-  s.text("Auto", "E-Auto vs. Diesel");
-  s.text("Aggregat", "Energie- und Kostenbilanz");
-  s.text("Gesamtkalkulation", "Produktion, Import, Export & alle Verbraucher in einer Übersicht");
-  s.text("Beispieltage", "Stündliche Tagesprofile (Jan, März, Juli) mit Verbrauchern, Ø-Preis & Netzentgelt");
-  s.text("Monatsübersicht", "Ganzes Jahr, eine Zeile je Monat: Verbrauch, Eigenverbrauch, Preise, Netto");
+  s.section(t("excel.sheets_included"));
+  s.text(t("sheet.pv"), t("excel.desc_pv"));
+  s.text(`${t("sheet.household")} / ${t("sheet.heatpump")} / ${t("sheet.ev")} / ${t("sheet.bwwp")}`, t("excel.desc_consumers"));
+  s.text(t("sheet.heating"), t("excel.desc_heating"));
+  s.text(t("sheet.car"), t("excel.desc_car"));
+  s.text(t("sheet.aggregate"), t("excel.desc_aggregate"));
+  s.text(t("sheet.overview"), t("excel.desc_overview"));
+  s.text(t("sheet.example_days"), t("excel.desc_example_days"));
+  s.text(t("sheet.monthly_overview"), t("excel.desc_monthly"));
 }
 
 // ---------------------------------------------------------------------------
@@ -1010,29 +1011,29 @@ function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
 /** Build the complete workbook (with live formulas) from a `SimReport`. */
 export function buildWorkbook(report: SimReport): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "PV-Erlösrechner";
+  wb.creator = t("workbook.creator");
   wb.created = new Date();
 
   buildSummarySheet(wb, report);
   buildPvSheet(wb, report);
-  buildConsumerSheet(wb, report, "household", "Haushalt", "Haushalt (H0-Lastprofil)");
+  buildConsumerSheet(wb, report, "household", t("sheet.household"), t("excel.household_title"));
   if (report.inputs.consumers.heatpump.enabled) {
-    buildConsumerSheet(wb, report, "heatpump", "Waermepumpe", "Wärmepumpe (Heizung)");
+    buildConsumerSheet(wb, report, "heatpump", t("sheet.heatpump"), t("excel.heatpump_title"));
   }
   if (report.inputs.consumers.ev.enabled) {
-    buildConsumerSheet(wb, report, "ev", "E-Auto", "E-Auto (Laden)");
+    buildConsumerSheet(wb, report, "ev", t("sheet.ev"), t("excel.ev_title"));
   }
   if (report.inputs.consumers.bwwp.enabled) {
-    buildConsumerSheet(wb, report, "bwwp", "Brauchwasser", "Brauchwasser-Wärmepumpe");
+    buildConsumerSheet(wb, report, "bwwp", t("sheet.bwwp"), t("excel.bwwp_title"));
   }
   buildAggregateSheet(wb, report);
   buildGesamtSheet(wb, report);
   // One combined example-day sheet (January, March, July) + a month-by-month
   // overview for the whole year.
-  buildExampleDaysSheet(wb, report, "Beispieltage", "Beispieltage — Januar, März & Juli", [
-    { monthIndex: 0, label: "Januar" },
-    { monthIndex: 2, label: "März" },
-    { monthIndex: 6, label: "Juli" },
+  buildExampleDaysSheet(wb, report, t("sheet.example_days"), t("sheet.example_days"), [
+    { monthIndex: 0, label: t("month.january") },
+    { monthIndex: 2, label: t("month.march") },
+    { monthIndex: 6, label: t("month.july") },
   ]);
   buildMonthlySheet(wb, report);
   if (report.opportunityCosts.heating.heatpumpElectricKWh > 0) {

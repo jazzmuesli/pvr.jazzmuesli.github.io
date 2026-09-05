@@ -43,6 +43,25 @@ body {
 .btn-download:hover:not(:disabled) { background: #0284c7; }
 .btn-download:active:not(:disabled) { transform: translateY(1px); }
 .btn-download:disabled { opacity: 0.6; cursor: progress; }
+.topbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.lang-toggle { display: flex; gap: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.25); }
+.lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  color: rgba(255,255,255,0.65);
+  border: none;
+  padding: 5px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  line-height: 1;
+}
+.lang-btn svg { flex-shrink: 0; }
+.lang-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.lang-btn.active { background: rgba(255,255,255,0.2); color: #fff; }
 /* Mobile sidebar toggle — hidden on desktop, shown in the media query below. */
 .btn-toggle {
   display: none;

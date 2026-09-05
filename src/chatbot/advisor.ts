@@ -16,6 +16,7 @@ import {
   pvLabel,
   pvPreset,
 } from "../scenario";
+import { t } from "../i18n";
 
 export type Stage = "welcome" | "ready";
 
@@ -69,12 +70,12 @@ function summarise(s: Scenario, headline?: string): AdvisorOutput {
   const m = computeMetrics(s);
   const reply =
     (headline ? headline + "\n\n" : "") +
-    `Zusammenfassung – ${pvLabel(s)}:\n` +
-    `Verbraucher @ ${s.priceCt} ct/kWh, Ort ${s.location[0].toUpperCase() + s.location.slice(1)}.\n` +
-    `PV-Ertrag ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh, Eigenverbrauch ${m.selfPct.toFixed(0)} %, ` +
-    `Netto ${fmtEUR(m.netEUR)}/Jahr, Ersparnis ${fmtEUR(m.savingsEUR)}/Jahr, ` +
-    `Amortisation ${fmtAmort(m.amortYears, m.investmentEUR)}, eff. Strompreis ${m.effCt.toFixed(1)} ct/kWh.\n` +
-    `Volle Details & Charts im Rechner: ${appUrl(s)}`;
+    `${t("advisor.summary")} ${pvLabel(s)}:\n` +
+    `${t("advisor.consumer_at")} ${s.priceCt} ct/kWh, ${t("advisor.location")}${s.location[0].toUpperCase() + s.location.slice(1)}.\n` +
+    `${t("advisor.pv_yield")} ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh, ${t("advisor.self_consumption")} ${m.selfPct.toFixed(0)} %, ` +
+    `${t("advisor.netto")} ${fmtEUR(m.netEUR)}/Jahr, ${t("advisor.savings")} ${fmtEUR(m.savingsEUR)}/Jahr, ` +
+    `${t("advisor.amortisation")} ${fmtAmort(m.amortYears, m.investmentEUR)}, ${t("advisor.eff_price")} ${m.effCt.toFixed(1)} ct/kWh.\n` +
+    `${t("advisor.full_details")} ${appUrl(s)}`;
   return {
     reply,
     intent: "summary",
@@ -88,13 +89,13 @@ function summarise(s: Scenario, headline?: string): AdvisorOutput {
 function resultReply(s: Scenario, changes: string[]): AdvisorOutput {
   const m = computeMetrics(s);
   const reply =
-    `Übernommen:\n• ${changes.join("\n• ")}\n\n` +
-    `Ergebnis (${pvLabel(s)}${s.battery === "on" ? " mit Speicher" : ", ohne Speicher"}):\n` +
-    `PV-Ertrag ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh/Jahr, ` +
-    `Eigenverbrauch ${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh (${m.selfPct.toFixed(0)} %).\n` +
-    `Netto (Export − Import): ${fmtEUR(m.netEUR)}/Jahr. ` +
-    `Ersparnis ggü. Basis: ${fmtEUR(m.savingsEUR)}/Jahr.\n` +
-    `Amortisation: ${fmtAmort(m.amortYears, m.investmentEUR)}, eff. Strompreis ${m.effCt.toFixed(1)} ct/kWh.`;
+    `${t("advisor.accepted")}\n• ${changes.join("\n• ")}\n\n` +
+    `${t("advisor.result")} (${pvLabel(s)}${s.battery === "on" ? " " + t("advisor.with_battery") : ", " + t("advisor.without_battery")}):\n` +
+    `${t("advisor.pv_yield")} ${Math.round(m.pvKWh).toLocaleString("de-DE")} kWh/Jahr, ` +
+    `${t("advisor.self_consumption")} ${Math.round(m.selfKWh).toLocaleString("de-DE")} kWh (${m.selfPct.toFixed(0)} %).\n` +
+    `${t("advisor.netto_label")} ${fmtEUR(m.netEUR)}/Jahr. ` +
+    `${t("advisor.savings_label")} ${fmtEUR(m.savingsEUR)}/Jahr.\n` +
+    `${t("advisor.amortisation")}: ${fmtAmort(m.amortYears, m.investmentEUR)}, ${t("advisor.eff_price")} ${m.effCt.toFixed(1)} ct/kWh.`;
   return { reply, intent: "adjust", scenario: s, stage: "ready", metrics: m, link: appUrl(s) };
 }
 
@@ -118,7 +119,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     const v = parseFloat(priceM[1].replace(",", "."));
     if (Number.isFinite(v) && v >= 10 && v <= 60 && v !== scenario.priceCt) {
       scenario.priceCt = v;
-      changes.push(`Strompreis → ${v} ct/kWh`);
+      changes.push(`${t("advisor.price_change")} ${v} ct/kWh`);
     }
   }
   // Derived working price: "<euro> € for <kwh> kWh" (any word order).
@@ -130,7 +131,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     const ct = (euro * 100) / kwh;
     if (Number.isFinite(ct) && ct >= 1 && ct <= 60 && Math.abs(ct - scenario.priceCt) > 0.005) {
       scenario.priceCt = Math.round(ct * 100) / 100;
-      changes.push(`Strompreis → ${ct.toFixed(2)} ct/kWh (aus ${euro} € / ${kwh} kWh)`);
+      changes.push(`${t("advisor.price_change")} ${ct.toFixed(2)} ct/kWh (aus ${euro} € / ${kwh} kWh)`);
     }
   }
 
@@ -139,7 +140,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   for (const c of LOCATIONS) {
     if (nmsg.includes(c) && scenario.location !== c) {
       scenario.location = c;
-      changes.push(`Ort → ${c[0].toUpperCase() + c.slice(1)}`);
+      changes.push(`${t("advisor.location_change")} ${c[0].toUpperCase() + c.slice(1)}`);
       break;
     }
   }
@@ -154,7 +155,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
       scenario.capacityKWh = 0;
       scenario.maxPowerKW = 0;
       scenario.investmentEUR = 0;
-      changes.push("PV → Kein PV (Basis)");
+      changes.push(t("advisor.pv_none"));
     }
   } else if (/\b(balkon(?:kraftwerk)?|\bbkw\b)\b/.test(msg)) {
     const p = pvPreset("balcony");
@@ -189,7 +190,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
       scenario.battery = "off";
       scenario.capacityKWh = 0;
       scenario.maxPowerKW = 0;
-      changes.push("Speicher → aus");
+      changes.push(t("advisor.battery_off"));
     }
   } else if (/\b(speicher|batter\w*)\b/i.test(msg) && scenario.peakKWp > 0) {
     const capM = /\b(speicher|batter\w*)\b/i.test(msg)
@@ -201,12 +202,12 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
         const cap = Number(capM[1].replace(",", "."));
         scenario.capacityKWh = cap;
         scenario.maxPowerKW = Math.max(1, Math.round(cap * 0.5));
-        changes.push(`Speicher → ${cap} kWh`);
+        changes.push(`${t("advisor.battery_on")} ${cap} kWh`);
       } else if (scenario.capacityKWh <= 0) {
         const cap = scenario.peakKWp >= 19 ? 15 : scenario.peakKWp >= 9 ? 10 : 2;
         scenario.capacityKWh = cap;
         scenario.maxPowerKW = scenario.peakKWp >= 19 ? 8 : scenario.peakKWp >= 9 ? 5 : 1;
-        changes.push(`Speicher → ${cap} kWh`);
+        changes.push(`${t("advisor.battery_on")} ${cap} kWh`);
       }
     }
   }
@@ -221,7 +222,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   else if (investNum) inv = Number(investNum[1]);
   if (inv !== null && inv >= 500 && inv <= 200000 && inv !== scenario.investmentEUR) {
     scenario.investmentEUR = inv;
-    changes.push(`Investment → ${inv.toLocaleString("de-DE")} €`);
+    changes.push(`${t("advisor.investment_change")} ${inv.toLocaleString("de-DE")} €`);
   }
 
   // 6) Consumers.
@@ -231,7 +232,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     if (!scenario.heatpump || scenario.heatpumpKWh !== clamped) {
       scenario.heatpump = true;
       scenario.heatpumpKWh = clamped;
-      changes.push(`Wärmepumpe → ein (${clamped} kWh)`);
+      changes.push(`${t("advisor.heatpump_on")} (${clamped} kWh)`);
     }
   }
   if (/\b(e-?auto|\bev\b)\b/.test(msg)) {
@@ -240,13 +241,13 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     if (!scenario.ev || scenario.evKWh !== clamped) {
       scenario.ev = true;
       scenario.evKWh = clamped;
-      changes.push(`E-Auto → ein (${clamped} kWh)`);
+      changes.push(`${t("advisor.ev_on")} (${clamped} kWh)`);
     }
   }
   if (/\b(brauchwasser|ww-?wp|\bbwwp\b)\b/.test(msg)) {
     if (!scenario.bwwp) {
       scenario.bwwp = true;
-      changes.push("Brauchwasser-WP → ein");
+      changes.push(t("advisor.bwwp_on"));
     }
   }
 
@@ -256,7 +257,7 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     const v = Number(hkM[1]);
     if (Number.isFinite(v) && v !== scenario.consumptionKWh) {
       scenario.consumptionKWh = v;
-      changes.push(`Jahresverbrauch → ${v} kWh`);
+      changes.push(`${t("advisor.consumption_change")} ${v} kWh`);
     }
   }
 
@@ -269,19 +270,18 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
   if (message.trim() === "") {
     const m = computeMetrics(scenario);
     const reply =
-      `Hallo! Ich passe dein PV-Szenario direkt an, sobald du mir etwas sagst – ganz ohne Rückfrage. ` +
-      `Beispiele: „Strompreis 24 ct", „Wärmepumpe 3000", „10 kWp mit Speicher", „anderer Ort Hamburg".\n\n` +
-      `Aktuell: ${pvLabel(scenario)}, ${scenario.consumptionKWh} kWh, ${scenario.priceCt} ct/kWh, ` +
+      `${t("advisor.welcome")}\n\n` +
+      `${t("advisor.current")} ${pvLabel(scenario)}, ${scenario.consumptionKWh} kWh, ${scenario.priceCt} ct/kWh, ` +
       `${scenario.location[0].toUpperCase() + scenario.location.slice(1)}.`;
     return { reply, intent: "welcome", scenario, stage: "ready", metrics: m };
   }
 
   return {
     reply:
-      `Ich habe keine Änderung erkannt. Sag mir z. B., was ich anpassen soll:\n` +
-      `• Strompreis („24 ct")\n• Ort („Hamburg")\n• PV („Balkonkraftwerk", „10 kWp", „20 kWp")\n` +
-      `• Speicher („mit/ohne Speicher")\n• Verbraucher („Wärmepumpe 3000", „E-Auto", „Brauchwasser").\n\n` +
-      `Aktuell: ${pvLabel(scenario)}, ${scenario.priceCt} ct/kWh, ${scenario.location[0].toUpperCase() + scenario.location.slice(1)}.`,
+      `${t("advisor.clarify")}\n` +
+      `• ${t("advisor.clarify_price")}\n• ${t("advisor.clarify_location")}\n• ${t("advisor.clarify_pv")}\n` +
+      `• ${t("advisor.clarify_battery")}\n• ${t("advisor.clarify_consumers")}\n\n` +
+      `${t("advisor.current")} ${pvLabel(scenario)}, ${scenario.priceCt} ct/kWh, ${scenario.location[0].toUpperCase() + scenario.location.slice(1)}.`,
     intent: "clarify",
     scenario,
     stage: "ready",

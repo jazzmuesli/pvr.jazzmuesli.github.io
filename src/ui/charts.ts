@@ -23,6 +23,7 @@ import {
   ScenarioDatum,
   TariffCombination,
 } from "../calc/report";
+import { t, fmtEUR as i18nFmtEUR, fmtKWh as i18nFmtKWh, getLocale } from "../i18n";
 
 function el(tag: string, attrs: Record<string, string | number> = {}): SVGElement {
   const e = document.createElementNS(SVGNS, tag);
@@ -31,6 +32,10 @@ function el(tag: string, attrs: Record<string, string | number> = {}): SVGElemen
 }
 
 // ---- semantic palette ------------------------------------------------------
+export function getConsumerLabel(key: ConsumerKey): string {
+  return t(`consumer.${key}`);
+}
+// Keep backward compatibility for existing consumers
 export const CONSUMER_LABELS: Record<ConsumerKey, string> = {
   household: "Haushalt",
   heatpump: "Wärmepumpe",
@@ -128,12 +133,8 @@ function bindTip(node: Element, html: () => string): void {
   node.addEventListener("mouseleave", hideTip);
 }
 
-function fmtKWh(v: number): string {
-  return v >= 100 ? Math.round(v).toLocaleString("de-DE") : v.toFixed(1);
-}
-function fmtEUR(v: number): string {
-  return `${Math.round(v).toLocaleString("de-DE")} €`;
-}
+const fmtKWh = i18nFmtKWh;
+const fmtEUR = i18nFmtEUR;
 
 // ---- line / dot with a white halo so they read over filled bars ------------
 function haloLine(svg: SVGElement, points: string, color: string, width = 3, dataKey?: string): void {
@@ -276,11 +277,11 @@ export function renderMonthlyChart(
       const rect = el("rect", { x: cx - barW / 2, y: yTop - h, width: barW, height: h, fill: CONSUMER_COLORS[key], rx: 2, class: "bar", "data-key": key });
       bindTip(rect, () =>
         `<strong>${d.label}</strong><br>` +
-        `${CONSUMER_LABELS.household}: <b>${fmtKWh(d.load.household)} kWh</b><br>` +
-        `${CONSUMER_LABELS.heatpump}: ${fmtKWh(d.load.heatpump)} kWh<br>` +
-        `${CONSUMER_LABELS.bwwp}: ${fmtKWh(d.load.bwwp)} kWh<br>` +
-        `${CONSUMER_LABELS.ev}: ${fmtKWh(d.load.ev)} kWh<br>` +
-        `Summe Verbrauch: <b>${fmtKWh(d.totalLoadKWh)} kWh</b>`);
+        `${getConsumerLabel("household")}: <b>${fmtKWh(d.load.household)} kWh</b><br>` +
+        `${getConsumerLabel("heatpump")}: ${fmtKWh(d.load.heatpump)} kWh<br>` +
+        `${getConsumerLabel("bwwp")}: ${fmtKWh(d.load.bwwp)} kWh<br>` +
+        `${getConsumerLabel("ev")}: ${fmtKWh(d.load.ev)} kWh<br>` +
+        `${t("chart.monthly.tooltip_sum")}: <b>${fmtKWh(d.totalLoadKWh)} kWh</b>`);
       svg.appendChild(rect);
       yTop -= h;
     }
@@ -295,7 +296,7 @@ export function renderMonthlyChart(
     pvPts.push(`${cx},${pvY}`);
     haloDot(svg, cx, pvY, 4, COLORS.pv, "pv");
     const pvHit = el("circle", { cx, cy: pvY, r: 11, fill: "transparent", "data-key": "pv" });
-    bindTip(pvHit, () => `<strong>${d.label}</strong><br>PV-Ertrag: <b>${fmtKWh(d.pvKWh)} kWh</b>`);
+    bindTip(pvHit, () => `<strong>${d.label}</strong><br>${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b>`);
     svg.appendChild(pvHit);
 
     // net € line point (right axis)
@@ -314,12 +315,12 @@ export function renderMonthlyChart(
     hit.addEventListener("click", () => onSelect(d.month));
     bindTip(hit, () =>
       `<strong>${d.label}</strong><br>` +
-      `PV-Ertrag: <b>${fmtKWh(d.pvKWh)} kWh</b><br>` +
-      `Verbrauch: ${fmtKWh(d.totalLoadKWh)} kWh<br>` +
-      `Eigenverbrauch: ${fmtKWh(d.selfConsumptionKWh)} kWh<br>` +
-      `Export: ${fmtKWh(d.exportKWh)} kWh<br>` +
-      `Netz-Import: ${fmtKWh(d.importKWh)} kWh<br>` +
-      `Netto: <b>${fmtEUR(d.netEUR)}</b>`);
+      `${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b><br>` +
+      `${t("tooltip.consumption")}: ${fmtKWh(d.totalLoadKWh)} kWh<br>` +
+      `${t("tooltip.self_use")}: ${fmtKWh(d.selfConsumptionKWh)} kWh<br>` +
+      `${t("tooltip.export")}: ${fmtKWh(d.exportKWh)} kWh<br>` +
+      `${t("tooltip.import")}: ${fmtKWh(d.importKWh)} kWh<br>` +
+      `${t("tooltip.netto")}: <b>${fmtEUR(d.netEUR)}</b>`);
     svg.appendChild(hit);
 
     const txt = el("text", { x: cx, y: m.top + plotH + 22, "text-anchor": "middle", fill: COLORS.text, "font-size": 12 });
@@ -341,25 +342,25 @@ export function renderMonthlyChart(
   svg.appendChild(el("line", { x1: m.left, y1: m.top + plotH, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
 
   const yLabel = el("text", { x: m.left - 10, y: m.top - 18, "text-anchor": "start", fill: COLORS.muted, "font-size": 12 });
-  yLabel.textContent = `Energie kWh/Monat (max ${Math.round(e.max)})`;
+  yLabel.textContent = t("chart.monthly.y_axis", { max: Math.round(e.max) });
   svg.appendChild(yLabel);
   const vLabel = el("text", { x: m.left + plotW + 10, y: m.top - 18, "text-anchor": "end", fill: COLORS.net, "font-size": 12 });
-  vLabel.textContent = `Netto €/Monat (0 = gestrichelt)`;
+  vLabel.textContent = t("chart.monthly.y_axis_net");
   svg.appendChild(vLabel);
 
   const hint = el("text", { x: m.left, y: H - 10, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
-  hint.textContent = "Klick auf einen Monat → Stundendetail. Gestapelte Balken = Verbrauch pro Verbraucher; Linien: PV-Ertrag (gold) und Netto-€ (türkis).";
+  hint.textContent = t("chart.monthly.hint");
   svg.appendChild(hint);
 
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect", key: "household" },
-    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect", key: "heatpump" },
-    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect", key: "bwwp" },
-    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect", key: "ev" },
-    { label: "PV-Ertrag", color: COLORS.pv, shape: "line", key: "pv" },
-    { label: "Netto €", color: COLORS.net, shape: "line", key: "net" },
+    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household" },
+    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump" },
+    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp" },
+    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev" },
+    { label: t("chart.monthly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv" },
+    { label: t("chart.monthly.legend_net"), color: COLORS.net, shape: "line", key: "net" },
   ], svg);
 }
 
@@ -468,17 +469,17 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
     const hit = el("rect", { x, y: m.top, width: band, height: plotH, fill: "transparent" });
     bindTip(hit, () =>
       `<strong>${monthLabel}, ${String(d.hour).padStart(2, "0")}:00 Uhr</strong><br>` +
-      `${CONSUMER_LABELS.household}: <b>${fmtKWh(d.load.household)} kWh/h</b><br>` +
-      `${CONSUMER_LABELS.heatpump}: ${fmtKWh(d.load.heatpump)} kWh/h<br>` +
-      `${CONSUMER_LABELS.bwwp}: ${fmtKWh(d.load.bwwp)} kWh/h<br>` +
-      `${CONSUMER_LABELS.ev}: ${fmtKWh(d.load.ev)} kWh/h<br>` +
-      `Summe Verbrauch: ${fmtKWh(d.totalLoadKWh)} kWh/h<br>` +
-      `PV produziert: ${fmtKWh(d.pvKWh)} kWh/h<br>` +
-      `Netz-Import: ${fmtKWh(d.importKWh)} kWh/h<br>` +
-      `Eigenverbrauch: ${fmtKWh(d.selfUseKWh)} kWh/h<br>` +
-      `Export: ${fmtKWh(d.exportKWh)} kWh/h` +
-      (showSoc ? `<br>Batterie-SoC: <b>${fmtKWh(d.socKWh)} kWh</b>` : "") +
-      (d.avgPrice ? `<br>Ø Strompreis: <b>${Math.round(d.avgPrice)} €/MWh</b>` : ""));
+      `${getConsumerLabel("household")}: <b>${fmtKWh(d.load.household)} kWh/h</b><br>` +
+      `${getConsumerLabel("heatpump")}: ${fmtKWh(d.load.heatpump)} kWh/h<br>` +
+      `${getConsumerLabel("bwwp")}: ${fmtKWh(d.load.bwwp)} kWh/h<br>` +
+      `${getConsumerLabel("ev")}: ${fmtKWh(d.load.ev)} kWh/h<br>` +
+      `${t("chart.hourly.tooltip_sum")}: ${fmtKWh(d.totalLoadKWh)} kWh/h<br>` +
+      `${t("chart.hourly.tooltip_pv")}: ${fmtKWh(d.pvKWh)} kWh/h<br>` +
+      `${t("chart.hourly.tooltip_import")}: ${fmtKWh(d.importKWh)} kWh/h<br>` +
+      `${t("chart.hourly.tooltip_self")}: ${fmtKWh(d.selfUseKWh)} kWh/h<br>` +
+      `${t("chart.hourly.tooltip_export")}: ${fmtKWh(d.exportKWh)} kWh/h` +
+      (showSoc ? `<br>${t("chart.hourly.tooltip_soc")}: <b>${fmtKWh(d.socKWh)} kWh</b>` : "") +
+      (d.avgPrice ? `<br>${t("chart.hourly.tooltip_price")}: <b>${Math.round(d.avgPrice)} €/MWh</b>` : ""));
     svg.appendChild(hit);
   });
 
@@ -488,24 +489,25 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   svg.appendChild(el("line", { x1: m.left, y1: m.top + plotH, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
 
   const t1 = el("text", { x: m.left - 10, y: m.top - 18, "text-anchor": "start", fill: COLORS.muted, "font-size": 12 });
-  t1.textContent = `${monthLabel} — kWh/h · gestapelte Fläche = Verbrauch pro Verbraucher${showSoc ? " · SoC (lila)" : ""}`;
+  const socText = showSoc ? (getLocale() === "de" ? " · SoC (lila)" : " · SoC (purple)") : "";
+  t1.textContent = t("chart.hourly.title", { month: monthLabel, soc: socText });
   svg.appendChild(t1);
   const t2 = el("text", { x: m.left + plotW + 10, y: m.top - 18, "text-anchor": "end", fill: hasPriceData ? COLORS.price : COLORS.muted, "font-size": 12 });
-  t2.textContent = hasPriceData ? `Preis €/MWh (max ${Math.round(maxPrice)})` : "kein Preisverlauf";
+  t2.textContent = hasPriceData ? t("chart.hourly.y_axis_price", { max: Math.round(maxPrice) }) : t("chart.hourly.y_axis_price_none");
   svg.appendChild(t2);
 
   host.appendChild(svg);
 
   const hourlyLegend: LegendItem[] = [
-    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect", key: "household" },
-    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect", key: "heatpump" },
-    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect", key: "bwwp" },
-    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect", key: "ev" },
-    { label: "PV-Ertrag", color: COLORS.pv, shape: "line", key: "pv" },
-    { label: "Netz-Import", color: COLORS.import, shape: "line", key: "import" },
-    { label: "Batterie-SoC", color: COLORS.soc, shape: "line", key: "soc" },
+    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household" },
+    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump" },
+    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp" },
+    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev" },
+    { label: t("chart.hourly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv" },
+    { label: t("chart.hourly.legend_import"), color: COLORS.import, shape: "line", key: "import" },
+    { label: t("chart.hourly.legend_soc"), color: COLORS.soc, shape: "line", key: "soc" },
   ];
-  if (hasPriceData) hourlyLegend.push({ label: "Preis", color: COLORS.price, shape: "line", key: "price" });
+  if (hasPriceData) hourlyLegend.push({ label: t("chart.hourly.legend_price"), color: COLORS.price, shape: "line", key: "price" });
   appendLegend(host, hourlyLegend, svg);
 }
 
@@ -544,7 +546,7 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
     // export revenue (green, up)
     const gH = (d.exportEUR / bound) * half;
     const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar", "data-key": "export" });
-    bindTip(grec, () => `<strong>${d.label}</strong><br>Export-Erlös: <b>${fmtEUR(d.exportEUR)}</b>`);
+    bindTip(grec, () => `<strong>${d.label}</strong><br>${t("chart.scenario.tooltip_export")}: <b>${fmtEUR(d.exportEUR)}</b>`);
     svg.appendChild(grec);
     const gl = el("text", { x: gx + barW / 2, y: zeroY - gH - 6, "text-anchor": "middle", fill: COLORS.exportK, "font-size": 11 });
     gl.textContent = `${Math.round(d.exportEUR)}`;
@@ -553,7 +555,7 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
     // import cost (red, down)
     const rH = (d.importEUR / bound) * half;
     const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar", "data-key": "import" });
-    bindTip(rrec, () => `<strong>${d.label}</strong><br>Import-Kosten: <b>${fmtEUR(d.importEUR)}</b>`);
+    bindTip(rrec, () => `<strong>${d.label}</strong><br>${t("chart.scenario.tooltip_import")}: <b>${fmtEUR(d.importEUR)}</b>`);
     svg.appendChild(rrec);
     const rl = el("text", { x: rx + barW / 2, y: zeroY + rH + 15, "text-anchor": "middle", fill: COLORS.import, "font-size": 11 });
     rl.textContent = `${Math.round(d.importEUR)}`;
@@ -570,18 +572,18 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
   });
 
   const yL = el("text", { x: m.left - 10, y: m.top - 18, "text-anchor": "start", fill: COLORS.muted, "font-size": 12 });
-  yL.textContent = "Jahresbilanz je Tarifkombination (€)";
+  yL.textContent = t("chart.scenario.title");
   svg.appendChild(yL);
   const hint = el("text", { x: m.left, y: H - 12, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
-  hint.textContent = "Blau = Export-Erlös (nach oben), Rot = Import-Kosten (nach unten). Netto = Erlös − Kosten.";
+  hint.textContent = t("chart.scenario.hint");
   svg.appendChild(hint);
 
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect", key: "export" },
-    { label: "Import-Kosten", color: COLORS.import, shape: "rect", key: "import" },
-    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line", key: "net" },
+    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export" },
+    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import" },
+    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net" },
   ], svg);
 }
 
@@ -624,10 +626,10 @@ export function renderComparisonChart(host: HTMLElement, data: ComparisonDatum[]
     const net = el("rect", { x: cx - barW - 2, y: scale(d.netMarketEUR), width: barW, height: plotH - netH, fill: COLORS.net, rx: 2, class: "bar" });
     const fix = el("rect", { x: cx + 2, y: scale(d.fixedValueEUR), width: barW, height: plotH - fixH, fill: COLORS.fixed, rx: 2, class: "bar" });
     bindTip(net, () =>
-      `<strong>${d.year}</strong><br>Direktvermarktung (netto): <b>${fmtEUR(d.netMarketEUR)}</b><br>` +
-      `Ø Preis: ${Math.round(d.vwapEURperMWh)} €/MWh<br>Export: ${Math.round(d.exportKWh)} kWh<br>` +
-      `Marktprämie: ${d.marktPraemieCt.toFixed(2)} ct/kWh`);
-    bindTip(fix, () => `<strong>${d.year}</strong><br>Feste Einspeisung: <b>${fmtEUR(d.fixedValueEUR)}</b>`);
+      `<strong>${d.year}</strong><br>${t("chart.comparison.tooltip_direct")}: <b>${fmtEUR(d.netMarketEUR)}</b><br>` +
+      `${t("chart.comparison.tooltip_avg_price")}: ${Math.round(d.vwapEURperMWh)} €/MWh<br>${t("chart.comparison.tooltip_export")}: ${Math.round(d.exportKWh)} kWh<br>` +
+      `${t("chart.comparison.tooltip_premium")}: ${d.marktPraemieCt.toFixed(2)} ct/kWh`);
+    bindTip(fix, () => `<strong>${d.year}</strong><br>${t("chart.comparison.tooltip_fixed")}: <b>${fmtEUR(d.fixedValueEUR)}</b>`);
     svg.appendChild(net);
     svg.appendChild(fix);
     const nl = el("text", { x: cx - barW / 2 - 2, y: scale(d.netMarketEUR) - 6, "text-anchor": "middle", fill: COLORS.net, "font-size": 11 });
@@ -646,10 +648,10 @@ export function renderComparisonChart(host: HTMLElement, data: ComparisonDatum[]
 
   svg.appendChild(el("line", { x1: m.left, y1: m.top + plotH, x2: m.left + plotW, y2: m.top + plotH, stroke: COLORS.axis }));
   const yL = el("text", { x: m.left - 10, y: m.top - 16, "text-anchor": "start", fill: COLORS.muted, "font-size": 12 });
-  yL.textContent = "Jahreserlös (€)";
+  yL.textContent = t("chart.comparison.title");
   svg.appendChild(yL);
   const hint = el("text", { x: m.left, y: H - 8, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
-  hint.textContent = "Balken: Direktvermarktung (türkis) vs. feste Einspeisung (grau). Export-Vergleich über die Preisjahre.";
+  hint.textContent = t("chart.comparison.hint");
   svg.appendChild(hint);
 
   host.appendChild(svg);
@@ -689,12 +691,12 @@ export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCom
 
     const gH = (d.exportEUR / bound) * half;
     const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar", "data-key": "export" });
-    bindTip(grec, () => `<strong>${combo.label} — ${d.year}</strong><br>Export-Erlös: <b>${fmtEUR(d.exportEUR)}</b><br>Export: ${Math.round(d.exportKWh)} kWh`);
+    bindTip(grec, () => `<strong>${combo.label} — ${d.year}</strong><br>${t("chart.scenario.tooltip_export")}: <b>${fmtEUR(d.exportEUR)}</b><br>${t("tooltip.export")}: ${Math.round(d.exportKWh)} kWh`);
     svg.appendChild(grec);
 
     const rH = (d.importEUR / bound) * half;
     const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar", "data-key": "import" });
-    bindTip(rrec, () => `<strong>${combo.label} — ${d.year}</strong><br>Import-Kosten: <b>${fmtEUR(d.importEUR)}</b><br>Import: ${Math.round(d.importKWh)} kWh`);
+    bindTip(rrec, () => `<strong>${combo.label} — ${d.year}</strong><br>${t("chart.scenario.tooltip_import")}: <b>${fmtEUR(d.importEUR)}</b><br>${t("tooltip.import")}: ${Math.round(d.importKWh)} kWh`);
     svg.appendChild(rrec);
 
     const netLbl = el("text", { x: cx, y: m.top + 14, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 11, "font-weight": 700, "data-key": "net" });
@@ -707,28 +709,28 @@ export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCom
   });
 
   const yL = el("text", { x: m.left - 10, y: m.top - 16, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
-  yL.textContent = "Jahresbilanz (€)";
+  yL.textContent = t("chart.tariff.y_axis");
   svg.appendChild(yL);
 
   host.appendChild(svg);
   appendLegend(host, [
-    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect", key: "export" },
-    { label: "Import-Kosten", color: COLORS.import, shape: "rect", key: "import" },
-    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line", key: "net" },
+    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export" },
+    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import" },
+    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net" },
   ], svg);
 }
 
 export function renderLegend(host: HTMLElement): void {
   host.innerHTML = "";
   const items: [string, string][] = [
-    [CONSUMER_LABELS.household, COLORS.household],
-    [CONSUMER_LABELS.heatpump, COLORS.heatpump],
-    [CONSUMER_LABELS.bwwp, COLORS.bwwp],
-    [CONSUMER_LABELS.ev, COLORS.ev],
-    ["PV-Ertrag", COLORS.pv],
-    ["Netz-Import", COLORS.import],
-    ["Netto € (Monat)", COLORS.net],
-    ["Batterie-SoC", COLORS.soc],
+    [getConsumerLabel("household"), COLORS.household],
+    [getConsumerLabel("heatpump"), COLORS.heatpump],
+    [getConsumerLabel("bwwp"), COLORS.bwwp],
+    [getConsumerLabel("ev"), COLORS.ev],
+    [t("chart.monthly.legend_pv"), COLORS.pv],
+    [t("chart.hourly.legend_import"), COLORS.import],
+    [t("chart.monthly.legend_net"), COLORS.net],
+    [t("chart.hourly.legend_soc"), COLORS.soc],
   ];
   for (const [label, color] of items) {
     const wrap = document.createElement("span");

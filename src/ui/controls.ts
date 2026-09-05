@@ -3,6 +3,7 @@ import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
 import { TariffScheme } from "../calc/tariff";
+import { t } from "../i18n";
 
 interface SliderOpts {
   label: string;
@@ -137,32 +138,32 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   });
   const expLab = document.createElement("label");
   expLab.htmlFor = expId;
-  expLab.textContent = "Experte";
+  expLab.textContent = t("control.expert");
   expWrap.appendChild(expInput);
   expWrap.appendChild(expLab);
   host.appendChild(expWrap);
 
-  section("Investition");
+  section(t("control.investment"));
   host.appendChild(
-    slider({ label: "Gesamtinvestition", min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+    slider({ label: t("control.total_investment"), min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
   );
 
-  section("PV-Anlage");
+  section(t("control.pv_system"));
   host.appendChild(
-    slider({ label: "Peak-Leistung", min: 0.4, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
+    slider({ label: t("control.peak_power"), min: 0.4, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
   );
   host.appendChild(
-    slider({ label: "Neigung", min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
+    slider({ label: t("control.tilt"), min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
   );
   host.appendChild(
     selectControl(
-      "Ausrichtung",
+      t("control.orientation"),
       [
-        { value: "south", label: "Süd" },
-        { value: "east", label: "Ost" },
-        { value: "west", label: "West" },
-        { value: "east_west", label: "Ost + West" },
-        { value: "north", label: "Nord" },
+        { value: "south", label: t("orientation.south") },
+        { value: "east", label: t("orientation.east") },
+        { value: "west", label: t("orientation.west") },
+        { value: "east_west", label: t("orientation.east_west") },
+        { value: "north", label: t("orientation.north") },
       ],
       (s) => s.orientation,
       (s, v) => (s.orientation = v as Orientation),
@@ -172,7 +173,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   );
   host.appendChild(
     selectControl(
-      "Standort",
+      t("control.location"),
       Object.entries(LOCATIONS).map(([k, v]) => ({ value: k, label: v.name })),
       (s) => s.location,
       (s, v) => (s.location = v),
@@ -181,27 +182,27 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
 
-  section("Batterie");
+  section(t("control.battery"));
   host.appendChild(
-    slider({ label: "Kapazität", min: 0, max: 40, step: 0.5, unit: " kWh", get: (s) => s.capacityKWh, set: (s, v) => (s.capacityKWh = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    slider({ label: t("control.capacity"), min: 0, max: 40, step: 0.5, unit: " kWh", get: (s) => s.capacityKWh, set: (s, v) => (s.capacityKWh = v), fmt: (v) => v.toFixed(1) }, state, onChange),
   );
   if (expert) {
     host.appendChild(
-      slider({ label: "Max. Leistung", min: 1, max: 20, step: 0.5, unit: " kW", get: (s) => s.maxPowerKW, set: (s, v) => (s.maxPowerKW = v) }, state, onChange),
+      slider({ label: t("control.max_power"), min: 1, max: 20, step: 0.5, unit: " kW", get: (s) => s.maxPowerKW, set: (s, v) => (s.maxPowerKW = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: "Min. SOC", min: 0, max: 0.5, step: 0.05, unit: "", get: (s) => s.minSOC, set: (s, v) => (s.minSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      slider({ label: t("control.min_soc"), min: 0, max: 0.5, step: 0.05, unit: "", get: (s) => s.minSOC, set: (s, v) => (s.minSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
     );
     host.appendChild(
-      slider({ label: "Max. SOC", min: 0.5, max: 1, step: 0.05, unit: "", get: (s) => s.maxSOC, set: (s, v) => (s.maxSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      slider({ label: t("control.max_soc"), min: 0.5, max: 1, step: 0.05, unit: "", get: (s) => s.maxSOC, set: (s, v) => (s.maxSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
     );
     host.appendChild(
       selectControl(
-        "Ladestrategie",
+        t("control.charge_strategy"),
         [
-          { value: "morning", label: "Morgens (PV-Überschuss)" },
-          { value: "midday", label: "Mittags (nur PV)" },
-          { value: "gridNegative", label: "Billiger Strom (PV + Netz bei Negativpreis)" },
+          { value: "morning", label: t("strategy.morning") },
+          { value: "midday", label: t("strategy.midday") },
+          { value: "gridNegative", label: t("strategy.cheap") },
         ],
         (s) => s.chargeMode,
         (s, v) => (s.chargeMode = v as "morning" | "midday" | "gridNegative"),
@@ -209,61 +210,61 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
         onChange,
       ),
     );
-    host.appendChild(checkbox("Entladung abends", (s) => s.dischargeEvening, (s, v) => (s.dischargeEvening = v), state, onChange));
+    host.appendChild(checkbox(t("control.discharge_evening"), (s) => s.dischargeEvening, (s, v) => (s.dischargeEvening = v), state, onChange));
     host.appendChild(
-      slider({ label: "Abend-Fenster von", min: 12, max: 22, step: 1, unit: " Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
+      slider({ label: t("control.evening_from"), min: 12, max: 22, step: 1, unit: " Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: "Abend-Fenster bis", min: 18, max: 24, step: 1, unit: " Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
+      slider({ label: t("control.evening_to"), min: 18, max: 24, step: 1, unit: " Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
     );
-    host.appendChild(checkbox("Entladung morgens", (s) => s.dischargeMorning, (s, v) => (s.dischargeMorning = v), state, onChange));
+    host.appendChild(checkbox(t("control.discharge_morning"), (s) => s.dischargeMorning, (s, v) => (s.dischargeMorning = v), state, onChange));
     host.appendChild(
-      slider({ label: "Morgen-Fenster von", min: 0, max: 10, step: 1, unit: " Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
+      slider({ label: t("control.morning_from"), min: 0, max: 10, step: 1, unit: " Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: "Morgen-Fenster bis", min: 8, max: 14, step: 1, unit: " Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
+      slider({ label: t("control.morning_to"), min: 8, max: 14, step: 1, unit: " Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
     );
   }
 
-  section("Verbraucher");
-  host.appendChild(checkbox("Haushalt", (s) => s.consumers.household.enabled, (s, v) => (s.consumers.household.enabled = v), state, onChange));
+  section(t("control.consumers"));
+  host.appendChild(checkbox(t("control.household"), (s) => s.consumers.household.enabled, (s, v) => (s.consumers.household.enabled = v), state, onChange));
   host.appendChild(
-    slider({ label: "Verbrauch", min: 1000, max: 6000, step: 100, unit: " kWh", get: (s) => s.consumers.household.annualKWh, set: (s, v) => (s.consumers.household.annualKWh = v) }, state, onChange),
+    slider({ label: t("control.consumption"), min: 1000, max: 6000, step: 100, unit: " kWh", get: (s) => s.consumers.household.annualKWh, set: (s, v) => (s.consumers.household.annualKWh = v) }, state, onChange),
   );
-  host.appendChild(checkbox("Wärmepumpe", (s) => s.consumers.heatpump.enabled, (s, v) => { s.consumers.heatpump.enabled = v; buildControls(host, state, onChange); }, state, onChange));
+  host.appendChild(checkbox(t("control.heatpump"), (s) => s.consumers.heatpump.enabled, (s, v) => { s.consumers.heatpump.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.heatpump.enabled) {
     host.appendChild(
-      slider({ label: "  Verbrauch", min: 1000, max: 10000, step: 100, unit: " kWh", get: (s) => s.consumers.heatpump.annualKWh, set: (s, v) => (s.consumers.heatpump.annualKWh = v) }, state, onChange),
+      slider({ label: t("control.consumption"), min: 1000, max: 10000, step: 100, unit: " kWh", get: (s) => s.consumers.heatpump.annualKWh, set: (s, v) => (s.consumers.heatpump.annualKWh = v) }, state, onChange),
     );
     if (expert) {
       host.appendChild(
-        slider({ label: "  JAZ", min: 1.5, max: 5, step: 0.1, unit: "", get: (s) => s.heatpumpJaz, set: (s, v) => (s.heatpumpJaz = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+        slider({ label: t("control.jaz"), min: 1.5, max: 5, step: 0.1, unit: "", get: (s) => s.heatpumpJaz, set: (s, v) => (s.heatpumpJaz = v), fmt: (v) => v.toFixed(1) }, state, onChange),
       );
     }
   }
-  host.appendChild(checkbox("Brauchwasser-WP", (s) => s.consumers.bwwp.enabled, (s, v) => { s.consumers.bwwp.enabled = v; buildControls(host, state, onChange); }, state, onChange));
+  host.appendChild(checkbox(t("control.bwwp"), (s) => s.consumers.bwwp.enabled, (s, v) => { s.consumers.bwwp.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.bwwp.enabled) {
     host.appendChild(
-      slider({ label: "  Verbrauch", min: 100, max: 1500, step: 20, unit: " kWh", get: (s) => s.consumers.bwwp.annualKWh ?? 480, set: (s, v) => (s.consumers.bwwp.annualKWh = v) }, state, onChange),
+      slider({ label: t("control.consumption"), min: 100, max: 1500, step: 20, unit: " kWh", get: (s) => s.consumers.bwwp.annualKWh ?? 480, set: (s, v) => (s.consumers.bwwp.annualKWh = v) }, state, onChange),
     );
   }
-  host.appendChild(checkbox("E-Auto", (s) => s.consumers.ev.enabled, (s, v) => { s.consumers.ev.enabled = v; buildControls(host, state, onChange); }, state, onChange));
+  host.appendChild(checkbox(t("control.ev"), (s) => s.consumers.ev.enabled, (s, v) => { s.consumers.ev.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.ev.enabled) {
     host.appendChild(
-      slider({ label: "  Verbrauch", min: 500, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
+      slider({ label: t("control.consumption"), min: 500, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: "  PV-Anteil", min: 0, max: 1, step: 0.05, unit: "", get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      slider({ label: t("control.pv_share"), min: 0, max: 1, step: 0.05, unit: "", get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
     );
   }
 
-  section("Vergütung");
-  const feedInSlider = slider({ label: "Einspeisevergütung", min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange);
+  section(t("control.feed_in"));
+  const feedInSlider = slider({ label: t("control.feed_in_rate"), min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange);
   host.appendChild(feedInSlider);
   feedInSync = (feedInSlider as unknown as { sync: () => void }).sync;
   host.appendChild(
     selectControl(
-      "Inbetriebnahme-Jahr",
+      t("control.commissioning_year"),
       [
         { value: "2023", label: "2023" },
         { value: "2024", label: "2024" },
@@ -277,13 +278,13 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
 
-  section("Einspeisung");
+  section(t("control.export_model"));
   host.appendChild(
     selectControl(
-      "Modell",
+      t("control.model"),
       [
-        { value: "market", label: "Direktvermarktung (Spot + Marktprämie)" },
-        { value: "fixed", label: "Feste Einspeisevergütung" },
+        { value: "market", label: t("export.direct") },
+        { value: "fixed", label: t("export.fixed") },
       ],
       (s) => s.exportScheme,
       (s, v) => (s.exportScheme = v as "fixed" | "market"),
@@ -292,14 +293,14 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
 
-  section("Stromtarif");
+  section(t("control.import_scheme"));
   host.appendChild(
     selectControl(
-      "Tarifmodell",
+      t("control.tariff_model"),
       [
-        { value: "fixed", label: "Fester Arbeitspreis" },
-        { value: "dynamic", label: "Dynamisch (Spot)" },
-        { value: "dynamic14a", label: "Dynamisch + §14a/3" },
+        { value: "fixed", label: t("import.fixed") },
+        { value: "dynamic", label: t("import.dynamic") },
+        { value: "dynamic14a", label: t("import.dynamic14a") },
       ],
       (s) => s.importScheme,
       (s, v) => (s.importScheme = v as TariffScheme),
@@ -308,12 +309,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
   host.appendChild(
-    slider({ label: "Arbeitspreis", min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    slider({ label: t("control.import_rate"), min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
   );
   if (expert) {
     host.appendChild(
       selectControl(
-        "Spotmarkt-Jahr",
+        t("control.price_year"),
         PRICE_YEARS.map((y) => ({ value: y, label: y })),
         (s) => String(s.priceYear),
         (s, v) => (s.priceYear = v),

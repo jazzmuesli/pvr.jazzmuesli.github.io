@@ -17,6 +17,10 @@ import { HyperFormula } from "hyperformula";
 import { runSimulation, DEFAULT_SIM_PARAMS, SimParams, SimReport } from "../src/calc/report";
 import { ConsumerConfig } from "../src/calc/consumers";
 import { buildWorkbook, workbookToBuffer } from "../src/export/workbook";
+import { setLocale } from "../src/i18n";
+
+// The test expectations use German sheet/label names; pin locale to "de".
+setLocale("de");
 
 const baseConsumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
@@ -564,7 +568,7 @@ describe("Excel export — Monatsuebersicht sheet", () => {
     const jahrRow = rowByLabel(hf, sid, "Jahr");
     const pvCol = colOfHeader(sid, headerRow, "PV kWh");
     const loadCol = colOfHeader(sid, headerRow, "Verbrauch kWh");
-    const nettoCol = colOfHeader(sid, headerRow, "Netto €");
+    const nettoCol = colOfHeader(sid, headerRow, "Netto-Bilanz");
     expect(evalCell(hf, sid, `${letter(pvCol)}${jahrRow}`)).toBeCloseTo(report.summary.totalPVKWh, 0);
     expect(evalCell(hf, sid, `${letter(loadCol)}${jahrRow}`)).toBeCloseTo(report.summary.totalLoadKWh, 0);
     // Sum of monthly net balances = the selected-scenario annual net balance.

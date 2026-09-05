@@ -6,6 +6,7 @@ import { Store } from "../store";
 import { Scenario } from "../scenario";
 import { ChatBot, GenerateFn, InterpretFn } from "./chatbot";
 import { createLogger } from "./logger";
+import { t } from "../i18n";
 
 export interface ChatUiOptions {
   mount: HTMLElement;
@@ -28,8 +29,8 @@ export function initChat(opts: ChatUiOptions): ChatBot {
   opts.mount.innerHTML = `
     <div class="chat-log" id="chat-log"></div>
     <div class="chat-input-row">
-      <input type="text" id="chat-input" class="chat-input" placeholder="Frag mich zur Energiewende …" />
-      <button id="chat-send" class="pill">Senden</button>
+      <input type="text" id="chat-input" class="chat-input" placeholder="${t("chat.placeholder")}" />
+      <button id="chat-send" class="pill">${t("chat.send")}</button>
     </div>`;
   const log = opts.mount.querySelector("#chat-log") as HTMLElement;
   const input = opts.mount.querySelector("#chat-input") as HTMLInputElement;
@@ -58,7 +59,7 @@ export function initChat(opts: ChatUiOptions): ChatBot {
       const out = await bot.send(message);
       loading.textContent = out.reply;
     } catch {
-      loading.textContent = "Entschuldigung, etwas ist schiefgelaufen.";
+      loading.textContent = t("chat.error");
     }
     log.scrollTop = log.scrollHeight;
   }

@@ -8,8 +8,9 @@ import {
   renderScenarioChart,
   renderTariffCombinationChart,
 } from "./ui/charts";
+import { t, monthAbbrevs, fmtEUR as i18nFmtEUR, getLocale, setLocale } from "./i18n";
 
-const MONTH_LABELS = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+function monthLabels(): string[] { return monthAbbrevs(); }
 
 // Initialise from a shared URL if present; otherwise use the defaults.
 const params = new URLSearchParams(location.search);
@@ -35,14 +36,12 @@ let rafPending = false;
 let report: SimReport | null = null;
 
 function importSchemeLabel(): string {
-  return state.importScheme === "fixed" ? "fester Tarif"
-    : state.importScheme === "dynamic" ? "dynamisch (Spot)"
-    : "dynamisch + §14a/3";
+  return state.importScheme === "fixed" ? t("import.label_fixed")
+    : state.importScheme === "dynamic" ? t("import.label_dynamic")
+    : t("import.label_dynamic14a");
 }
 
-function fmtEUR(v: number): string {
-  return v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-}
+const fmtEUR = i18nFmtEUR;
 
 function renderSummary(r: SimReport): void {
   const s = r.summary;
@@ -50,25 +49,25 @@ function renderSummary(r: SimReport): void {
   const selfPct = s.totalLoadKWh > 0 ? (s.selfConsumptionKWh / s.totalLoadKWh) * 100 : 0;
   const expert = state.expertMode;
   const cards: [string, string, string][] = [
-    ["PV-Ertrag", `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Verbrauch", `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, "pro Jahr"],
-    ["Eigenverbrauch", `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% des Verbrauchs`],
-    ["Netz-Import", `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, ""],
-    ["Export", `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, "ins Netz"],
-    ["Netto-Bilanz", `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, "Export − Import"],
-    ["Eff. Strompreis", `${eff.overallCt.toFixed(1)} ct/kWh`, "netto"],
-    ["Amortisation", r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} J.`, "Jahresersparnis " + fmtEUR(r.amortisation.annualBenefitEUR)],
+    [t("summary.pv_yield"), `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year")],
+    [t("summary.consumption"), `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year")],
+    [t("summary.self_consumption"), `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% ${t("summary.of_consumption")}`],
+    [t("summary.grid_import"), `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, ""],
+    [t("summary.export"), `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, t("summary.to_grid")],
+    [t("summary.net_balance"), `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, t("summary.export_import")],
+    [t("summary.eff_price"), `${eff.overallCt.toFixed(1)} ct/kWh`, t("summary.netto")],
+    [t("summary.amortisation"), r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} J.`, t("summary.annual_savings") + fmtEUR(r.amortisation.annualBenefitEUR)],
   ];
   if (expert) {
     cards.push(
-      ["Export-Erlös", fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? "Direktvermarktung" : "Feste Vergütung"],
-      ["Stromkosten", fmtEUR(s.importCostEUR), importSchemeLabel()],
-      ["Marktprämie", `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
-      ["EEG Referenz", `${s.referenceValueCt.toFixed(2)} ct/kWh`, "anzulegender Wert"],
-      ["Eff. Preis Haushalt", `${eff.byConsumer.household.toFixed(1)} ct/kWh`, ""],
-      ["Eff. Preis Wärmepumpe", `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, ""],
-      ["Eff. Preis E-Auto", `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, ""],
-      ["Investition", fmtEUR(r.amortisation.totalInvestmentEUR), ""],
+      [t("summary.export_revenue"), fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? t("summary.direct_marketing") : t("summary.fixed_feed_in")],
+      [t("summary.grid_cost"), fmtEUR(s.importCostEUR), importSchemeLabel()],
+      [t("summary.market_premium"), `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
+      [t("summary.eeg_reference"), `${s.referenceValueCt.toFixed(2)} ct/kWh`, t("summary.eeg_value")],
+      [t("summary.eff_price_household"), `${eff.byConsumer.household.toFixed(1)} ct/kWh`, ""],
+      [t("summary.eff_price_heatpump"), `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, ""],
+      [t("summary.eff_price_ev"), `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, ""],
+      [t("summary.investment"), fmtEUR(r.amortisation.totalInvestmentEUR), ""],
     );
   }
   summaryHost.innerHTML = "";
@@ -83,8 +82,8 @@ function renderSummary(r: SimReport): void {
 function renderHourly(): void {
   if (!report) return;
   const data = report.daily[selectedMonth - 1];
-  monthTitle.textContent = `${MONTH_LABELS[selectedMonth - 1]} — Stundenverteilung`;
-  renderHourlyChart(hourlyHost, data, MONTH_LABELS[selectedMonth - 1], state.capacityKWh);
+  monthTitle.textContent = `${monthLabels()[selectedMonth - 1]} — ${t("hourly.title")}`;
+  renderHourlyChart(hourlyHost, data, monthLabels()[selectedMonth - 1], state.capacityKWh);
 }
 
 /** One-line PV+battery coverage summary for a consumer (heat pump / EV).
@@ -106,15 +105,15 @@ function coverageLine(
 ): string {
   if (!cov) return "";
   const kwh = (v: number) => Math.round(v).toLocaleString("de-DE");
-  const gridLabel = cov.dynamic ? "Ø dynamischer Netzpreis" : "fester Netzpreis";
+  const gridLabel = cov.dynamic ? t("coverage.grid_price_dynamic") : t("coverage.grid_price_fixed");
   const gridSharePct = Math.max(0, 100 - cov.pvSharePct);
   return `
     <div class="heat-cov">
-      <span class="cov-pv">PV+Speicher: <b>${cov.pvSharePct.toFixed(0)}%</b>
+      <span class="cov-pv">${t("coverage.pv_battery")} <b>${cov.pvSharePct.toFixed(0)}%</b>
         (${kwh(cov.pvCoveredKWh)} kWh · 0 ct/kWh)</span>
-      <span class="cov-grid">Netz: <b>${gridSharePct.toFixed(0)}%</b>
+      <span class="cov-grid">${t("coverage.grid")} <b>${gridSharePct.toFixed(0)}%</b>
         (${kwh(cov.gridKWh)} kWh · ${gridLabel} ${cov.gridPriceCt.toFixed(1)} ct/kWh)</span>
-      <span class="cov-eff">Effektiv: <b>${cov.effectiveCt.toFixed(1)} ct/kWh</b></span>
+      <span class="cov-eff">${t("coverage.effective")} <b>${cov.effectiveCt.toFixed(1)} ct/kWh</b></span>
     </div>`;
 }
 
@@ -130,20 +129,20 @@ function renderHeating(r: SimReport): void {  const h = r.opportunityCosts.heati
   ];
   const head = `
     <div class="heat-head">
-      <span>Wärmepumpe: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh Strom →
+      <span>${t("heating.heatpump")}: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh Strom →
       ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</span>
     </div>${coverageLine(h.coverage, "Wärmepumpe")}`;
   const cards = rows
     .map(({ a, highlight }) => {
       const delta =
         a.mode === "heatpump" ? "" :
-        `<div class="card-sub">${a.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(a.deltaVsHeatpumpEUR)} ggü. Wärmepumpe</div>`;
+        `<div class="card-sub">${a.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(a.deltaVsHeatpumpEUR)} ${t("opportunity.vs_hp")}</div>`;
       return `
       <div class="card${highlight ? " card-hl" : ""}">
         <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/Jahr</span></div>
         <div class="card-key">${a.label}</div>
-        <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · Netz ${fmt(a.gridFeeEUR)}` : ""}</div>
-        <div class="card-sub">Schornsteinfeger ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · Nebenk. ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
+        <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · ${t("opportunity.grid")} ${fmt(a.gridFeeEUR)}` : ""}</div>
+        <div class="card-sub">${t("opportunity.chimney")} ${fmt(a.chimneySweepEUR)}${a.otherNebenkostenEUR ? ` · ${t("opportunity.other_costs")} ${fmt(a.otherNebenkostenEUR)}` : ""}</div>
         ${delta}
       </div>`;
     })
@@ -159,7 +158,7 @@ function opportunityNote(r: SimReport, kind: "heating" | "car"): string {
   const label = kind === "heating" ? "Gas" : "Diesel";
   if (financeable == null) return "";
   const fmt = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-  return `<div class="heat-foot">Ersparnis ggü. ${label}: ${fmt(saving)}/Jahr · finanzierbar in ${inv.pvPaybackYears.toFixed(1)} J. (PV-Amortisation): ${fmt(financeable)}</div>`;
+  return `<div class="heat-foot">${t("opportunity.savings")} ${label}: ${fmt(saving)}${t("opportunity.per_year_finance")} ${inv.pvPaybackYears.toFixed(1)} ${t("opportunity.years_pv")} ${fmt(financeable)}</div>`;
 }
 
 function renderOpportunityCar(r: SimReport): void {
@@ -175,19 +174,19 @@ function renderOpportunityCar(r: SimReport): void {
   ];
   const head = `
     <div class="heat-head">
-      <span>E-Auto vs. Diesel: ${fmtKm(c.annualKm)} pro Jahr</span>
+      <span>${t("car.comparison")} ${fmtKm(c.annualKm)} ${t("car.per_year")}</span>
     </div>${coverageLine(c.coverage, "E-Auto")}`;
   const cards = rows
     .map(({ a, highlight }) => {
       const delta =
         a.mode === "ev" ? "" :
-        `<div class="card-sub">${a.deltaVsEvEUR > 0 ? "+" : ""}${fmt(a.deltaVsEvEUR)} ggü. E-Auto</div>`;
+        `<div class="card-sub">${a.deltaVsEvEUR > 0 ? "+" : ""}${fmt(a.deltaVsEvEUR)} ${t("opportunity.vs_ev")}</div>`;
       return `
       <div class="card${highlight ? " card-hl" : ""}">
         <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/Jahr</span></div>
         <div class="card-key">${a.label}</div>
-        <div class="card-sub">Energie ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
-        <div class="card-sub">Wartung ${fmt(a.maintenanceEUR)} · Steuer ${fmt(a.vehicleTaxEUR)} · Nebenk. ${fmt(a.otherNebenkostenEUR)}</div>
+        <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
+        <div class="card-sub">${t("opportunity.maintenance")} ${fmt(a.maintenanceEUR)} · ${t("opportunity.tax")} ${fmt(a.vehicleTaxEUR)} · ${t("opportunity.other_costs")} ${fmt(a.otherNebenkostenEUR)}</div>
         ${delta}
       </div>`;
     })
@@ -215,7 +214,7 @@ function renderBwwp(r: SimReport): void {
   };
   const head = `
     <div class="heat-head">
-      <span>Brauchwasser: ${kwh(cov.consumptionKWh)} kWh Strom/Jahr (Mittags-PV-Block 11–15 Uhr)</span>
+      <span>${t("bwwp.electricity")} ${kwh(cov.consumptionKWh)} ${t("bwwp.pv_block")}</span>
     </div>${coverageLine(covInfo, "Brauchwasser-WP")}`;
   const card = `
     <div class="card card-hl">
@@ -248,7 +247,7 @@ function renderTariffCombinations(r: SimReport): void {
   combosHost.style.display = "";
   const years = r.tariffCombinations.years.join(", ");
   combosBody.innerHTML =
-    `<div class="hint">Import-Kosten & Export-Erlös je Tarifkombination, berechnet über die historischen Spot-Preisjahre ${years} ` +
+    `<div class="hint">${t("tariff.hint").replace(/\.$/, "")} ${years} ` +
     `(Volllast-Auslegung: PV-Erzeugung, Verbrauch und Batterie-Dispatch werden pro Jahr neu simuliert).</div>` +
     `<div class="combo-grid"></div>`;
   const grid = combosBody.querySelector(".combo-grid") as HTMLElement;
@@ -306,6 +305,80 @@ window.addEventListener("resize", () => {
   if (window.innerWidth > 880) setSidebar(false);
 });
 
+// ---------- Localize static HTML text ----------------------------------------
+function setText(id: string, text: string): void {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+function setAttr(id: string, attr: string, val: string): void {
+  const el = document.getElementById(id);
+  if (el) el.setAttribute(attr, val);
+}
+
+function relocalize(): void {
+  document.documentElement.lang = getLocale();
+  document.title = t("ui.title");
+  setText("toggle-sidebar", t("ui.sidebar_toggle"));
+  setAttr("toggle-sidebar", "title", t("ui.sidebar_toggle_title"));
+  const h1 = document.querySelector(".topbar h1");
+  if (h1) h1.textContent = t("ui.title");
+  const subtitle = document.querySelector(".topbar p");
+  if (subtitle) subtitle.textContent = t("ui.subtitle");
+  setText("download-xlsx", t("ui.excel_button"));
+  setAttr("download-xlsx", "title", t("ui.excel_button_title"));
+  const panelH2s = document.querySelectorAll(".panel h2");
+  if (panelH2s[0]) panelH2s[0].textContent = t("chart.monthly.title");
+  if (panelH2s[1]) panelH2s[1].textContent = t("hourly.title");
+  if (panelH2s[2]) panelH2s[2].textContent = t("scenario.title");
+  if (panelH2s[3]) panelH2s[3].textContent = t("tariff.title");
+  const panelHints = document.querySelectorAll(".panel .hint");
+  if (panelHints[0]) panelHints[0].textContent = t("chart.monthly.hint");
+  if (panelHints[2]) panelHints[2].textContent = t("scenario.hint");
+  if (panelHints[3]) panelHints[3].textContent = t("tariff.hint");
+  const heatingH2 = document.querySelector("#heating h2");
+  if (heatingH2) heatingH2.textContent = t("heating.title");
+  const heatingHint = document.querySelector("#heating .hint");
+  if (heatingHint) heatingHint.textContent = t("heating.hint");
+  const bwwpH2 = document.querySelector("#bwwp h2");
+  if (bwwpH2) bwwpH2.textContent = t("bwwp.title");
+  const bwwpHint = document.querySelector("#bwwp .hint");
+  if (bwwpHint) bwwpHint.textContent = t("bwwp.hint");
+  const carH2 = document.querySelector("#car h2");
+  if (carH2) carH2.textContent = t("car.title");
+  const carHint = document.querySelector("#car .hint");
+  if (carHint) carHint.textContent = t("car.hint");
+}
+relocalize();
+
+// ---------- Language toggle ---------------------------------------------------
+const langDe = document.getElementById("lang-de") as HTMLButtonElement | null;
+const langEn = document.getElementById("lang-en") as HTMLButtonElement | null;
+
+function updateLangButtons(): void {
+  const locale = getLocale();
+  if (langDe) {
+    langDe.classList.toggle("active", locale === "de");
+    langDe.setAttribute("aria-pressed", String(locale === "de"));
+  }
+  if (langEn) {
+    langEn.classList.toggle("active", locale === "en");
+    langEn.setAttribute("aria-pressed", String(locale === "en"));
+  }
+}
+updateLangButtons();
+
+function switchLocale(locale: "de" | "en"): void {
+  if (getLocale() === locale) return;
+  setLocale(locale);
+  updateLangButtons();
+  relocalize();
+  buildControls(controlsHost, state, onChange);
+  recompute();
+}
+
+if (langDe) langDe.addEventListener("click", () => switchLocale("de"));
+if (langEn) langEn.addEventListener("click", () => switchLocale("en"));
+
 // Excel export: generate a fully-formula workbook from the current report and
 // download it client-side (no server round-trip).
 const downloadBtn = document.getElementById("download-xlsx") as HTMLButtonElement | null;
@@ -314,13 +387,13 @@ if (downloadBtn) {
     if (!report) return;
     const prev = downloadBtn.textContent;
     downloadBtn.disabled = true;
-    downloadBtn.textContent = "⏳ Erzeuge…";
+    downloadBtn.textContent = t("ui.excel_loading");
     try {
       const { downloadWorkbook } = await import("./export/workbook");
       await downloadWorkbook(report);
     } catch (err) {
-      console.error("Excel-Export fehlgeschlagen:", err);
-      alert("Excel-Export fehlgeschlagen. Details in der Konsole.");
+      console.error(t("ui.excel_error"), err);
+      alert(t("ui.excel_error"));
     } finally {
       downloadBtn.disabled = false;
       downloadBtn.textContent = prev;
