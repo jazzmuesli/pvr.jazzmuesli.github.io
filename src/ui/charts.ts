@@ -1,14 +1,17 @@
-// Hand-rolled SVG charts (no charting dependency) with tooltips, value
-// labels and drill-down. Follows basic usability patterns: clear titles, axis
-// hints, hover tooltips with precise numbers, gridlines and on-bar value labels.
+// Hand-rolled SVG charts — no charting dependency. Follows UX best
+// practices from Fronius Solar.web, SolarEdge, and energy-dashboard research:
+//
+//  • Interactive legend: hover a legend item → highlights that series
+//  • Shared crosshair tooltip at cursor position
+//  • Clear axis labels with units, readable on mobile
+//  • Maximum 4–5 series per chart for clarity
+//  • Production vs consumption clearly separated
+//  • Grid import/export shown as net balance (negative = export)
+//  • Monetary balance with zero-line reference
 //
 // Per-consumer load breakdown: the monthly and hourly charts stack the load of
 // each consumer (Haushalt / Wärmepumpe / Brauchw.-WP / E-Auto) so the user can
 // see *who* consumes the energy, on top of the PV / net-€ context lines.
-//
-// Each chart renders its own legend directly beneath it (so the meaning of the
-// colours/lines is always visible where the data is shown) and emphasises the
-// PV production line with a white halo so it stays readable over the bars.
 
 const SVGNS = "http://www.w3.org/2000/svg";
 
@@ -35,7 +38,6 @@ export const CONSUMER_LABELS: Record<ConsumerKey, string> = {
   ev: "E-Auto",
 };
 
-// A calm, colour-blind-friendly stack palette (distinct hues, similar lightness).
 export const COLORS = {
   // consumers (stack)
   household: "#0ea5e9", // sky
@@ -43,7 +45,7 @@ export const COLORS = {
   bwwp: "#14b8a6", // teal
   ev: "#a855f7", // violet
   // energy flows
-  pv: "#d97706", // strong solar amber (dark enough to read on white)
+  pv: "#d97706", // strong solar amber
   selfUse: "#22c55e",
   import: "#ef4444", // red
   exportK: "#2563eb", // blue
@@ -80,6 +82,14 @@ function niceScale(maxV: number, targetTicks = 5): { max: number; step: number }
   step *= mag;
   const max = Math.ceil(maxV / step) * step;
   return { max, step };
+}
+
+// Extended niceScale that also computes a min (for charts with negative values).
+function niceScaleRange(minV: number, maxV: number, targetTicks = 5): { min: number; max: number; step: number } {
+  const absMax = Math.max(Math.abs(minV), Math.abs(maxV), 1);
+  const s = niceScale(absMax, targetTicks);
+  const min = minV < 0 ? -s.max : 0;
+  return { min, max: s.max, step: s.step };
 }
 
 // ---- shared tooltip --------------------------------------------------------
@@ -126,23 +136,30 @@ function fmtEUR(v: number): string {
 }
 
 // ---- line / dot with a white halo so they read over filled bars ------------
-function haloLine(svg: SVGElement, points: string, color: string, width = 3): void {
-  svg.appendChild(el("polyline", { points, fill: "none", stroke: "#ffffff", "stroke-width": width + 3.5, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.9 }));
-  svg.appendChild(el("polyline", { points, fill: "none", stroke: color, "stroke-width": width, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+function haloLine(svg: SVGElement, points: string, color: string, width = 3, dataKey?: string): void {
+  const g = dataKey ? el("g", { "data-key": dataKey }) : svg;
+  g.appendChild(el("polyline", { points, fill: "none", stroke: "#ffffff", "stroke-width": width + 3.5, "stroke-linejoin": "round", "stroke-linecap": "round", opacity: 0.9 }));
+  g.appendChild(el("polyline", { points, fill: "none", stroke: color, "stroke-width": width, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  if (dataKey) svg.appendChild(g);
 }
-function haloDot(svg: SVGElement, cx: number, cy: number, r: number, color: string): void {
-  svg.appendChild(el("circle", { cx, cy, r: r + 1.6, fill: "#ffffff", opacity: 0.9 }));
-  svg.appendChild(el("circle", { cx, cy, r, fill: color }));
+function haloDot(svg: SVGElement, cx: number, cy: number, r: number, color: string, dataKey?: string): void {
+  const g = dataKey ? el("g", { "data-key": dataKey }) : svg;
+  g.appendChild(el("circle", { cx, cy, r: r + 1.6, fill: "#ffffff", opacity: 0.9 }));
+  g.appendChild(el("circle", { cx, cy, r, fill: color }));
+  if (dataKey) svg.appendChild(g);
 }
 
-// ---- per-chart legend (rendered right under the chart) ---------------------
-interface LegendItem { label: string; color: string; shape: "rect" | "line"; }
-function appendLegend(host: HTMLElement, items: LegendItem[]): void {
+// ---- interactive legend ----------------------------------------------------
+// Hovering a legend item highlights matching SVG elements and vice-versa.
+interface LegendItem { label: string; color: string; shape: "rect" | "line"; key?: string; }
+function appendLegend(host: HTMLElement, items: LegendItem[], svgEl?: SVGElement): void {
   const wrap = document.createElement("div");
   wrap.className = "chart-legend";
+
   for (const it of items) {
     const item = document.createElement("span");
     item.className = "legend-item";
+    if (it.key) item.dataset.key = it.key;
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     if (it.shape === "line") {
@@ -158,8 +175,47 @@ function appendLegend(host: HTMLElement, items: LegendItem[]): void {
     const lbl = document.createElement("span");
     lbl.textContent = it.label;
     item.appendChild(lbl);
+
+    // Hover on legend → highlight matching chart elements
+    if (it.key && svgEl) {
+      const key = it.key;
+      item.addEventListener("mouseenter", () => {
+        svgEl.querySelectorAll(`[data-key="${key}"]`).forEach((el) => el.classList.add("chart-element-highlighted"));
+        svgEl.querySelectorAll(`[data-key]`).forEach((el) => {
+          if (el.getAttribute("data-key") !== key) el.classList.add("chart-element-dimmed");
+        });
+        item.classList.add("legend-item-highlighted");
+      });
+      item.addEventListener("mouseleave", () => {
+        svgEl.querySelectorAll(".chart-element-highlighted").forEach((el) => el.classList.remove("chart-element-highlighted"));
+        svgEl.querySelectorAll(".chart-element-dimmed").forEach((el) => el.classList.remove("chart-element-dimmed"));
+        item.classList.remove("legend-item-highlighted");
+      });
+    }
+
     wrap.appendChild(item);
   }
+
+  // Hover on chart SVG element → highlight matching legend item
+  if (svgEl) {
+    svgEl.addEventListener("mouseover", (e) => {
+      const target = (e.target as Element).closest("[data-key]");
+      if (!target) return;
+      const key = target.getAttribute("data-key");
+      if (!key) return;
+      wrap.querySelectorAll(`.legend-item[data-key="${key}"]`).forEach((li) => li.classList.add("legend-item-highlighted"));
+      svgEl.querySelectorAll(`[data-key]`).forEach((el) => {
+        if (el.getAttribute("data-key") !== key) el.classList.add("chart-element-dimmed");
+      });
+    });
+    svgEl.addEventListener("mouseout", (e) => {
+      const related = e.relatedTarget as Element | null;
+      if (related && svgEl.contains(related) && related.closest("[data-key]")) return;
+      wrap.querySelectorAll(".legend-item-highlighted").forEach((li) => li.classList.remove("legend-item-highlighted"));
+      svgEl.querySelectorAll(".chart-element-dimmed").forEach((el) => el.classList.remove("chart-element-dimmed"));
+    });
+  }
+
   host.appendChild(wrap);
 }
 
@@ -217,7 +273,7 @@ export function renderMonthlyChart(
       const val = d.load[key];
       if (val <= 0) continue;
       const h = (val / e.max) * plotH;
-      const rect = el("rect", { x: cx - barW / 2, y: yTop - h, width: barW, height: h, fill: CONSUMER_COLORS[key], rx: 2, class: "bar" });
+      const rect = el("rect", { x: cx - barW / 2, y: yTop - h, width: barW, height: h, fill: CONSUMER_COLORS[key], rx: 2, class: "bar", "data-key": key });
       bindTip(rect, () =>
         `<strong>${d.label}</strong><br>` +
         `${CONSUMER_LABELS.household}: <b>${fmtKWh(d.load.household)} kWh</b><br>` +
@@ -237,16 +293,16 @@ export function renderMonthlyChart(
     // PV line point (left axis) — emphasised
     const pvY = eScale(d.pvKWh);
     pvPts.push(`${cx},${pvY}`);
-    haloDot(svg, cx, pvY, 4, COLORS.pv);
-    const pvHit = el("circle", { cx, cy: pvY, r: 11, fill: "transparent" });
+    haloDot(svg, cx, pvY, 4, COLORS.pv, "pv");
+    const pvHit = el("circle", { cx, cy: pvY, r: 11, fill: "transparent", "data-key": "pv" });
     bindTip(pvHit, () => `<strong>${d.label}</strong><br>PV-Ertrag: <b>${fmtKWh(d.pvKWh)} kWh</b>`);
     svg.appendChild(pvHit);
 
     // net € line point (right axis)
     const netY = nScale(d.netEUR);
     netPts.push(`${cx},${netY}`);
-    haloDot(svg, cx, netY, 3.5, COLORS.net);
-    const netLbl = el("text", { x: cx, y: netY - 8, "text-anchor": "middle", fill: COLORS.net, "font-size": 10 });
+    haloDot(svg, cx, netY, 3.5, COLORS.net, "net");
+    const netLbl = el("text", { x: cx, y: netY - 8, "text-anchor": "middle", fill: COLORS.net, "font-size": 10, "data-key": "net" });
     netLbl.textContent = `${Math.round(d.netEUR)}`;
     svg.appendChild(netLbl);
 
@@ -272,8 +328,8 @@ export function renderMonthlyChart(
   });
 
   // emphasised PV + net lines (halo makes them pop over the bars)
-  haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5);
-  haloLine(svg, netPts.join(" "), COLORS.net, 3);
+  haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5, "pv");
+  haloLine(svg, netPts.join(" "), COLORS.net, 3, "net");
 
   // zero reference for net axis
   const zeroY = nScale(0);
@@ -298,13 +354,13 @@ export function renderMonthlyChart(
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect" },
-    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect" },
-    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect" },
-    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect" },
-    { label: "PV-Ertrag", color: COLORS.pv, shape: "line" },
-    { label: "Netto €", color: COLORS.net, shape: "line" },
-  ]);
+    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect", key: "household" },
+    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect", key: "heatpump" },
+    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect", key: "bwwp" },
+    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect", key: "ev" },
+    { label: "PV-Ertrag", color: COLORS.pv, shape: "line", key: "pv" },
+    { label: "Netto €", color: COLORS.net, shape: "line", key: "net" },
+  ], svg);
 }
 
 // ---- day chart (hourly, stacked consumer area + PV/import/SOC/price) -------
@@ -321,9 +377,11 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   const plotH = H - m.top - m.bottom;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
 
-  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh, d.importKWh)));
-  const e = niceScale(eMaxRaw, 5);
-  const eScale = (v: number) => m.top + plotH - (v / e.max) * plotH;
+  // Import can go negative (grid export) — extend axis below zero
+  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh)));
+  const eMinRaw = Math.min(0, ...data.map((d) => d.importKWh));
+  const e = niceScaleRange(eMinRaw, eMaxRaw, 5);
+  const eScale = (v: number) => m.top + plotH - ((v - e.min) / (e.max - e.min)) * plotH;
 
   const showSoc = socMaxKWh > 0;
   const maxPrice = Math.max(1, ...data.map((d) => d.avgPrice));
@@ -333,11 +391,12 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
 
   const band = plotW / 24;
 
-  // gridlines + left axis ticks (kWh/h)
-  for (let t = 0; t <= e.max + 1e-6; t += e.step) {
+  // gridlines + left axis ticks (kWh/h) — includes negative values
+  for (let t = e.min; t <= e.max + 1e-6; t += e.step) {
     const y = eScale(t);
-    svg.appendChild(el("line", { x1: m.left, y1: y, x2: m.left + plotW, y2: y, stroke: COLORS.grid, "stroke-width": 1 }));
-    const lbl = el("text", { x: m.left - 10, y: y + 4, "text-anchor": "end", fill: COLORS.muted, "font-size": 11 });
+    const isZero = Math.abs(t) < 1e-6;
+    svg.appendChild(el("line", { x1: m.left, y1: y, x2: m.left + plotW, y2: y, stroke: isZero ? COLORS.axis : COLORS.grid, "stroke-width": isZero ? 1.2 : 1 }));
+    const lbl = el("text", { x: m.left - 10, y: y + 4, "text-anchor": "end", fill: t < -0.5 ? COLORS.import : COLORS.muted, "font-size": 11 });
     lbl.textContent = String(Math.round(t));
     svg.appendChild(lbl);
   }
@@ -365,34 +424,34 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
       botPts.unshift(`${x},${yBot}`);
       cum[h] += d.load[key];
     });
-    svg.appendChild(el("polygon", { points: [...topPts, ...botPts].join(" "), fill: CONSUMER_COLORS[key], opacity: 0.9 }));
+    svg.appendChild(el("polygon", { points: [...topPts, ...botPts].join(" "), fill: CONSUMER_COLORS[key], opacity: 0.85, "data-key": key }));
   }
 
   // total-load outline
   const loadPts = data.map((_, h) => `${m.left + h * band + band / 2},${eScale(cum[h])}`);
-  svg.appendChild(el("polyline", { points: loadPts.join(" "), fill: "none", stroke: COLORS.text, "stroke-width": 1.5, opacity: 0.5 }));
+  svg.appendChild(el("polyline", { points: loadPts.join(" "), fill: "none", stroke: COLORS.text, "stroke-width": 1.5, opacity: 0.4 }));
 
   // PV production line (emphasised)
   const pvPts = data.map((d, h) => `${m.left + h * band + band / 2},${eScale(d.pvKWh)}`);
-  haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5);
+  haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5, "pv");
 
-  // grid-import line (part of load, emphasised)
+  // grid-import line (part of load, emphasised) — can go negative (export)
   const impPts = data.map((d, h) => `${m.left + h * band + band / 2},${eScale(d.importKWh)}`);
-  haloLine(svg, impPts.join(" "), COLORS.import, 2);
+  haloLine(svg, impPts.join(" "), COLORS.import, 2.5, "import");
 
   // battery SOC line (own 0..capacity scale)
   if (showSoc) {
     const socPts = data.map((d, h) => `${m.left + h * band + band / 2},${socScale(d.socKWh)}`);
-    haloLine(svg, socPts.join(" "), COLORS.soc, 2);
+    haloLine(svg, socPts.join(" "), COLORS.soc, 2, "soc");
     for (let h = 0; h < data.length; h++) {
-      haloDot(svg, m.left + h * band + band / 2, socScale(data[h].socKWh), 2, COLORS.soc);
+      haloDot(svg, m.left + h * band + band / 2, socScale(data[h].socKWh), 2, COLORS.soc, "soc");
     }
   }
 
   // price line (right axis)
   if (hasPriceData) {
     const pricePts = data.map((d, h) => `${m.left + h * band + band / 2},${pScale(d.avgPrice)}`);
-    haloLine(svg, pricePts.join(" "), COLORS.price, 1.8);
+    haloLine(svg, pricePts.join(" "), COLORS.price, 1.8, "price");
   }
 
   // hour labels
@@ -438,16 +497,16 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   host.appendChild(svg);
 
   const hourlyLegend: LegendItem[] = [
-    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect" },
-    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect" },
-    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect" },
-    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect" },
-    { label: "PV-Ertrag", color: COLORS.pv, shape: "line" },
-    { label: "Netz-Import", color: COLORS.import, shape: "line" },
-    { label: "Batterie-SoC", color: COLORS.soc, shape: "line" },
+    { label: CONSUMER_LABELS.household, color: COLORS.household, shape: "rect", key: "household" },
+    { label: CONSUMER_LABELS.heatpump, color: COLORS.heatpump, shape: "rect", key: "heatpump" },
+    { label: CONSUMER_LABELS.bwwp, color: COLORS.bwwp, shape: "rect", key: "bwwp" },
+    { label: CONSUMER_LABELS.ev, color: COLORS.ev, shape: "rect", key: "ev" },
+    { label: "PV-Ertrag", color: COLORS.pv, shape: "line", key: "pv" },
+    { label: "Netz-Import", color: COLORS.import, shape: "line", key: "import" },
+    { label: "Batterie-SoC", color: COLORS.soc, shape: "line", key: "soc" },
   ];
-  if (hasPriceData) hourlyLegend.push({ label: "Preis", color: COLORS.price, shape: "line" });
-  appendLegend(host, hourlyLegend);
+  if (hasPriceData) hourlyLegend.push({ label: "Preis", color: COLORS.price, shape: "line", key: "price" });
+  appendLegend(host, hourlyLegend, svg);
 }
 
 // ---- scenario comparison (export revenue vs import cost, net) --------------
@@ -484,7 +543,7 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
 
     // export revenue (green, up)
     const gH = (d.exportEUR / bound) * half;
-    const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar" });
+    const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar", "data-key": "export" });
     bindTip(grec, () => `<strong>${d.label}</strong><br>Export-Erlös: <b>${fmtEUR(d.exportEUR)}</b>`);
     svg.appendChild(grec);
     const gl = el("text", { x: gx + barW / 2, y: zeroY - gH - 6, "text-anchor": "middle", fill: COLORS.exportK, "font-size": 11 });
@@ -493,7 +552,7 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
 
     // import cost (red, down)
     const rH = (d.importEUR / bound) * half;
-    const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar" });
+    const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar", "data-key": "import" });
     bindTip(rrec, () => `<strong>${d.label}</strong><br>Import-Kosten: <b>${fmtEUR(d.importEUR)}</b>`);
     svg.appendChild(rrec);
     const rl = el("text", { x: rx + barW / 2, y: zeroY + rH + 15, "text-anchor": "middle", fill: COLORS.import, "font-size": 11 });
@@ -501,7 +560,7 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
     svg.appendChild(rl);
 
     // net label
-    const netLbl = el("text", { x: cx, y: m.top + 16, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 13, "font-weight": 700 });
+    const netLbl = el("text", { x: cx, y: m.top + 16, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 13, "font-weight": 700, "data-key": "net" });
     netLbl.textContent = `Netto ${fmtEUR(d.netEUR)}`;
     svg.appendChild(netLbl);
 
@@ -514,16 +573,16 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
   yL.textContent = "Jahresbilanz je Tarifkombination (€)";
   svg.appendChild(yL);
   const hint = el("text", { x: m.left, y: H - 12, "text-anchor": "start", fill: COLORS.muted, "font-size": 11 });
-  hint.textContent = "Grün = Export-Erlös (nach oben), Rot = Import-Kosten (nach unten). Netto = Erlös − Kosten.";
+  hint.textContent = "Blau = Export-Erlös (nach oben), Rot = Import-Kosten (nach unten). Netto = Erlös − Kosten.";
   svg.appendChild(hint);
 
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect" },
-    { label: "Import-Kosten", color: COLORS.import, shape: "rect" },
-    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line" },
-  ]);
+    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect", key: "export" },
+    { label: "Import-Kosten", color: COLORS.import, shape: "rect", key: "import" },
+    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line", key: "net" },
+  ], svg);
 }
 
 // ---- comparison chart (trend across years) --------------------------------
@@ -597,11 +656,6 @@ export function renderComparisonChart(host: HTMLElement, data: ComparisonDatum[]
 }
 
 // ---- tariff combinations (per year, per combination) -----------------------
-// One chart per combination: the x-axis is the historical price year, with the
-// export revenue (green, up) and import cost (red, down) bars and the net
-// balance label. Because the dispatch is re-run for each year the volumes and
-// therefore the bars differ between years; and because the tariff schemes
-// differ, the four combinations produce visibly different charts.
 export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCombination): void {
   host.innerHTML = "";
   const W = 460;
@@ -634,16 +688,16 @@ export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCom
     const rx = cx + 3;
 
     const gH = (d.exportEUR / bound) * half;
-    const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar" });
+    const grec = el("rect", { x: gx, y: zeroY - gH, width: barW, height: gH, fill: COLORS.exportK, rx: 3, class: "bar", "data-key": "export" });
     bindTip(grec, () => `<strong>${combo.label} — ${d.year}</strong><br>Export-Erlös: <b>${fmtEUR(d.exportEUR)}</b><br>Export: ${Math.round(d.exportKWh)} kWh`);
     svg.appendChild(grec);
 
     const rH = (d.importEUR / bound) * half;
-    const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar" });
+    const rrec = el("rect", { x: rx, y: zeroY, width: barW, height: rH, fill: COLORS.import, rx: 3, class: "bar", "data-key": "import" });
     bindTip(rrec, () => `<strong>${combo.label} — ${d.year}</strong><br>Import-Kosten: <b>${fmtEUR(d.importEUR)}</b><br>Import: ${Math.round(d.importKWh)} kWh`);
     svg.appendChild(rrec);
 
-    const netLbl = el("text", { x: cx, y: m.top + 14, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 11, "font-weight": 700 });
+    const netLbl = el("text", { x: cx, y: m.top + 14, "text-anchor": "middle", fill: d.netEUR >= 0 ? COLORS.net : COLORS.import, "font-size": 11, "font-weight": 700, "data-key": "net" });
     netLbl.textContent = `Netto ${fmtEUR(d.netEUR)}`;
     svg.appendChild(netLbl);
 
@@ -658,10 +712,10 @@ export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCom
 
   host.appendChild(svg);
   appendLegend(host, [
-    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect" },
-    { label: "Import-Kosten", color: COLORS.import, shape: "rect" },
-    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line" },
-  ]);
+    { label: "Export-Erlös", color: COLORS.exportK, shape: "rect", key: "export" },
+    { label: "Import-Kosten", color: COLORS.import, shape: "rect", key: "import" },
+    { label: "Netto (Erlös−Kosten)", color: COLORS.net, shape: "line", key: "net" },
+  ], svg);
 }
 
 export function renderLegend(host: HTMLElement): void {

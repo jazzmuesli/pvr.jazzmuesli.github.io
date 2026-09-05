@@ -27,12 +27,24 @@
       <section class="content">
         <div id="summary" class="summary"></div>
         <div class="panel">
-          <h2>Energiefluss pro Monat</h2>
+          <div class="panel-header">
+            <h2>Energiefluss pro Monat</h2>
+            <div class="panel-actions">
+              <button class="btn-export" data-chart="monthly" data-format="svg" title="Diagramm als SVG herunterladen">SVG</button>
+              <button class="btn-export" data-chart="monthly" data-format="png" title="Diagramm als PNG herunterladen">PNG</button>
+            </div>
+          </div>
           <p class="hint">Klicke auf einen Monat, um die Stundenverteilung (inkl. Batterie-SoC) zu sehen.</p>
           <div id="monthly"></div>
         </div>
         <div class="panel">
-          <h2 id="month-title">Stundenverteilung</h2>
+          <div class="panel-header">
+            <h2 id="month-title">Stundenverteilung</h2>
+            <div class="panel-actions">
+              <button class="btn-export" data-chart="hourly" data-format="svg" title="Diagramm als SVG herunterladen">SVG</button>
+              <button class="btn-export" data-chart="hourly" data-format="png" title="Diagramm als PNG herunterladen">PNG</button>
+            </div>
+          </div>
           <div id="hourly"></div>
         </div>
         <div class="panel">
