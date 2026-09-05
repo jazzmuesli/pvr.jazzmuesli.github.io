@@ -23,6 +23,8 @@
 
 import ExcelJS from "exceljs";
 import type { SimReport } from "../calc/report";
+import { averageNetzentgeltCt, cityForLocation } from "../calc/tariff";
+import type { TariffScheme } from "../calc/tariff";
 
 /** Round to 2 decimals (mirrors the calc modules' `round2`). */
 function r2(v: number): number {
@@ -513,6 +515,440 @@ function buildAggregateSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   s.formula("netEUR", "Netto-Bilanz", `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", "Export-Erlös − Import-Kosten", "result");
 }
 
+/**
+ * "Gesamtkalkulation" — a single overview sheet that puts the whole energy and
+ * cost balance in one place, per the user's request: PV production, grid import,
+ * grid export, and every active consumer (household, heat pump, hot-water heat
+ * pump, EV). Each consumer's consumption is a yellow input; its PV+battery
+ * coverage share is an orange calibration cell from the 15-min simulation; the
+ * PV-covered and grid kWh are live formulas, and the column totals are `SUM`s
+ * so the parts provably add up to the whole.
+ */
+function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
+  const s = new SheetBuilder(wb, "Gesamtkalkulation");
+  const sum = report.summary;
+  const cov = report.effectivePrice.coverage;
+  s.header(
+    "Gesamtkalkulation",
+    "Produktion, Import, Export und alle Verbraucher (Haushalt, WP, BWWP, E-Auto) in einer Übersicht.",
+  );
+
+  // --- Consumer table: label | consumption (input) | PV-share % (calib) |
+  //     PV-covered kWh (formula) | grid kWh (formula) | eff. price (formula) ---
+  s.section("Verbraucher (Verbrauch = Eingabe · PV-Anteil = aus Simulation)");
+  const ws = s.worksheet;
+  // Give the extra data columns sensible widths.
+  ws.getColumn(3).width = 16;
+  ws.getColumn(4).width = 16;
+  ws.getColumn(5).width = 16;
+  ws.getColumn(6).width = 16;
+
+  let rowIdx = s.currentRow;
+  const headers = ["Verbraucher", "Verbrauch kWh", "PV-Anteil %", "PV-gedeckt kWh", "Netzbezug kWh", "Eff. ct/kWh"];
+  headers.forEach((h, i) => {
+    const c = ws.getCell(rowIdx, i + 1);
+    c.value = h;
+    c.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.headerFill } };
+    c.border = THIN_BORDER;
+  });
+  rowIdx += 1;
+
+  const consumerDefs: { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[] = [
+    { key: "household", label: "Haushalt" },
+    { key: "heatpump", label: "Wärmepumpe" },
+    { key: "bwwp", label: "Brauchwasser-WP (BWWP)" },
+    { key: "ev", label: "E-Auto" },
+  ];
+  const active = consumerDefs.filter((d) => report.inputs.consumers[d.key].enabled);
+  const firstConsRow = rowIdx;
+  for (const d of active) {
+    const c = cov[d.key];
+    const consumptionKWh = r2(c?.consumptionKWh ?? report.inputs.consumers[d.key].annualKWh ?? 0);
+    const pvSharePct = r2(c?.pvSharePct ?? 0);
+    const gridPriceCt = r2(c?.gridPriceCt ?? 0);
+
+    // Col A: label
+    const lc = ws.getCell(rowIdx, 1);
+    lc.value = d.label;
+    lc.border = THIN_BORDER;
+    // Col B: consumption (yellow input)
+    const bc = ws.getCell(rowIdx, 2);
+    bc.value = consumptionKWh;
+    bc.numFmt = NUM_FMT;
+    bc.alignment = { horizontal: "right" };
+    bc.border = THIN_BORDER;
+    bc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.inputFill } };
+    // Col C: PV share % (orange calibration)
+    const cc = ws.getCell(rowIdx, 3);
+    cc.value = pvSharePct;
+    cc.numFmt = NUM_FMT;
+    cc.alignment = { horizontal: "right" };
+    cc.border = THIN_BORDER;
+    cc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
+    // Col D: PV-covered kWh = consumption × share/100 (formula)
+    const dc = ws.getCell(rowIdx, 4);
+    dc.value = { formula: `B${rowIdx}*C${rowIdx}/100`, result: r2(c?.pvCoveredKWh ?? 0) } as ExcelJS.CellFormulaValue;
+    dc.numFmt = NUM_FMT;
+    dc.alignment = { horizontal: "right" };
+    dc.border = THIN_BORDER;
+    dc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+    // Col E: grid kWh = consumption − PV-covered (formula)
+    const ec = ws.getCell(rowIdx, 5);
+    ec.value = { formula: `B${rowIdx}-D${rowIdx}`, result: r2(c?.gridKWh ?? 0) } as ExcelJS.CellFormulaValue;
+    ec.numFmt = NUM_FMT;
+    ec.alignment = { horizontal: "right" };
+    ec.border = THIN_BORDER;
+    ec.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+    // Col F: effective ct/kWh = grid kWh × grid price / consumption (formula).
+    // The grid price sits in a helper cell in col G (kept out of the way but
+    // still a real, editable input) so the effective-price formula is honest.
+    const gpc = ws.getCell(rowIdx, 7);
+    gpc.value = gridPriceCt;
+    gpc.numFmt = NUM_FMT;
+    gpc.alignment = { horizontal: "right" };
+    gpc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.inputFill } };
+    const fc = ws.getCell(rowIdx, 6);
+    fc.value = {
+      formula: `IF(B${rowIdx}=0,0,E${rowIdx}*G${rowIdx}/B${rowIdx})`,
+      result: r2(c?.effectiveCt ?? 0),
+    } as ExcelJS.CellFormulaValue;
+    fc.numFmt = NUM_FMT;
+    fc.alignment = { horizontal: "right" };
+    fc.border = THIN_BORDER;
+    fc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+    rowIdx += 1;
+  }
+  const lastConsRow = rowIdx - 1;
+  // Totals row: SUM of each numeric column.
+  const tl = ws.getCell(rowIdx, 1);
+  tl.value = "Summe Verbraucher";
+  tl.font = { bold: true };
+  tl.border = THIN_BORDER;
+  for (const col of [2, 4, 5]) {
+    const cell = ws.getCell(rowIdx, col);
+    const colLetter = String.fromCharCode(64 + col);
+    const fallback =
+      col === 2 ? r2(sum.totalLoadKWh)
+      : col === 4 ? r2(sum.selfConsumptionKWh)
+      : r2(sum.totalImportKWh);
+    cell.value = {
+      formula: `SUM(${colLetter}${firstConsRow}:${colLetter}${lastConsRow})`,
+      result: fallback,
+    } as ExcelJS.CellFormulaValue;
+    cell.numFmt = NUM_FMT;
+    cell.alignment = { horizontal: "right" };
+    cell.font = { bold: true };
+    cell.border = THIN_BORDER;
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.resultFill } };
+  }
+  // Remember the total-consumption cell for the energy-balance block below.
+  const loadTotalAddr = `B${rowIdx}`;
+  const selfTotalAddr = `D${rowIdx}`;
+  const gridTotalAddr = `E${rowIdx}`;
+  s.currentRow = rowIdx + 1;
+
+  // --- Energy balance: PV production, self-consumption, export, import ---
+  s.section("Energiebilanz (Produktion · Import · Export)");
+  s.calib([
+    { key: "pvYear", label: "PV-Produktion", value: r2(sum.totalPVKWh), unit: "kWh", note: "Jahresertrag der Anlage (aus Simulation)" },
+    { key: "exportKWh", label: "Netz-Einspeisung (Export)", value: r2(sum.totalExportKWh), unit: "kWh" },
+    { key: "exportRev", label: "Export-Erlös", value: r2(sum.exportRevenueEUR), unit: "€" },
+    { key: "importCost", label: "Import-Kosten", value: r2(sum.importCostEUR), unit: "€" },
+  ]);
+  // Self-consumption and import tie back to the consumer-table totals.
+  s.formula("selfCons", "Eigenverbrauch (PV+Speicher)", `=${selfTotalAddr}`, r2(sum.selfConsumptionKWh), "kWh", "Summe PV-gedeckt aller Verbraucher");
+  s.formula("importKWh", "Netz-Import", `=${gridTotalAddr}`, r2(sum.totalImportKWh), "kWh", "Summe Netzbezug aller Verbraucher");
+  s.formula("load", "Gesamtverbrauch", `=${loadTotalAddr}`, r2(sum.totalLoadKWh), "kWh", "Summe Verbrauch aller Verbraucher");
+
+  s.section("Kennzahlen");
+  s.formula("selfConsRate", "Eigenverbrauchsquote", `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", "Eigenverbrauch / PV-Produktion");
+  s.formula("selfSuff", "Autarkiegrad", `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", "Eigenverbrauch / Verbrauch");
+  s.formula("netEUR", "Netto-Bilanz", `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", "Export-Erlös − Import-Kosten", "result");
+}
+
+/**
+ * The single "Beispieltage" sheet: for every requested month it lays out the
+ * average 24-hour profile (from `report.daily[month-1]`) as an hourly table.
+ *
+ * Columns, left → right:
+ *   Stunde | PV | Last gesamt | [Haushalt] [Wärmepumpe] [BWWP] [E-Auto] |
+ *   Eigenverbrauch | Netzbezug | Einspeisung | Ø Strompreis | Ø Netzentgelt | SoC
+ *
+ * The per-consumer columns are only emitted for consumers that are enabled, per
+ * the user's request. PV / load / self-use / export / SoC and the two price
+ * columns are orange calibration values straight from the 15-min simulation;
+ * the **grid import per hour is a live formula** `=MAX(0, Last − Eigenverbrauch)`
+ * and a daily-totals row `SUM`s each kWh column so the day balances. The
+ * Ø-Strompreis is the average import price for that hour/season (incl. all
+ * levies), and Ø-Netzentgelt is the grid-fee component (time-varying under
+ * § 14a) so the user can see *why* the price moves across the day.
+ */
+function buildExampleDaysSheet(
+  wb: ExcelJS.Workbook,
+  report: SimReport,
+  sheetName: string,
+  title: string,
+  months: { monthIndex: number; label: string }[],
+): void {
+  const s = new SheetBuilder(wb, sheetName);
+  s.header(
+    title,
+    "Durchschnittlicher Tagesverlauf (24 h) je Monat aus der 15-Min-Simulation. Netzbezug = Last − Eigenverbrauch; Ø-Preis & Ø-Netzentgelt = Mittel dieser Tages-/Jahreszeit.",
+  );
+  const ws = s.worksheet;
+
+  // Which consumer columns to show (Haushalt always; the rest only if enabled).
+  const consumerCols: { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[] = (
+    [
+      { key: "household", label: "Haushalt kWh" },
+      { key: "heatpump", label: "Wärmepumpe kWh" },
+      { key: "bwwp", label: "BWWP kWh" },
+      { key: "ev", label: "E-Auto kWh" },
+    ] as { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[]
+  ).filter((c) => report.inputs.consumers[c.key].enabled);
+  const headers: string[] = ["Stunde", "PV kWh", "Last kWh"];
+  consumerCols.forEach((c) => headers.push(c.label));
+  const idxSelf = headers.push("Eigenverbr. kWh"); // 1-based col of self-use
+  const idxGrid = headers.push("Netzbezug kWh"); // grid import (formula)
+  const idxExport = headers.push("Einspeisung kWh");
+  const idxPrice = headers.push("Ø Strompreis ct/kWh");
+  const idxNet = headers.push("Ø Netzentgelt ct/kWh");
+  const idxSoc = headers.push("SoC kWh");
+  const idxLoad = 3; // "Last kWh"
+  const colLetter = (i: number) => String.fromCharCode(64 + i);
+
+  // Widen columns: label wide, the rest uniform.
+  ws.getColumn(1).width = 20;
+  for (let c = 2; c <= headers.length; c++) ws.getColumn(c).width = 15;
+
+  const city = cityForLocation(report.inputs.location);
+  const scheme = report.inputs.importScheme as TariffScheme;
+
+  for (const { monthIndex, label } of months) {
+    const day = report.daily[monthIndex];
+    s.section(`Beispieltag — ${label}`);
+    let rowIdx = s.currentRow;
+    headers.forEach((h, i) => {
+      const c = ws.getCell(rowIdx, i + 1);
+      c.value = h;
+      c.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.headerFill } };
+      c.border = THIN_BORDER;
+      c.alignment = { horizontal: "center", wrapText: true };
+    });
+    rowIdx += 1;
+
+    const firstRow = rowIdx;
+    for (const d of day) {
+      // Col A: hour label
+      const hc = ws.getCell(rowIdx, 1);
+      hc.value = `${String(d.hour).padStart(2, "0")}:00`;
+      hc.border = THIN_BORDER;
+
+      // Calibration (orange) numeric cells keyed by their column index.
+      const calib: Record<number, number> = {
+        2: r2(d.pvKWh),
+        [idxLoad]: r2(d.totalLoadKWh),
+        [idxSelf]: r2(d.selfUseKWh),
+        [idxExport]: r2(d.exportKWh),
+        [idxPrice]: r2(d.avgPrice),
+        [idxNet]: r2(averageNetzentgeltCt(scheme, city, monthIndex, d.hour)),
+        [idxSoc]: r2(d.socKWh),
+      };
+      // Per-consumer columns come straight after "Last kWh" (col 3).
+      consumerCols.forEach((c, i) => {
+        calib[4 + i] = r2(d.load[c.key]);
+      });
+      for (const [colStr, val] of Object.entries(calib)) {
+        const col = Number(colStr);
+        const cell = ws.getCell(rowIdx, col);
+        cell.value = val;
+        cell.numFmt = NUM_FMT;
+        cell.alignment = { horizontal: "right" };
+        cell.border = THIN_BORDER;
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
+      }
+      // Grid import = MAX(0, load − self-use) as a live formula (grey).
+      const ec = ws.getCell(rowIdx, idxGrid);
+      ec.value = {
+        formula: `MAX(0,${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx})`,
+        result: r2(d.importKWh),
+      } as ExcelJS.CellFormulaValue;
+      ec.numFmt = NUM_FMT;
+      ec.alignment = { horizontal: "right" };
+      ec.border = THIN_BORDER;
+      ec.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+      rowIdx += 1;
+    }
+    const lastRow = rowIdx - 1;
+
+    // Daily totals row: SUM each kWh column (skip the two price columns, which
+    // are averages, not sums — show the day-average there instead).
+    const tl = ws.getCell(rowIdx, 1);
+    tl.value = "Tagessumme";
+    tl.font = { bold: true };
+    tl.border = THIN_BORDER;
+    const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport];
+    for (const col of sumCols) {
+      const L = colLetter(col);
+      const cell = ws.getCell(rowIdx, col);
+      cell.value = { formula: `SUM(${L}${firstRow}:${L}${lastRow})`, result: 0 } as ExcelJS.CellFormulaValue;
+      cell.numFmt = NUM_FMT;
+      cell.alignment = { horizontal: "right" };
+      cell.font = { bold: true };
+      cell.border = THIN_BORDER;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.resultFill } };
+    }
+    // Day-average for the two price columns.
+    for (const col of [idxPrice, idxNet]) {
+      const L = colLetter(col);
+      const cell = ws.getCell(rowIdx, col);
+      cell.value = { formula: `AVERAGE(${L}${firstRow}:${L}${lastRow})`, result: 0 } as ExcelJS.CellFormulaValue;
+      cell.numFmt = NUM_FMT;
+      cell.alignment = { horizontal: "right" };
+      cell.font = { bold: true, italic: true };
+      cell.border = THIN_BORDER;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+    }
+    s.currentRow = rowIdx + 1;
+  }
+}
+
+/**
+ * The "Monatsuebersicht" sheet: the whole year with **one row per month** and
+ * the same figures as the example days, aggregated to the month:
+ *
+ *   Monat | PV | Verbrauch gesamt | [Haushalt] [WP] [BWWP] [E-Auto] |
+ *   Eigenverbrauch | Netzbezug | Einspeisung | Ø Strompreis | Ø Netzentgelt | Netto €
+ *
+ * The per-consumer columns follow the same "only if enabled" rule. Monthly PV,
+ * consumption (total + per consumer), self-consumption, export and the net
+ * balance are orange calibration values from the simulation; the **grid import
+ * is a live formula** `=Verbrauch − Eigenverbrauch`; the two price columns are
+ * the month's average import price and grid fee. A "Jahr" totals row SUMs the
+ * kWh / € columns and averages the two price columns.
+ */
+function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
+  const s = new SheetBuilder(wb, "Monatsuebersicht");
+  s.header(
+    "Monatsübersicht — ganzes Jahr (eine Zeile = ein Monat)",
+    "Produktion, Verbrauch je Verbraucher, Eigenverbrauch, Netzbezug/Einspeisung sowie Ø-Strompreis & Ø-Netzentgelt pro Monat. Netzbezug = Verbrauch − Eigenverbrauch.",
+  );
+  const ws = s.worksheet;
+
+  const consumerCols: { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[] = (
+    [
+      { key: "household", label: "Haushalt kWh" },
+      { key: "heatpump", label: "Wärmepumpe kWh" },
+      { key: "bwwp", label: "BWWP kWh" },
+      { key: "ev", label: "E-Auto kWh" },
+    ] as { key: "household" | "heatpump" | "bwwp" | "ev"; label: string }[]
+  ).filter((c) => report.inputs.consumers[c.key].enabled);
+  const headers: string[] = ["Monat", "PV kWh", "Verbrauch kWh"];
+  consumerCols.forEach((c) => headers.push(c.label));
+  const idxSelf = headers.push("Eigenverbr. kWh");
+  const idxGrid = headers.push("Netzbezug kWh");
+  const idxExport = headers.push("Einspeisung kWh");
+  const idxPrice = headers.push("Ø Strompreis ct/kWh");
+  const idxNet = headers.push("Ø Netzentgelt ct/kWh");
+  const idxNetto = headers.push("Netto €");
+  const idxLoad = 3; // "Verbrauch kWh"
+  const colLetter = (i: number) => String.fromCharCode(64 + i);
+
+  ws.getColumn(1).width = 14;
+  for (let c = 2; c <= headers.length; c++) ws.getColumn(c).width = 15;
+
+  const city = cityForLocation(report.inputs.location);
+  const scheme = report.inputs.importScheme as TariffScheme;
+
+  s.section("Monatswerte");
+  let rowIdx = s.currentRow;
+  headers.forEach((h, i) => {
+    const c = ws.getCell(rowIdx, i + 1);
+    c.value = h;
+    c.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.headerFill } };
+    c.border = THIN_BORDER;
+    c.alignment = { horizontal: "center", wrapText: true };
+  });
+  rowIdx += 1;
+
+  const firstRow = rowIdx;
+  for (let m = 0; m < report.monthly.length; m++) {
+    const mo = report.monthly[m];
+    // Month-average import price = mean of the 24 hourly averages for that month.
+    const day = report.daily[m];
+    const avgPrice = day.length > 0 ? day.reduce((a, d) => a + d.avgPrice, 0) / day.length : 0;
+
+    const lc = ws.getCell(rowIdx, 1);
+    lc.value = mo.label;
+    lc.border = THIN_BORDER;
+
+    const calib: Record<number, number> = {
+      2: r2(mo.pvKWh),
+      [idxLoad]: r2(mo.totalLoadKWh),
+      [idxSelf]: r2(mo.selfConsumptionKWh),
+      [idxExport]: r2(mo.exportKWh),
+      [idxPrice]: r2(avgPrice),
+      [idxNet]: r2(averageNetzentgeltCt(scheme, city, m)),
+      [idxNetto]: r2(mo.netEUR),
+    };
+    consumerCols.forEach((c, i) => {
+      calib[4 + i] = r2(mo.load[c.key]);
+    });
+    for (const [colStr, val] of Object.entries(calib)) {
+      const col = Number(colStr);
+      const cell = ws.getCell(rowIdx, col);
+      cell.value = val;
+      cell.numFmt = NUM_FMT;
+      cell.alignment = { horizontal: "right" };
+      cell.border = THIN_BORDER;
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
+    }
+    // Grid import = MAX(0, consumption − self-consumption) as a live formula.
+    const ec = ws.getCell(rowIdx, idxGrid);
+    ec.value = {
+      formula: `MAX(0,${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx})`,
+      result: r2(mo.importKWh),
+    } as ExcelJS.CellFormulaValue;
+    ec.numFmt = NUM_FMT;
+    ec.alignment = { horizontal: "right" };
+    ec.border = THIN_BORDER;
+    ec.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+    rowIdx += 1;
+  }
+  const lastRow = rowIdx - 1;
+
+  // "Jahr" totals row: SUM the kWh / € columns, AVERAGE the two price columns.
+  const tl = ws.getCell(rowIdx, 1);
+  tl.value = "Jahr";
+  tl.font = { bold: true };
+  tl.border = THIN_BORDER;
+  const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport, idxNetto];
+  for (const col of sumCols) {
+    const L = colLetter(col);
+    const cell = ws.getCell(rowIdx, col);
+    cell.value = { formula: `SUM(${L}${firstRow}:${L}${lastRow})`, result: 0 } as ExcelJS.CellFormulaValue;
+    cell.numFmt = NUM_FMT;
+    cell.alignment = { horizontal: "right" };
+    cell.font = { bold: true };
+    cell.border = THIN_BORDER;
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.resultFill } };
+  }
+  for (const col of [idxPrice, idxNet]) {
+    const L = colLetter(col);
+    const cell = ws.getCell(rowIdx, col);
+    cell.value = { formula: `AVERAGE(${L}${firstRow}:${L}${lastRow})`, result: 0 } as ExcelJS.CellFormulaValue;
+    cell.numFmt = NUM_FMT;
+    cell.alignment = { horizontal: "right" };
+    cell.font = { bold: true, italic: true };
+    cell.border = THIN_BORDER;
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calcFill } };
+  }
+  s.currentRow = rowIdx + 1;
+}
+
 function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const s = new SheetBuilder(wb, "Zusammenfassung");
   const sum = report.summary;
@@ -562,6 +998,9 @@ function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
   s.text("Heizung", "Wärmepumpe vs. Heizöl vs. Erdgas");
   s.text("Auto", "E-Auto vs. Diesel");
   s.text("Aggregat", "Energie- und Kostenbilanz");
+  s.text("Gesamtkalkulation", "Produktion, Import, Export & alle Verbraucher in einer Übersicht");
+  s.text("Beispieltage", "Stündliche Tagesprofile (Jan, März, Juli) mit Verbrauchern, Ø-Preis & Netzentgelt");
+  s.text("Monatsübersicht", "Ganzes Jahr, eine Zeile je Monat: Verbrauch, Eigenverbrauch, Preise, Netto");
 }
 
 // ---------------------------------------------------------------------------
@@ -587,6 +1026,15 @@ export function buildWorkbook(report: SimReport): ExcelJS.Workbook {
     buildConsumerSheet(wb, report, "bwwp", "Brauchwasser", "Brauchwasser-Wärmepumpe");
   }
   buildAggregateSheet(wb, report);
+  buildGesamtSheet(wb, report);
+  // One combined example-day sheet (January, March, July) + a month-by-month
+  // overview for the whole year.
+  buildExampleDaysSheet(wb, report, "Beispieltage", "Beispieltage — Januar, März & Juli", [
+    { monthIndex: 0, label: "Januar" },
+    { monthIndex: 2, label: "März" },
+    { monthIndex: 6, label: "Juli" },
+  ]);
+  buildMonthlySheet(wb, report);
   if (report.opportunityCosts.heating.heatpumpElectricKWh > 0) {
     buildHeatingSheet(wb, report);
   }

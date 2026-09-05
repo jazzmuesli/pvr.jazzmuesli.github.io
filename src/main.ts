@@ -283,6 +283,29 @@ buildControls(controlsHost, state, onChange);
 writeUrl(state);
 recompute();
 
+// Mobile sidebar drawer: the sidebar is a slide-in overlay on small screens.
+// Toggle it with the header button, close it via the backdrop, the Escape key,
+// or automatically once the viewport grows back to desktop width.
+const toggleBtn = document.getElementById("toggle-sidebar") as HTMLButtonElement | null;
+const backdrop = document.getElementById("sidebar-backdrop");
+function setSidebar(open: boolean): void {
+  document.body.classList.toggle("sidebar-open", open);
+  if (toggleBtn) toggleBtn.setAttribute("aria-expanded", String(open));
+}
+if (toggleBtn) {
+  toggleBtn.addEventListener("click", () => {
+    setSidebar(!document.body.classList.contains("sidebar-open"));
+  });
+}
+backdrop?.addEventListener("click", () => setSidebar(false));
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") setSidebar(false);
+});
+// If the window is resized to desktop width, drop the mobile drawer state.
+window.addEventListener("resize", () => {
+  if (window.innerWidth > 880) setSidebar(false);
+});
+
 // Excel export: generate a fully-formula workbook from the current report and
 // download it client-side (no server round-trip).
 const downloadBtn = document.getElementById("download-xlsx") as HTMLButtonElement | null;

@@ -12,7 +12,7 @@
 // (preise-strom-nne-vbe-ab-01-01-2026.pdf). Other cities use illustrative
 // 2025 levels. All figures in ct/kWh.
 
-import { monthOfStep, hourOfStep } from "./types";
+import { monthOfStep, hourOfStep, TOTAL_STEPS } from "./types";
 
 export type TariffScheme = "fixed" | "dynamic" | "dynamic14a";
 export type City = "Hamburg" | "Muenchen" | "Berlin" | "Koeln" | "Boizenburg";
@@ -116,4 +116,40 @@ export function importPriceArray(
     out[i] = importPriceCtPerKWh(scheme, city, spotCt, i, fixedCt);
   }
   return out;
+}
+
+/**
+ * The grid-fee (Netzentgelt) component of the import price in ct/kWh for one
+ * step. For "fixed" and "dynamic" this is the flat, city-level Netzentgelt; for
+ * "dynamic14a" it follows the time-varying § 14a Modul 3 tariff. This is the
+ * part of the price that varies with *time of day / season* under 14a, which is
+ * why it's useful to show alongside the average spot price.
+ */
+export function netzentgeltCtPerStep(scheme: TariffScheme, city: City, stepIndex: number): number {
+  return scheme === "dynamic14a" ? modul3NetzentgeltCt(city, stepIndex) : NET_ENTGELT_CT[city];
+}
+
+/**
+ * Average Netzentgelt (ct/kWh) over the steps of a given calendar month
+ * (`monthIndex` 0–11), optionally restricted to a single hour of the day
+ * (`hour` 0–23). Mirrors how the report averages the day / month profiles, so
+ * the exported "Ø Netzentgelt" column matches the same steps that produced the
+ * average price. Under the flat schemes this is simply the city rate; under
+ * 14a it captures the cheap-night / expensive-winter-evening variation.
+ */
+export function averageNetzentgeltCt(
+  scheme: TariffScheme,
+  city: City,
+  monthIndex: number,
+  hour?: number,
+): number {
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    if (monthOfStep(i) - 1 !== monthIndex) continue;
+    if (hour !== undefined && hourOfStep(i) !== hour) continue;
+    sum += netzentgeltCtPerStep(scheme, city, i);
+    n += 1;
+  }
+  return n > 0 ? sum / n : NET_ENTGELT_CT[city];
 }
