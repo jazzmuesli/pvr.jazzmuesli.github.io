@@ -152,7 +152,7 @@ function haloDot(svg: SVGElement, cx: number, cy: number, r: number, color: stri
 
 // ---- interactive legend ----------------------------------------------------
 // Hovering a legend item highlights matching SVG elements and vice-versa.
-interface LegendItem { label: string; color: string; shape: "rect" | "line"; key?: string; }
+interface LegendItem { label: string; color: string; shape: "rect" | "line"; key?: string; tip?: string; }
 function appendLegend(host: HTMLElement, items: LegendItem[], svgEl?: SVGElement): void {
   const wrap = document.createElement("div");
   wrap.className = "chart-legend";
@@ -161,6 +161,7 @@ function appendLegend(host: HTMLElement, items: LegendItem[], svgEl?: SVGElement
     const item = document.createElement("span");
     item.className = "legend-item";
     if (it.key) item.dataset.key = it.key;
+    if (it.tip) item.dataset.tooltip = it.tip;
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     if (it.shape === "line") {
@@ -355,12 +356,12 @@ export function renderMonthlyChart(
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household" },
-    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump" },
-    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp" },
-    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev" },
-    { label: t("chart.monthly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv" },
-    { label: t("chart.monthly.legend_net"), color: COLORS.net, shape: "line", key: "net" },
+    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household", tip: t("tooltip.consumption_calc") },
+    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump", tip: t("tooltip.consumption_calc") },
+    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp", tip: t("tooltip.dhw_hp") },
+    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev", tip: t("tooltip.consumption_calc") },
+    { label: t("chart.monthly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv", tip: t("tooltip.pv_yield_calc") },
+    { label: t("chart.monthly.legend_net"), color: COLORS.net, shape: "line", key: "net", tip: t("tooltip.net_balance") },
   ], svg);
 }
 
@@ -499,15 +500,15 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   host.appendChild(svg);
 
   const hourlyLegend: LegendItem[] = [
-    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household" },
-    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump" },
-    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp" },
-    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev" },
-    { label: t("chart.hourly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv" },
-    { label: t("chart.hourly.legend_import"), color: COLORS.import, shape: "line", key: "import" },
-    { label: t("chart.hourly.legend_soc"), color: COLORS.soc, shape: "line", key: "soc" },
+    { label: getConsumerLabel("household"), color: COLORS.household, shape: "rect", key: "household", tip: t("tooltip.consumption_calc") },
+    { label: getConsumerLabel("heatpump"), color: COLORS.heatpump, shape: "rect", key: "heatpump", tip: t("tooltip.consumption_calc") },
+    { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp", tip: t("tooltip.dhw_hp") },
+    { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev", tip: t("tooltip.consumption_calc") },
+    { label: t("chart.hourly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv", tip: t("tooltip.pv_yield_calc") },
+    { label: t("chart.hourly.legend_import"), color: COLORS.import, shape: "line", key: "import", tip: t("tooltip.grid_import_calc") },
+    { label: t("chart.hourly.legend_soc"), color: COLORS.soc, shape: "line", key: "soc", tip: t("tooltip.coverage_pv") },
   ];
-  if (hasPriceData) hourlyLegend.push({ label: t("chart.hourly.legend_price"), color: COLORS.price, shape: "line", key: "price" });
+  if (hasPriceData) hourlyLegend.push({ label: t("chart.hourly.legend_price"), color: COLORS.price, shape: "line", key: "price", tip: t("tooltip.eeg_reference") });
   appendLegend(host, hourlyLegend, svg);
 }
 
@@ -581,9 +582,9 @@ export function renderScenarioChart(host: HTMLElement, data: ScenarioDatum[]): v
   host.appendChild(svg);
 
   appendLegend(host, [
-    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export" },
-    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import" },
-    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net" },
+    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export", tip: t("tooltip.export_calc") },
+    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import", tip: t("tooltip.grid_import_calc") },
+    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net", tip: t("tooltip.net_balance") },
   ], svg);
 }
 
@@ -714,9 +715,9 @@ export function renderTariffCombinationChart(host: HTMLElement, combo: TariffCom
 
   host.appendChild(svg);
   appendLegend(host, [
-    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export" },
-    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import" },
-    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net" },
+    { label: t("chart.scenario.legend_export"), color: COLORS.exportK, shape: "rect", key: "export", tip: t("tooltip.export_calc") },
+    { label: t("chart.scenario.legend_import"), color: COLORS.import, shape: "rect", key: "import", tip: t("tooltip.grid_import_calc") },
+    { label: t("chart.scenario.legend_net"), color: COLORS.net, shape: "line", key: "net", tip: t("tooltip.net_balance") },
   ], svg);
 }
 

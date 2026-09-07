@@ -48,32 +48,33 @@ function renderSummary(r: SimReport): void {
   const eff = r.effectivePrice;
   const selfPct = s.totalLoadKWh > 0 ? (s.selfConsumptionKWh / s.totalLoadKWh) * 100 : 0;
   const expert = state.expertMode;
-  const cards: [string, string, string][] = [
-    [t("summary.pv_yield"), `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year")],
-    [t("summary.consumption"), `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year")],
-    [t("summary.self_consumption"), `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% ${t("summary.of_consumption")}`],
-    [t("summary.grid_import"), `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, ""],
-    [t("summary.export"), `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, t("summary.to_grid")],
-    [t("summary.net_balance"), `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, t("summary.export_import")],
-    [t("summary.eff_price"), `${eff.overallCt.toFixed(1)} ct/kWh`, t("summary.netto")],
-    [t("summary.amortisation"), r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} J.`, t("summary.annual_savings") + fmtEUR(r.amortisation.annualBenefitEUR)],
+  const cards: [string, string, string, string][] = [
+    [t("summary.pv_yield"), `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year"), t("tooltip.pv_yield_calc")],
+    [t("summary.consumption"), `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year"), t("tooltip.consumption_calc")],
+    [t("summary.self_consumption"), `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% ${t("summary.of_consumption")}`, t("tooltip.self_consumption")],
+    [t("summary.grid_import"), `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, "", t("tooltip.grid_import_calc")],
+    [t("summary.export"), `${Math.round(s.totalExportKWh).toLocaleString("de-DE")} kWh`, t("summary.to_grid"), t("tooltip.export_calc")],
+    [t("summary.net_balance"), `${s.netSelectedEUR >= 0 ? "+" : ""}${fmtEUR(s.netSelectedEUR)}`, t("summary.export_import"), t("tooltip.net_balance")],
+    [t("summary.eff_price"), `${eff.overallCt.toFixed(1)} ct/kWh`, t("summary.netto"), t("tooltip.eff_price")],
+    [t("summary.amortisation"), r.amortisation.paybackYears === Infinity ? "—" : `${r.amortisation.paybackYears.toFixed(1)} J.`, t("summary.annual_savings") + fmtEUR(r.amortisation.annualBenefitEUR), t("tooltip.amortisation")],
   ];
   if (expert) {
     cards.push(
-      [t("summary.export_revenue"), fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? t("summary.direct_marketing") : t("summary.fixed_feed_in")],
-      [t("summary.grid_cost"), fmtEUR(s.importCostEUR), importSchemeLabel()],
-      [t("summary.market_premium"), `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`],
-      [t("summary.eeg_reference"), `${s.referenceValueCt.toFixed(2)} ct/kWh`, t("summary.eeg_value")],
-      [t("summary.eff_price_household"), `${eff.byConsumer.household.toFixed(1)} ct/kWh`, ""],
-      [t("summary.eff_price_heatpump"), `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, ""],
-      [t("summary.eff_price_ev"), `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, ""],
-      [t("summary.investment"), fmtEUR(r.amortisation.totalInvestmentEUR), ""],
+      [t("summary.export_revenue"), fmtEUR(s.exportRevenueEUR), state.exportScheme === "market" ? t("summary.direct_marketing") : t("summary.fixed_feed_in"), t("tooltip.export_revenue")],
+      [t("summary.grid_cost"), fmtEUR(s.importCostEUR), importSchemeLabel(), t("tooltip.grid_cost")],
+      [t("summary.market_premium"), `${s.marktPraemieCt.toFixed(2)} ct/kWh`, `EEG ${state.commissioningYear}`, t("tooltip.marktpraemie")],
+      [t("summary.eeg_reference"), `${s.referenceValueCt.toFixed(2)} ct/kWh`, t("summary.eeg_value"), t("tooltip.eeg_reference")],
+      [t("summary.eff_price_household"), `${eff.byConsumer.household.toFixed(1)} ct/kWh`, "", t("tooltip.eff_price_household")],
+      [t("summary.eff_price_heatpump"), `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, "", t("tooltip.eff_price_heatpump")],
+      [t("summary.eff_price_ev"), `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, "", t("tooltip.eff_price_ev")],
+      [t("summary.investment"), fmtEUR(r.amortisation.totalInvestmentEUR), "", t("tooltip.investment")],
     );
   }
   summaryHost.innerHTML = "";
-  for (const [k, v, sub] of cards) {
+  for (const [k, v, sub, tip] of cards) {
     const card = document.createElement("div");
     card.className = "card";
+    if (tip) card.dataset.tooltip = tip;
     card.innerHTML = `<div class="card-val">${v}</div><div class="card-key">${k}</div>${sub ? `<div class="card-sub">${sub}</div>` : ""}`;
     summaryHost.appendChild(card);
   }
@@ -128,7 +129,7 @@ function renderHeating(r: SimReport): void {  const h = r.opportunityCosts.heati
     { a: h.gas, highlight: false },
   ];
   const head = `
-    <div class="heat-head">
+    <div class="heat-head" data-tooltip="${t("tooltip.heating_jaz")}">
       <span>${t("heating.heatpump")}: ${Math.round(h.heatpumpElectricKWh).toLocaleString("de-DE")} kWh Strom →
       ${Math.round(h.usefulHeatKWh).toLocaleString("de-DE")} kWh Wärme (JAZ ${h.jaz})</span>
     </div>${coverageLine(h.coverage, "Wärmepumpe")}`;
@@ -137,8 +138,10 @@ function renderHeating(r: SimReport): void {  const h = r.opportunityCosts.heati
       const delta =
         a.mode === "heatpump" ? "" :
         `<div class="card-sub">${a.deltaVsHeatpumpEUR > 0 ? "+" : ""}${fmt(a.deltaVsHeatpumpEUR)} ${t("opportunity.vs_hp")}</div>`;
+      const tip = a.mode === "heatpump" ? t("tooltip.heating_jaz") :
+        a.mode === "oil" ? t("tooltip.heating_jaz") : t("tooltip.heating_jaz");
       return `
-      <div class="card${highlight ? " card-hl" : ""}">
+      <div class="card${highlight ? " card-hl" : ""}" data-tooltip="${tip}">
         <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/Jahr</span></div>
         <div class="card-key">${a.label}</div>
         <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.gridFeeEUR ? ` · ${t("opportunity.grid")} ${fmt(a.gridFeeEUR)}` : ""}</div>
@@ -158,7 +161,8 @@ function opportunityNote(r: SimReport, kind: "heating" | "car"): string {
   const label = kind === "heating" ? "Gas" : "Diesel";
   if (financeable == null) return "";
   const fmt = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-  return `<div class="heat-foot">${t("opportunity.savings")} ${label}: ${fmt(saving)}${t("opportunity.per_year_finance")} ${inv.pvPaybackYears.toFixed(1)} ${t("opportunity.years_pv")} ${fmt(financeable)}</div>`;
+  const tip = t("opportunity.financeable_hint");
+  return `<div class="heat-foot" data-tooltip="${tip}">${t("opportunity.savings")} ${label}: ${fmt(saving)}${t("opportunity.per_year_finance")} (${inv.pvPaybackYears.toFixed(1)} ${t("opportunity.years_pv")} ${fmt(financeable)})</div>`;
 }
 
 function renderOpportunityCar(r: SimReport): void {
@@ -181,8 +185,9 @@ function renderOpportunityCar(r: SimReport): void {
       const delta =
         a.mode === "ev" ? "" :
         `<div class="card-sub">${a.deltaVsEvEUR > 0 ? "+" : ""}${fmt(a.deltaVsEvEUR)} ${t("opportunity.vs_ev")}</div>`;
+      const tip = a.mode === "ev" ? t("tooltip.car_ev_price") : t("tooltip.car_diesel_saving");
       return `
-      <div class="card${highlight ? " card-hl" : ""}">
+      <div class="card${highlight ? " card-hl" : ""}" data-tooltip="${tip}">
         <div class="card-val">${fmt(a.totalEUR)}<span class="card-unit">/Jahr</span></div>
         <div class="card-key">${a.label}</div>
         <div class="card-sub">${t("opportunity.energy")} ${fmt(a.energyCostEUR)}${a.mode === "ev" ? ` · ${Math.round(a.primaryEnergy)} kWh` : ` · ${Math.round(a.primaryEnergy)} L`}</div>
@@ -213,13 +218,13 @@ function renderBwwp(r: SimReport): void {
     dynamic,
   };
   const head = `
-    <div class="heat-head">
+    <div class="heat-head" data-tooltip="${t("tooltip.bwwp_midday")}">
       <span>${t("bwwp.electricity")} ${kwh(cov.consumptionKWh)} ${t("bwwp.pv_block")}</span>
-    </div>${coverageLine(covInfo, "Brauchwasser-WP")}`;
+    </div>${coverageLine(covInfo, "Brauchwasser-Wärmepumpe")}`;
   const card = `
-    <div class="card card-hl">
+    <div class="card card-hl" data-tooltip="${t("tooltip.dhw_hp")}">
       <div class="card-val">${cov.pvSharePct.toFixed(0)}%<span class="card-unit"> PV</span></div>
-      <div class="card-key">Brauchwasser-WP</div>
+      <div class="card-key">Brauchwasser-Wärmepumpe</div>
       <div class="card-sub">PV+Speicher ${kwh(cov.pvCoveredKWh)} kWh · 0 ct/kWh</div>
       <div class="card-sub">Netz ${kwh(cov.gridKWh)} kWh (${gridSharePct.toFixed(0)}%) · ${gridLabel} ${cov.gridPriceCt.toFixed(1)} ct/kWh</div>
       <div class="card-sub">Effektiver Preis ${cov.effectiveCt.toFixed(1)} ct/kWh</div>

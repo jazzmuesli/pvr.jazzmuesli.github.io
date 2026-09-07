@@ -226,3 +226,70 @@ body {
 .combo-cell { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #fff; }
 .combo-cell h3 { margin: 0 0 4px; font-size: 13px; color: var(--text); }
 @media (max-width: 720px) { .combo-grid { grid-template-columns: 1fr; } }
+
+/* ---- CSS Tooltip system (data-tooltip) ---------------------------------- */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #f1f5f9;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+  max-width: 340px;
+  width: max-content;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+  z-index: 999;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #0f172a;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+  z-index: 999;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+/* Flip below when too close to the top edge */
+[data-tooltip].tip-below::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+[data-tooltip].tip-below::before {
+  bottom: auto;
+  top: calc(100% + 2px);
+  border-top-color: transparent;
+  border-bottom-color: #0f172a;
+}
+/* Legend items with tooltips */
+.chart-legend [data-tooltip] {
+  cursor: help;
+}
+/* Heat-head / heat-foot with tooltips */
+.heat-head[data-tooltip],
+.heat-foot[data-tooltip] {
+  cursor: help;
+}
