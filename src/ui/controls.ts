@@ -292,6 +292,11 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       onChange,
     ),
   );
+  if (state.exportScheme === "market") {
+    host.appendChild(
+      slider({ label: t("control.market_margin"), min: 0, max: 1.5, step: 0.1, unit: " ct/kWh", get: (s) => s.marketMarginCt, set: (s, v) => (s.marketMarginCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    );
+  }
 
   section(t("control.import_scheme"));
   host.appendChild(

@@ -223,18 +223,18 @@ describe("totalLoad", () => {
   it("sums the enabled consumers", () => {
     const cfg: ConsumerConfig = {
       household: { enabled: true, annualKWh: 2400 },
-      heatpump: { enabled: true, annualKWh: 6500 },
+      heatpump: { enabled: true, annualKWh: 5000 },
       bwwp: { enabled: true },
       ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
     };
     const total = annualSum(totalLoad(cfg));
     const parts =
       annualSum(householdLoad(2400)) +
-      annualSum(heatpumpLoad(6500)) +
+      annualSum(heatpumpLoad(5000)) +
       annualSum(bwwpLoad(480)) +
       annualSum(evLoad(2000, 0.8));
     expect(total).toBeCloseTo(parts, 1);
-    expect(total).toBeCloseTo(2400 + 6500 + 480 + 2000, 0);
+    expect(total).toBeCloseTo(2400 + 5000 + 480 + 2000, 0);
   });
 
   it("is empty when nothing is enabled", () => {

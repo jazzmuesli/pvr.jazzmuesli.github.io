@@ -25,7 +25,7 @@ function baseConfig(load: Float64Array, capacityKWh = 19.353, peakKWp = 22): Sim
 
 const consumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };
@@ -41,8 +41,8 @@ interface Scn {
   benefit: number; payback: number; overallEff: number; byConsumer: Record<string, number>;
 }
 
-function scenario(ex: "fixed" | "market", im: "fixed" | "dynamic" | "dynamic14a", ict = 24): Scn {
-  const econ = computeEconomics(result, { commissioningYear: 2025, peakKWp: 22, exportScheme: ex, feedInCt: 7.2, importScheme: im, importCity: city, importFixedCt: ict });
+function scenario(ex: "fixed" | "market", im: "fixed" | "dynamic" | "dynamic14a", ict = 24, marginCt = 0): Scn {
+  const econ = computeEconomics(result, { commissioningYear: 2025, peakKWp: 22, exportScheme: ex, feedInCt: 7.2, importScheme: im, importCity: city, importFixedCt: ict, marketMarginCt: marginCt });
   const exportEUR = ex === "fixed" ? econ.exportRevenueFixedEUR : econ.exportRevenueMarketEUR;
   const importEUR = im === "fixed" ? econ.importCostFixedEUR : im === "dynamic" ? econ.importCostDynamicEUR : econ.importCost14aEUR;
   const net = exportEUR - importEUR;
@@ -81,7 +81,7 @@ describe("per-consumer load breakdown integrity", () => {
 
   it("each enabled consumer's annual sum matches its configured demand", () => {
     expect(annualSum(loads.household)).toBeCloseTo(2400, 0);
-    expect(annualSum(loads.heatpump)).toBeCloseTo(6500, 0);
+    expect(annualSum(loads.heatpump)).toBeCloseTo(5000, 0);
     expect(annualSum(loads.bwwp)).toBeGreaterThan(400); // ~40 kWh/month
     expect(annualSum(loads.ev)).toBeCloseTo(2000, 0);
   });
@@ -165,6 +165,27 @@ describe("parameter plausibility (price / PV / battery)", () => {
     const econLow = computeEconomics(simulate(baseConfig(load, 19.353, 22)), { commissioningYear: 2025, peakKWp: 22, exportScheme: "market", feedInCt: 7.2, importScheme: "fixed", importCity: city, importFixedCt: 24 });
     const econHigh = computeEconomics(simulate({ ...baseConfig(load, 19.353, 22), prices: getYearPrices(highY) }), { commissioningYear: 2025, peakKWp: 22, exportScheme: "market", feedInCt: 7.2, importScheme: "fixed", importCity: city, importFixedCt: 24 });
     expect(econHigh.exportRevenueMarketEUR).toBeGreaterThan(econLow.exportRevenueMarketEUR);
+  });
+});
+
+describe("Direktvermarkter-Marge", () => {
+  it("higher margin reduces Direktvermarktung net balance", () => {
+    const noMargin = scenario("market", "fixed", 24, 0);
+    const withMargin = scenario("market", "fixed", 24, 1.0);
+    expect(withMargin.net).toBeLessThan(noMargin.net);
+  });
+
+  it("margin has no effect on fixed feed-in scheme", () => {
+    const noMargin = scenario("fixed", "fixed", 24, 0);
+    const withMargin = scenario("fixed", "fixed", 24, 1.0);
+    expect(withMargin.exportEUR).toBeCloseTo(noMargin.exportEUR, 10);
+  });
+
+  it("a 1.5 ct/kWh margin reduces export revenue by roughly exportKWh * 1.5 ct", () => {
+    const noMargin = scenario("market", "fixed", 24, 0);
+    const maxMargin = scenario("market", "fixed", 24, 1.5);
+    const expectedDiff = (result.exportTotal.reduce((a, b) => a + b, 0) * 1.5) / 100;
+    expect(noMargin.exportEUR - maxMargin.exportEUR).toBeCloseTo(expectedDiff, 0);
   });
 });
 

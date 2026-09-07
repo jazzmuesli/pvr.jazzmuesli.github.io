@@ -56,6 +56,8 @@ export interface AppState {
   heatpumpElectricCt: number;
   // Opportunitätskosten: E-Auto vs. Diesel (jährliche Fahrleistung u. a.).
   car: CarParams;
+  // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
+  marketMarginCt: number;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -84,7 +86,7 @@ export const DEFAULT_STATE: AppState = {
     // Profile calibrated to the real household data in ~/MyDocuments/ha:
     // heat pump ~6.6 MWh/yr (temp-driven, winter-heavy), base load ~2.4 MWh/yr.
     household: { enabled: true, annualKWh: 2400 },
-    heatpump: { enabled: true, annualKWh: 6500 },
+    heatpump: { enabled: true, annualKWh: 5000 },
     bwwp: { enabled: true, annualKWh: 480 },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },
@@ -106,6 +108,7 @@ export const DEFAULT_STATE: AppState = {
   heatpumpJaz: 3,
   heatpumpElectricCt: 24,
   car: { ...DEFAULT_CAR_PARAMS },
+  marketMarginCt: 1,
 };
 
 /** Map the UI state onto the pure simulation parameters. */
@@ -164,6 +167,7 @@ export function toSimParams(s: AppState): SimParams {
     heatpumpJaz: s.heatpumpJaz,
     heatpumpElectricCt: s.importFixedCt,
     car: { ...s.car },
+    marketMarginCt: s.marketMarginCt,
   };
 }
 

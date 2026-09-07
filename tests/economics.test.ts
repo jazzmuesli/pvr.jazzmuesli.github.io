@@ -22,7 +22,7 @@ function cfg(load: Float64Array): SimConfig {
 
 const consumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };
@@ -30,6 +30,7 @@ const consumers: ConsumerConfig = {
 const econOpts: EconOptions = {
   commissioningYear: 2025, peakKWp: 22, exportScheme: "market", feedInCt: 7.2,
   importScheme: "dynamic", importCity: "Boizenburg", importFixedCt: 24,
+  marketMarginCt: 0,
 };
 
 describe("computeEconomics", () => {
@@ -105,5 +106,32 @@ describe("computeEconomics", () => {
     cfgNoBat.battery.capacityKWh = 0;
     const eNoBat = computeEconomics(simulate(cfgNoBat), econOpts);
     expect(e.marktPraemieCt).toBeCloseTo(eNoBat.marktPraemieCt, 4);
+  });
+
+  it("market margin reduces export revenue proportionally", () => {
+    const optsNoMargin: EconOptions = { ...econOpts, marketMarginCt: 0 };
+    const optsWithMargin: EconOptions = { ...econOpts, marketMarginCt: 1.0 };
+    const eNoMargin = computeEconomics(r, optsNoMargin);
+    const eWithMargin = computeEconomics(r, optsWithMargin);
+    expect(eWithMargin.exportRevenueMarketEUR).toBeLessThan(eNoMargin.exportRevenueMarketEUR);
+    // The difference should be approximately exportKWh * 1 ct/kWh in EUR.
+    const expectedDiff = (eNoMargin.totalExportKWh * 1.0) / 100;
+    expect(eNoMargin.exportRevenueMarketEUR - eWithMargin.exportRevenueMarketEUR).toBeCloseTo(expectedDiff, 1);
+  });
+
+  it("market margin has no effect when exportScheme is fixed", () => {
+    const optsFixed: EconOptions = { ...econOpts, exportScheme: "fixed", marketMarginCt: 0 };
+    const optsFixedMargin: EconOptions = { ...econOpts, exportScheme: "fixed", marketMarginCt: 1.0 };
+    const eFixed = computeEconomics(r, optsFixed);
+    const eFixedMargin = computeEconomics(r, optsFixedMargin);
+    expect(eFixedMargin.exportRevenueFixedEUR).toBeCloseTo(eFixed.exportRevenueFixedEUR, 10);
+  });
+
+  it("zero margin equals no margin", () => {
+    const optsZero: EconOptions = { ...econOpts, marketMarginCt: 0 };
+    const optsUndefined: EconOptions = { ...econOpts };
+    const eZero = computeEconomics(r, optsZero);
+    const eUndefined = computeEconomics(r, optsUndefined);
+    expect(eZero.exportRevenueMarketEUR).toBeCloseTo(eUndefined.exportRevenueMarketEUR, 10);
   });
 });

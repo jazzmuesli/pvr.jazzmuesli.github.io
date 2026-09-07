@@ -24,7 +24,7 @@ setLocale("de");
 
 const baseConsumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true, annualKWh: 480 },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };

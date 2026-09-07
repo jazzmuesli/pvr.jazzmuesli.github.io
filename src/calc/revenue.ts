@@ -55,6 +55,8 @@ export interface EconOptions {
   importScheme: TariffScheme;
   importCity: City;
   importFixedCt: number;
+  /** Direktvermarkter-Marge in ct/kWh, only applied when exportScheme === "market". */
+  marketMarginCt?: number;
 }
 
 export interface MonthlyEcon {
@@ -141,13 +143,21 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     row.premiumEUR = (row.exportKWh * marktPraemieCt) / 100;
     premiumTotal += row.premiumEUR;
     row.exportRevenueMarketEUR = row.marketValueEUR + row.premiumEUR;
+    // Apply Direktvermarkter-Marge (only for market export scheme).
+    if (opts.exportScheme === "market" && (opts.marketMarginCt ?? 0) > 0) {
+      const marginEUR = (row.exportKWh * (opts.marketMarginCt ?? 0)) / 100;
+      row.exportRevenueMarketEUR -= marginEUR;
+    }
     const selCost = opts.importScheme === "fixed" ? row.importCostFixedEUR
       : opts.importScheme === "dynamic" ? row.importCostDynamicEUR : row.importCost14aEUR;
     const selExport = opts.exportScheme === "fixed" ? row.exportRevenueFixedEUR : row.exportRevenueMarketEUR;
     row.netSelectedEUR = selExport - selCost;
   }
 
-  const exportRevMarket = marketValue + premiumTotal;
+  const exportRevMarketGross = marketValue + premiumTotal;
+  // Apply Direktvermarkter-Marge to the annual market export revenue.
+  const annualMarginEUR = opts.exportScheme === "market" ? (totalExport * (opts.marketMarginCt ?? 0)) / 100 : 0;
+  const exportRevMarket = exportRevMarketGross - annualMarginEUR;
   const netSelected = (opts.exportScheme === "market" ? exportRevMarket : exportRevFixed) -
     (opts.importScheme === "fixed" ? importCostFixed
       : opts.importScheme === "dynamic" ? importCostDynamic : importCost14a);

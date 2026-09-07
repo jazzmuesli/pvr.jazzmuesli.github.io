@@ -20,7 +20,7 @@ function cfg(consumers: ConsumerConfig, chargeMode: "morning" | "midday" | "grid
 
 const consumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };

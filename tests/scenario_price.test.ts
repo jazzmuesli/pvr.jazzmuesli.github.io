@@ -22,7 +22,7 @@ function baseConfig(load: Float64Array, capacityKWh = 19.353): Parameters<typeof
 
 const consumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };
@@ -34,10 +34,10 @@ const result = simulate(baseConfig(load));
 const loads = loadByConsumer(consumers);
 const fixedCt = 24;
 
-function effFor(exportScheme: "fixed" | "market", importScheme: "fixed" | "dynamic" | "dynamic14a") {
+function effFor(exportScheme: "fixed" | "market", importScheme: "fixed" | "dynamic" | "dynamic14a", marketMarginCt = 0) {
   const opts: EconOptions = {
     commissioningYear: 2025, peakKWp: 22, exportScheme, feedInCt: 7.2,
-    importScheme, importCity: city, importFixedCt: fixedCt,
+    importScheme, importCity: city, importFixedCt: fixedCt, marketMarginCt,
   };
   const econ = computeEconomics(result, opts);
   const imp = importPriceArray(importScheme, city, prices);

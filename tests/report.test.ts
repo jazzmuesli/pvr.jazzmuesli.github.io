@@ -4,7 +4,7 @@ import { ConsumerConfig } from "../src/calc/consumers";
 
 const baseConsumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
-  heatpump: { enabled: true, annualKWh: 6500 },
+  heatpump: { enabled: true, annualKWh: 5000 },
   bwwp: { enabled: true },
   ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
 };
@@ -179,5 +179,27 @@ describe("simParamsFromQuery", () => {
     expect(p.exportScheme).toBe("market");
     expect(p.importScheme).toBe("dynamic14a");
     expect(p.consumers.ev.pvShare).toBeCloseTo(0.3, 6);
+  });
+
+  it("parses marketMarginCt from query string", () => {
+    const p = simParamsFromQuery(new URLSearchParams("mm=1.5"));
+    expect(p.marketMarginCt).toBe(1.5);
+  });
+
+  it("marketMarginCt defaults to 1 when not in query", () => {
+    const p = simParamsFromQuery(new URLSearchParams(""));
+    expect(p.marketMarginCt).toBe(1);
+  });
+
+  it("marketMarginCt reduces export revenue in market scheme", () => {
+    const r0 = runSimulation(params({ marketMarginCt: 0, exportScheme: "market" }));
+    const r1 = runSimulation(params({ marketMarginCt: 1.5, exportScheme: "market" }));
+    expect(r1.summary.exportRevenueEUR).toBeLessThan(r0.summary.exportRevenueEUR);
+  });
+
+  it("marketMarginCt has no effect in fixed export scheme", () => {
+    const r0 = runSimulation(params({ marketMarginCt: 0, exportScheme: "fixed" }));
+    const r1 = runSimulation(params({ marketMarginCt: 1.5, exportScheme: "fixed" }));
+    expect(r1.summary.exportRevenueEUR).toBeCloseTo(r0.summary.exportRevenueEUR, 10);
   });
 });

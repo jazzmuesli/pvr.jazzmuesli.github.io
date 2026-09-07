@@ -159,6 +159,8 @@ export interface SimParams {
   // are realistic for a German household; the heat-pump electricity comes from
   // the heat-pump consumer above.
   car: CarParams;
+  // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
+  marketMarginCt: number;
 }
 
 export const DEFAULT_SIM_PARAMS: SimParams = {
@@ -197,7 +199,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   // Consumers
   consumers: {
     household: { enabled: true, annualKWh: 2400 },
-    heatpump: { enabled: true, annualKWh: 6500 },
+    heatpump: { enabled: true, annualKWh: 5000 },
     bwwp: { enabled: true, annualKWh: 480 },
     ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
   },
@@ -213,6 +215,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   // are realistic for a German household; the heat-pump electricity comes from
   // the heat-pump consumer above.
   car: { ...DEFAULT_CAR_PARAMS },
+  marketMarginCt: 1,
 };
 
 // Parse URL-style query parameters into SimParams. Mirrors the names used by
@@ -282,6 +285,8 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.car.annualKm = num("km", p.car.annualKm);
   p.car.dieselEurPerL = num("dl", p.car.dieselEurPerL);
   p.car.evElectricCtPerKwh = num("ec", p.car.evElectricCtPerKwh);
+  // Direktvermarkter-Marge.
+  p.marketMarginCt = num("mm", p.marketMarginCt);
   return p;
 }
 
@@ -503,6 +508,7 @@ function scenarioVariants(
       importScheme: v.importScheme,
       importCity: city,
       importFixedCt: base.importFixedCt,
+      marketMarginCt: base.marketMarginCt,
     });
     const exportEUR = v.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
     let importEUR = 0;
@@ -535,6 +541,7 @@ function computeTariffCombinations(p: SimParams): TariffCombinationReport {
     importScheme: "fixed",
     importCity: city,
     importFixedCt: p.importFixedCt,
+    marketMarginCt: p.marketMarginCt,
   };
   // One full dispatch per historical price year (volumes + cost differ by year).
   const yearRuns = PRICE_YEARS.map((year) => {
@@ -586,6 +593,7 @@ export function runSimulation(p: SimParams): SimReport {
     importScheme: p.importScheme,
     importCity: city,
     importFixedCt: p.importFixedCt,
+    marketMarginCt: p.marketMarginCt,
   } as EconOptions);
 
   const loads = loadByConsumer(p.consumers);
