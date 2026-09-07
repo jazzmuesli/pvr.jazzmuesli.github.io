@@ -269,12 +269,13 @@ function irr(yearly: YearlyCashflow[]): number {
 }
 
 /**
- * Levelized Cost of Energy.
+ * Levelized Cost of Energy (LCOE) — German standard per IKEM / Bundesnetzagentur.
  *
- *   LCOE = Σ (Cost_t / (1+d)^t) / Σ (Energy_t / (1+d)^t)
+ *   LCOE = Σ (Cost_t / (1+WACC)^t) / Σ (Energy_t / (1+WACC)^t)
  *
- * Costs include the initial investment (year 0), O&M and replacement costs.
- * Energy is the degraded annual PV production. Result in ct/kWh.
+ * Costs: investment (year 0) + O&M + replacements + standby.
+ * Energy: degraded annual PV production.
+ * Result in ct/kWh.
  */
 function lcoe(
   yearly: YearlyCashflow[],
@@ -291,7 +292,7 @@ function lcoe(
       discountedCosts += input.investmentEUR;
       continue;
     }
-    discountedCosts += (y.omCostEUR + y.replacementCostEUR) / discountFactor;
+    discountedCosts += (y.omCostEUR + y.replacementCostEUR + y.standbyCostEUR) / discountFactor;
     const energyKWh = input.annualPVKWh * Math.pow(1 - pvDegradationPct, y.year);
     discountedEnergy += energyKWh / discountFactor;
   }

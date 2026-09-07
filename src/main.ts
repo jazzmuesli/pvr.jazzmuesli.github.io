@@ -68,6 +68,7 @@ function renderSummary(r: SimReport): void {
       [t("summary.eff_price_heatpump"), `${eff.byConsumer.heatpump.toFixed(1)} ct/kWh`, "", t("tooltip.eff_price_heatpump")],
       [t("summary.eff_price_ev"), `${eff.byConsumer.ev.toFixed(1)} ct/kWh`, "", t("tooltip.eff_price_ev")],
       [t("summary.investment"), fmtEUR(r.amortisation.totalInvestmentEUR), "", t("tooltip.investment")],
+      [t("summary.lcoe"), `${r.cashflow.lcoeCtPerKWh.toFixed(1)} ct/kWh`, "", t("tooltip.lcoe")],
     );
   }
   summaryHost.innerHTML = "";

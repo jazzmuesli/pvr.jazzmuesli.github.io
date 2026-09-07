@@ -57,13 +57,14 @@ const THIN_BORDER: Partial<ExcelJS.Borders> = {
 
 type CellKind = "input" | "calib" | "calc" | "result";
 
-/** A labelled input row: `label | value | unit | note`. */
+/** A labelled input row: `label | value | unit | note | comment`. */
 interface InputRow {
   key: string;
   label: string;
   value: number;
   unit?: string;
   note?: string;
+  comment?: string;
 }
 
 /**
@@ -157,6 +158,13 @@ class SheetBuilder {
     if (kind === "result") cell.font = { bold: true };
   }
 
+  /** Set an ExcelJS cell comment (hover annotation). */
+  private setComment(cell: ExcelJS.Cell, text: string): void {
+    cell.note = {
+      texts: [{ font: { size: 10 }, text }],
+    };
+  }
+
   /** Add raw, editable rows and record their addresses. `kind` = "input"
    *  (yellow, user value) or "calib" (orange, from the 15-min simulation). */
   input(rows: InputRow[], kind: "input" | "calib" = "input"): void {
@@ -172,6 +180,9 @@ class SheetBuilder {
         const n = this.ws.getCell(this.row, 4);
         n.value = r.note;
         n.font = { size: 9, italic: true, color: { argb: "FF595959" } };
+      }
+      if (r.comment) {
+        this.setComment(valueCell, r.comment);
       }
       this.addr[r.key] = `B${this.row}`;
       this.row += 1;
@@ -404,17 +415,17 @@ function buildHeatingSheet(wb: ExcelJS.Workbook, report: SimReport): void {
 
   s.section(t("excel.inputs"));
   s.input([
-    { key: "hpElec", label: t("excel.hp_electricity"), value: r2(h.heatpumpElectricKWh), unit: "kWh", note: t("excel.hp_electricity_note") },
-    { key: "jaz", label: t("excel.jaz"), value: h.jaz, unit: "", note: t("excel.jaz_note") },
-    { key: "oilEurPer100L", label: t("excel.oil_price"), value: 130, unit: "€/100L", note: t("excel.oil_price_note") },
-    { key: "oilKWhPerL", label: t("excel.oil_heating_value"), value: 10, unit: "kWh/L" },
-    { key: "oilEff", label: t("excel.oil_efficiency"), value: 0.85, unit: "" },
-    { key: "oilSweep", label: t("excel.oil_chimney"), value: r2(h.oil.chimneySweepEUR), unit: "€/Jahr" },
-    { key: "gasCt", label: t("excel.gas_price"), value: 11, unit: "ct/kWh" },
-    { key: "gasEff", label: t("excel.gas_efficiency"), value: 0.92, unit: "" },
-    { key: "gasGridFeeCt", label: t("excel.gas_grid_fee"), value: 2.0, unit: "ct/kWh" },
-    { key: "gasNeben", label: t("excel.gas_fixed_costs"), value: r2(h.gas.otherNebenkostenEUR), unit: "€/Jahr" },
-    { key: "gasSweep", label: t("excel.gas_chimney"), value: r2(h.gas.chimneySweepEUR), unit: "€/Jahr" },
+    { key: "hpElec", label: t("excel.hp_electricity"), value: r2(h.heatpumpElectricKWh), unit: "kWh", note: t("excel.hp_electricity_note"), comment: t("excel.comment.hp_electricity") },
+    { key: "jaz", label: t("excel.jaz"), value: h.jaz, unit: "", note: t("excel.jaz_note"), comment: t("excel.comment.jaz") },
+    { key: "oilEurPer100L", label: t("excel.oil_price"), value: 130, unit: "€/100L", note: t("excel.oil_price_note"), comment: t("excel.comment.oil_price") },
+    { key: "oilKWhPerL", label: t("excel.oil_heating_value"), value: 10, unit: "kWh/L", comment: t("excel.comment.oil_heating_value") },
+    { key: "oilEff", label: t("excel.oil_efficiency"), value: 0.85, unit: "", comment: t("excel.comment.oil_efficiency") },
+    { key: "oilSweep", label: t("excel.oil_chimney"), value: r2(h.oil.chimneySweepEUR), unit: "€/Jahr", comment: t("excel.comment.oil_chimney") },
+    { key: "gasCt", label: t("excel.gas_price"), value: 11, unit: "ct/kWh", comment: t("excel.comment.gas_price") },
+    { key: "gasEff", label: t("excel.gas_efficiency"), value: 0.92, unit: "", comment: t("excel.comment.gas_efficiency") },
+    { key: "gasGridFeeCt", label: t("excel.gas_grid_fee"), value: 2.0, unit: "ct/kWh", comment: t("excel.comment.gas_grid_fee") },
+    { key: "gasNeben", label: t("excel.gas_fixed_costs"), value: r2(h.gas.otherNebenkostenEUR), unit: "€/Jahr", comment: t("excel.comment.gas_fixed_costs") },
+    { key: "gasSweep", label: t("excel.gas_chimney"), value: r2(h.gas.chimneySweepEUR), unit: "€/Jahr", comment: t("excel.comment.gas_chimney") },
   ]);
 
   s.section(t("excel.calibration_section"));
@@ -460,15 +471,15 @@ function buildCarSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   s.section(t("excel.inputs"));
   s.input([
     { key: "km", label: t("excel.ev_annual_km"), value: r2(c.annualKm), unit: "km" },
-    { key: "evKwh100", label: t("excel.ev_consumption"), value: r2((c.ev.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "kWh/100km" },
-    { key: "evMaintCt", label: t("excel.ev_maintenance"), value: r2((c.ev.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
-    { key: "evTax", label: t("excel.ev_tax"), value: r2(c.ev.vehicleTaxEUR), unit: "€/Jahr" },
-    { key: "evOther", label: t("excel.ev_insurance"), value: r2(c.ev.otherNebenkostenEUR), unit: "€/Jahr" },
-    { key: "dieselL100", label: t("excel.diesel_consumption"), value: r2((c.diesel.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "L/100km" },
-    { key: "dieselEurL", label: t("excel.diesel_price"), value: r2(c.diesel.energyCostEUR / Math.max(c.diesel.primaryEnergy, 1e-9)), unit: "€/L" },
-    { key: "dieselMaintCt", label: t("excel.diesel_maintenance"), value: r2((c.diesel.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km" },
-    { key: "dieselTax", label: t("excel.diesel_tax"), value: r2(c.diesel.vehicleTaxEUR), unit: "€/Jahr" },
-    { key: "dieselOther", label: t("excel.diesel_insurance"), value: r2(c.diesel.otherNebenkostenEUR), unit: "€/Jahr" },
+    { key: "evKwh100", label: t("excel.ev_consumption"), value: r2((c.ev.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "kWh/100km", comment: t("excel.comment.ev_consumption") },
+    { key: "evMaintCt", label: t("excel.ev_maintenance"), value: r2((c.ev.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km", comment: t("excel.comment.ev_maintenance") },
+    { key: "evTax", label: t("excel.ev_tax"), value: r2(c.ev.vehicleTaxEUR), unit: "€/Jahr", comment: t("excel.comment.ev_tax") },
+    { key: "evOther", label: t("excel.ev_insurance"), value: r2(c.ev.otherNebenkostenEUR), unit: "€/Jahr", comment: t("excel.comment.ev_insurance") },
+    { key: "dieselL100", label: t("excel.diesel_consumption"), value: r2((c.diesel.primaryEnergy / Math.max(c.annualKm, 1e-9)) * 100), unit: "L/100km", comment: t("excel.comment.diesel_consumption") },
+    { key: "dieselEurL", label: t("excel.diesel_price"), value: r2(c.diesel.energyCostEUR / Math.max(c.diesel.primaryEnergy, 1e-9)), unit: "€/L", comment: t("excel.comment.diesel_price") },
+    { key: "dieselMaintCt", label: t("excel.diesel_maintenance"), value: r2((c.diesel.maintenanceEUR / Math.max(c.annualKm, 1e-9)) * 100), unit: "ct/km", comment: t("excel.comment.diesel_maintenance") },
+    { key: "dieselTax", label: t("excel.diesel_tax"), value: r2(c.diesel.vehicleTaxEUR), unit: "€/Jahr", comment: t("excel.comment.diesel_tax") },
+    { key: "dieselOther", label: t("excel.diesel_insurance"), value: r2(c.diesel.otherNebenkostenEUR), unit: "€/Jahr", comment: t("excel.comment.diesel_insurance") },
   ]);
 
   s.section(t("excel.calibration_section"));
@@ -497,16 +508,16 @@ function buildAggregateSheet(wb: ExcelJS.Workbook, report: SimReport): void {
 
   s.section(t("excel.inputs"));
   s.input([
-    { key: "load", label: t("excel.total_consumption"), value: r2(sum.totalLoadKWh), unit: "kWh", note: t("excel.total_consumption_note") },
+    { key: "load", label: t("excel.total_consumption"), value: r2(sum.totalLoadKWh), unit: "kWh", note: t("excel.total_consumption_note"), comment: t("excel.comment.total_consumption") },
   ]);
 
   s.section(t("excel.calibration_section"));
   s.calib([
-    { key: "pvYear", label: t("excel.pv_yield"), value: r2(sum.totalPVKWh), unit: "kWh" },
-    { key: "selfCons", label: t("excel.self_consumption"), value: r2(sum.selfConsumptionKWh), unit: "kWh", note: t("excel.self_consumption_note") },
-    { key: "export", label: t("excel.grid_export"), value: r2(sum.totalExportKWh), unit: "kWh" },
-    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€" },
-    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€" },
+    { key: "pvYear", label: t("excel.pv_yield"), value: r2(sum.totalPVKWh), unit: "kWh", comment: t("excel.comment.pv_yield") },
+    { key: "selfCons", label: t("excel.self_consumption"), value: r2(sum.selfConsumptionKWh), unit: "kWh", note: t("excel.self_consumption_note"), comment: t("excel.comment.self_consumption") },
+    { key: "export", label: t("excel.grid_export"), value: r2(sum.totalExportKWh), unit: "kWh", comment: t("excel.comment.grid_export") },
+    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€", comment: t("excel.comment.export_revenue") },
+    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€", comment: t("excel.comment.import_cost") },
   ]);
 
   s.section(t("excel.calculation"));
@@ -962,14 +973,14 @@ function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
 
   s.section(t("excel.inputs"));
   s.input([
-    { key: "invest", label: t("excel.investment_total"), value: r2(am.totalInvestmentEUR), unit: "€" },
+    { key: "invest", label: t("excel.investment_total"), value: r2(am.totalInvestmentEUR), unit: "€", comment: t("excel.comment.investment_total") },
   ]);
 
   s.section(t("excel.calibration_section"));
   s.calib([
-    { key: "baseline", label: t("excel.baseline_cost"), value: r2(baselineCost), unit: "€/Jahr", note: t("excel.baseline_cost_note") },
-    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€" },
-    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€" },
+    { key: "baseline", label: t("excel.baseline_cost"), value: r2(baselineCost), unit: "€/Jahr", note: t("excel.baseline_cost_note"), comment: t("excel.comment.baseline_cost") },
+    { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€", comment: t("excel.comment.export_revenue") },
+    { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€", comment: t("excel.comment.import_cost") },
   ]);
 
   s.section(t("excel.summary_controls"));
@@ -987,10 +998,10 @@ function buildSummarySheet(wb: ExcelJS.Workbook, report: SimReport): void {
 
   s.section("Weitere Kennzahlen (aus Simulation)");
   s.calib([
-    { key: "effOverall", label: t("excel.eff_price_total"), value: r2(report.effectivePrice.overallCt), unit: "ct/kWh" },
-    { key: "npv", label: t("excel.npv"), value: r2(report.cashflow.npvEUR), unit: "€" },
-    { key: "irr", label: t("excel.irr"), value: r2(report.cashflow.irrPercent), unit: "%" },
-    { key: "lcoe", label: t("excel.lcoe"), value: r2(report.cashflow.lcoeCtPerKWh), unit: "ct/kWh" },
+    { key: "effOverall", label: t("excel.eff_price_total"), value: r2(report.effectivePrice.overallCt), unit: "ct/kWh", comment: t("excel.comment.eff_price_total") },
+    { key: "npv", label: t("excel.npv"), value: r2(report.cashflow.npvEUR), unit: "€", comment: t("excel.comment.npv") },
+    { key: "irr", label: t("excel.irr"), value: r2(report.cashflow.irrPercent), unit: "%", comment: t("excel.comment.irr") },
+    { key: "lcoe", label: t("excel.lcoe"), value: r2(report.cashflow.lcoeCtPerKWh), unit: "ct/kWh", comment: t("excel.comment.lcoe") },
   ]);
 
   s.section(t("excel.sheets_included"));
