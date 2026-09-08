@@ -188,6 +188,9 @@ body {
 .card-sub { font-size: 11px; color: var(--muted); }
 .card-hl { border-color: #0ea5e9; background: #f0f9ff; box-shadow: inset 0 0 0 1px #0ea5e9; }
 .heat-head { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.gas-savings { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.gas-savings .heat-head { margin-bottom: 8px; }
+.gas-savings .card-hl { border-color: #16a34a; background: #f0fdf4; box-shadow: inset 0 0 0 1px #16a34a; }
 .heat-foot { font-size: 12px; color: var(--muted); margin-top: 8px; padding: 6px 8px; background: #f0f9ff; border-radius: 6px; }
 .heat-cov { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; margin: 4px 0 10px; padding: 6px 8px; background: #f6fdf6; border-radius: 6px; }
 .heat-cov .cov-pv b { color: #16a34a; }
@@ -292,4 +295,129 @@ body {
 .heat-head[data-tooltip],
 .heat-foot[data-tooltip] {
   cursor: help;
+}
+
+/* ---- Pie chart grid ------------------------------------------------------- */
+.pie-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+.pie-chart-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pie-chart-card-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1f2937;
+  margin-bottom: 0.15rem;
+}
+.pie-chart-card-hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+.pie-chart-card-body {
+  display: flex;
+  justify-content: center;
+}
+.pie-chart-card-footer {
+  margin-top: 0.5rem;
+  font-size: 0.82rem;
+  color: #374151;
+}
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+}
+.pie-chart {
+  display: block;
+}
+
+/* ---- CO2 scenarios -------------------------------------------------------- */
+.co2-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.co2-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 140px;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+.co2-row-hl {
+  background: #f0fdf4;
+  border-radius: 0.375rem;
+  padding: 0.35rem 0.5rem;
+  margin: 0 -0.5rem;
+}
+.co2-label {
+  font-size: 0.82rem;
+  color: #374151;
+  font-weight: 500;
+}
+.co2-bar-wrap {
+  height: 18px;
+  background: #e5e7eb;
+  border-radius: 9px;
+  overflow: hidden;
+}
+.co2-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #f59e0b, #ef4444);
+  border-radius: 9px;
+  transition: width 0.3s ease;
+}
+.co2-row-hl .co2-bar {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+}
+.co2-value {
+  font-size: 0.82rem;
+  color: #1f2937;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.co2-sub {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+.co2-savings {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  justify-content: center;
+}
+.co2-saving-card {
+  text-align: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+.co2-saving-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+.co2-saving-key {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 0.15rem;
 }

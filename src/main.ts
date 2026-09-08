@@ -1,4 +1,5 @@
 import { runSimulation, SimReport } from "./calc/report";
+import { DEFAULT_GAS_BOILER_EFFICIENCY, DEFAULT_GAS_POWERPLANT_EFFICIENCY } from "./calc/heatpumpGasSavings";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimParams } from "./ui/state";
 import { writeUrl, deserializeState } from "./ui/url";
@@ -7,6 +8,7 @@ import {
   renderHourlyChart,
   renderScenarioChart,
   renderTariffCombinationChart,
+  renderPieChart,
 } from "./ui/charts";
 import { t, monthAbbrevs, fmtEUR as i18nFmtEUR, getLocale, setLocale } from "./i18n";
 
@@ -30,6 +32,12 @@ const bwwpHost = document.getElementById("bwwp") as HTMLElement;
 const bwwpBody = document.getElementById("bwwp-body") as HTMLElement;
 const combosHost = document.getElementById("tarif-combos") as HTMLElement;
 const combosBody = document.getElementById("tarif-combos-body") as HTMLElement;
+const gridMixTitle = document.getElementById("grid-mix-title") as HTMLElement;
+const gridMixHint = document.getElementById("grid-mix-hint") as HTMLElement;
+const gridMixBody = document.getElementById("grid-mix-body") as HTMLElement;
+const co2Title = document.getElementById("co2-title") as HTMLElement;
+const co2Hint = document.getElementById("co2-hint") as HTMLElement;
+const co2Body = document.getElementById("co2-body") as HTMLElement;
 
 let selectedMonth = 6; // July
 let rafPending = false;
@@ -151,7 +159,138 @@ function renderHeating(r: SimReport): void {  const h = r.opportunityCosts.heati
       </div>`;
     })
     .join("");
-  heatingBody.innerHTML = head + `<div class="summary">${cards}</div>` + opportunityNote(r, "heating");
+
+  // Gas savings card
+  const gs = r.gasSavings;
+  let gasSavingsHtml = "";
+  if (gs) {
+    const gasSavedPct = gs.gasDirectKWh > 0
+      ? ((gs.gasSavedKWh / gs.gasDirectKWh) * 100).toFixed(0)
+      : "0";
+    const kwh = (v: number) => Math.round(v).toLocaleString("de-DE");
+    gasSavingsHtml = `
+      <div class="gas-savings">
+        <div class="heat-head">
+          <span>${t("heating.gas_savings")}</span>
+        </div>
+        <div class="summary">
+          <div class="card card-hl" data-tooltip="${t("heating.gas_source_mix")}">
+            <div class="card-val">${gasSavedPct}%</div>
+            <div class="card-key">${t("heating.gas_saved_pct")}</div>
+            <div class="card-sub">${kwh(gs.gasSavedKWh)} kWh ${t("heating.gas_saved")} · ${kwh(gs.co2SavedKg)} kg CO₂</div>
+          </div>
+          <div class="card">
+            <div class="card-val">${kwh(gs.gasDirectKWh)} kWh</div>
+            <div class="card-key">${t("heating.gas_direct")}</div>
+            <div class="card-sub">Wärme ${kwh(gs.usefulHeatKWh)} kWh ÷ ${(DEFAULT_GAS_BOILER_EFFICIENCY * 100).toFixed(0)}% η</div>
+          </div>
+          <div class="card">
+            <div class="card-val">${kwh(gs.gasForElectricityKWh)} kWh</div>
+            <div class="card-key">${t("heating.gas_for_elec")}</div>
+            <div class="card-sub">Strom ${kwh(gs.heatpumpElectricKWh)} kWh ÷ ${(DEFAULT_GAS_POWERPLANT_EFFICIENCY * 100).toFixed(0)}% η</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  heatingBody.innerHTML = head + `<div class="summary">${cards}</div>` + gasSavingsHtml + opportunityNote(r, "heating");
+}
+
+function renderGridMix(r: SimReport): void {
+  const gm = r.gridMix;
+  gridMixTitle.textContent = t("gridmix.title");
+  gridMixHint.textContent = t("gridmix.hint");
+
+  const fmtPct = (v: number) => (v * 100).toFixed(1) + "%";
+  const hpGas = gm.heatpump.gas;
+  const overallGas = gm.overall.gas;
+  const noPvGas = gm.withoutPv.gas;
+
+  let html = "";
+
+  // HP pie chart
+  if (r.inputs.consumers.heatpump.enabled) {
+    html += `<div class="pie-chart-card">
+      <div class="pie-chart-card-title">${t("gridmix.heatpump")}</div>
+      <div class="pie-chart-card-hint">${t("gridmix.heatpump_hint")}</div>
+      <div class="pie-chart-card-body"></div>
+      <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(hpGas)}</strong></div>
+    </div>`;
+  }
+
+  // Overall pie chart
+  html += `<div class="pie-chart-card">
+    <div class="pie-chart-card-title">${t("gridmix.overall")}</div>
+    <div class="pie-chart-card-hint">${t("gridmix.overall_hint")}</div>
+    <div class="pie-chart-card-body"></div>
+    <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(overallGas)}</strong></div>
+  </div>`;
+
+  // Without PV pie chart
+  html += `<div class="pie-chart-card">
+    <div class="pie-chart-card-title">${t("gridmix.without_pv")}</div>
+    <div class="pie-chart-card-hint">${t("gridmix.without_pv_hint")}</div>
+    <div class="pie-chart-card-body"></div>
+    <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(noPvGas)}</strong></div>
+  </div>`;
+
+  gridMixBody.innerHTML = html;
+
+  // Render pie charts into their containers
+  const bodies = gridMixBody.querySelectorAll(".pie-chart-card-body");
+  let idx = 0;
+  if (r.inputs.consumers.heatpump.enabled) {
+    renderPieChart(bodies[idx] as HTMLElement, gm.heatpump);
+    idx++;
+  }
+  renderPieChart(bodies[idx] as HTMLElement, gm.overall);
+  idx++;
+  renderPieChart(bodies[idx] as HTMLElement, gm.withoutPv);
+}
+
+function renderCo2(r: SimReport): void {
+  const c = r.co2Analysis;
+  co2Title.textContent = t("co2.title");
+  co2Hint.textContent = t("co2.hint");
+
+  const scenarios = [c.current, c.withoutPv, c.withoutHp, c.baseline, c.directGas];
+  const maxCo2 = Math.max(...scenarios.map((s) => s.co2Kg), 1);
+
+  const kwh = (v: number) => v.toLocaleString("de-DE");
+  const fmt = (v: number) => (v / 1000).toFixed(1);
+
+  let html = `<div class="co2-scenarios">`;
+  for (const s of scenarios) {
+    const pct = (s.co2Kg / maxCo2) * 100;
+    const isCurrent = s === c.current;
+    html += `
+      <div class="co2-row${isCurrent ? " co2-row-hl" : ""}">
+        <div class="co2-label">${s.label}</div>
+        <div class="co2-bar-wrap">
+          <div class="co2-bar" style="width:${pct}%"></div>
+        </div>
+        <div class="co2-value">${fmt(s.co2Kg)} t <span class="co2-sub">(${kwh(s.co2Kg)} kg)</span></div>
+      </div>`;
+  }
+  html += `</div>`;
+
+  // Savings summary
+  html += `<div class="co2-savings">`;
+  if (c.savedVsBaselineKg > 0) {
+    html += `<div class="co2-saving-card">
+      <div class="co2-saving-val">−${fmt(c.savedVsBaselineKg)} t</div>
+      <div class="co2-saving-key">${t("co2.saved_vs_baseline")}</div>
+    </div>`;
+  }
+  if (c.savedVsGasKg > 0) {
+    html += `<div class="co2-saving-card">
+      <div class="co2-saving-val">−${fmt(c.savedVsGasKg)} t</div>
+      <div class="co2-saving-key">${t("co2.saved_vs_gas")}</div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  co2Body.innerHTML = html;
 }
 
 /** Footer line that ties the annual saving to the PV payback horizon. */
@@ -244,6 +383,8 @@ function recompute(): void {
   renderHourly();
   renderScenarioChart(scenarioHost, report.scenario);
   renderHeating(report);
+  renderGridMix(report);
+  renderCo2(report);
   renderOpportunityCar(report);
   renderBwwp(report);
   renderTariffCombinations(report);

@@ -744,3 +744,109 @@ export function renderLegend(host: HTMLElement): void {
     host.appendChild(wrap);
   }
 }
+
+// ---- Pie chart ---------------------------------------------------------------
+
+const SOURCE_COLORS: Record<string, string> = {
+  wind: "#3b82f6",   // blue
+  solar: "#facc15",  // yellow
+  gas: "#f97316",    // orange
+  coal: "#78716c",   // stone
+  biomass: "#22c55e", // green
+  hydro: "#06b6d4",  // cyan
+  other: "#a3a3a3",  // neutral
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  wind: "Wind",
+  solar: "Solar",
+  gas: "Gas",
+  coal: "Kohle",
+  biomass: "Biomasse",
+  hydro: "Hydro",
+  other: "Sonstige",
+};
+
+export function renderPieChart(
+  host: HTMLElement,
+  shares: { wind: number; solar: number; gas: number; coal: number; biomass: number; hydro: number; other: number },
+  opts: { size?: number; thickness?: number; title?: string } = {},
+): void {
+  const size = opts.size ?? 180;
+  const thickness = opts.thickness ?? 30;
+  const cx = size / 2;
+  const cy = size / 2;
+  const outerR = size / 2 - 2;
+  const innerR = outerR - thickness;
+
+  // Filter out sources with < 0.5% for cleaner display
+  const sources = Object.entries(shares)
+    .filter(([, v]) => v >= 0.005)
+    .sort((a, b) => b[1] - a[1]);
+
+  const svg = document.createElementNS(SVGNS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.classList.add("pie-chart");
+
+  let angle = -Math.PI / 2; // start at 12 o'clock
+  for (const [src, share] of sources) {
+    const sweep = share * 2 * Math.PI;
+    const path = document.createElementNS(SVGNS, "path");
+    // Use a donut approach: outer arc forward, inner arc backward
+    const ox1 = cx + outerR * Math.cos(angle);
+    const oy1 = cy + outerR * Math.sin(angle);
+    const ox2 = cx + outerR * Math.cos(angle + sweep);
+    const oy2 = cy + outerR * Math.sin(angle + sweep);
+    const ix1 = cx + innerR * Math.cos(angle + sweep);
+    const iy1 = cy + innerR * Math.sin(angle + sweep);
+    const ix2 = cx + innerR * Math.cos(angle);
+    const iy2 = cy + innerR * Math.sin(angle);
+    const large = sweep > Math.PI ? 1 : 0;
+    const donutD = [
+      `M${ox1},${oy1}`,
+      `A${outerR},${outerR} 0 ${large} 1 ${ox2},${oy2}`,
+      `L${ix1},${iy1}`,
+      `A${innerR},${innerR} 0 ${large} 0 ${ix2},${iy2}`,
+      "Z",
+    ].join(" ");
+    path.setAttribute("d", donutD);
+    path.setAttribute("fill", SOURCE_COLORS[src] ?? SOURCE_COLORS.other);
+    path.setAttribute("stroke", "#fff");
+    path.setAttribute("stroke-width", "1");
+    svg.appendChild(path);
+    angle += sweep;
+  }
+
+  // Center label: total % or text
+  const totalPct = sources.reduce((s, [, v]) => s + v, 0) * 100;
+  const centerText = document.createElementNS(SVGNS, "text");
+  centerText.setAttribute("x", String(cx));
+  centerText.setAttribute("y", String(cy));
+  centerText.setAttribute("text-anchor", "middle");
+  centerText.setAttribute("dominant-baseline", "central");
+  centerText.setAttribute("font-size", "13");
+  centerText.setAttribute("font-weight", "600");
+  centerText.setAttribute("fill", "#374151");
+  centerText.textContent = `${totalPct.toFixed(0)}%`;
+  svg.appendChild(centerText);
+
+  host.appendChild(svg);
+
+  // Legend
+  const legend = document.createElement("div");
+  legend.className = "pie-legend";
+  for (const [src, share] of sources) {
+    const pct = (share * 100).toFixed(1);
+    const item = document.createElement("span");
+    item.className = "legend-item";
+    const sw = document.createElement("span");
+    sw.className = "legend-swatch";
+    sw.style.background = SOURCE_COLORS[src] ?? SOURCE_COLORS.other;
+    item.appendChild(sw);
+    item.appendChild(document.createTextNode(`${SOURCE_LABELS[src] ?? src} ${pct}%`));
+    legend.appendChild(item);
+  }
+  host.appendChild(legend);
+}

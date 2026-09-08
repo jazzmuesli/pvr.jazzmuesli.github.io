@@ -33,6 +33,13 @@ import {
   computeOpportunityCosts,
   OpportunityCosts,
 } from "./opportunity";
+import {
+  computeGasSavings,
+  GasSavingsReport,
+  DEFAULT_GAS_SAVINGS_PARAMS,
+  DEFAULT_GAS_BOILER_EFFICIENCY,
+} from "./heatpumpGasSavings";
+import { electricityMixForStep } from "./electricityMix";
 
 // ---- Domain types shared with the UI ----------------------------------------
 
@@ -320,6 +327,69 @@ function degressionFactor(kWp: number): number {
 
 // ---- Report ----------------------------------------------------------------
 
+export interface GridMixShares {
+  wind: number;
+  solar: number;
+  gas: number;
+  coal: number;
+  biomass: number;
+  hydro: number;
+  other: number;
+}
+
+export interface GridMix {
+  /** Grid-import mix for the heat pump (PV-shifted). */
+  heatpump: GridMixShares;
+  /** Grid-import mix for all consumers combined. */
+  overall: GridMixShares;
+  /** Hypothetical mix without any PV/battery (100% grid). */
+  withoutPv: GridMixShares;
+}
+
+// ---- CO2 scenarios ----------------------------------------------------------
+
+/** Lifecycle emission factors in kg CO2 per kWh (German average). */
+export const CO2_EMISSION_FACTORS: GridMixShares = {
+  wind: 0.011,
+  solar: 0.041,
+  gas: 1.0,     // at ~45% plant efficiency → ~1.0 kg CO2/kWh electricity
+  coal: 0.95,
+  biomass: 0.05,
+  hydro: 0.005,
+  other: 0.5,
+};
+
+/** CO2 emission factor for natural gas burned directly (heating). */
+export const CO2_GAS_DIRECT = 0.201; // kg CO2/kWh (German gas)
+
+export interface Co2Scenario {
+  /** Label for the scenario. */
+  label: string;
+  /** Total CO2 emissions in kg/year. */
+  co2Kg: number;
+  /** CO2 in t/year (rounded to 2 decimals). */
+  co2Tonnes: number;
+  /** Energy source description. */
+  source: string;
+}
+
+export interface Co2Analysis {
+  /** Current scenario: PV + battery + HP (actual grid import). */
+  current: Co2Scenario;
+  /** Without PV/battery: HP draws 100% from grid. */
+  withoutPv: Co2Scenario;
+  /** Without HP: PV + battery, household + EV only on grid. */
+  withoutHp: Co2Scenario;
+  /** Baseline: no PV, no battery, no HP — all load from grid. */
+  baseline: Co2Scenario;
+  /** Direct gas: HP replaced by gas boiler. */
+  directGas: Co2Scenario;
+  /** CO2 saved vs. baseline (kg/year). */
+  savedVsBaselineKg: number;
+  /** CO2 saved vs. direct gas (kg/year). */
+  savedVsGasKg: number;
+}
+
 export interface SimReport {
   inputs: SimParams;
   summary: SimSummary;
@@ -338,6 +408,12 @@ export interface SimReport {
   opportunityCosts: OpportunityCosts;
   /** What the annual saving can finance: tied to the PV payback horizon. */
   opportunityInvestment: OpportunityInvestment;
+  /** Gas savings analysis: HP electricity vs. direct gas heating. */
+  gasSavings: GasSavingsReport | null;
+  /** Electricity mix for grid-imported electricity. */
+  gridMix: GridMix;
+  /** CO2 analysis across multiple scenarios. */
+  co2Analysis: Co2Analysis;
 }
 
 export interface OpportunityInvestment {
@@ -581,6 +657,183 @@ function computeTariffCombinations(p: SimParams): TariffCombinationReport {
   return { years: PRICE_YEARS, combinations };
 }
 
+function normalizeShares(shares: GridMixShares, total: number): GridMixShares {
+  if (total <= 0) return { wind: 0, solar: 0, gas: 0, coal: 0, biomass: 0, hydro: 0, other: 0 };
+  const s = 1 / total;
+  return {
+    wind: shares.wind * s,
+    solar: shares.solar * s,
+    gas: shares.gas * s,
+    coal: shares.coal * s,
+    biomass: shares.biomass * s,
+    hydro: shares.hydro * s,
+    other: shares.other * s,
+  };
+}
+
+function computeGridMix(
+  loads: ConsumerLoads,
+  result: SimResult,
+): GridMix {
+  const totalLoad = result.load;
+
+  // --- Overall grid mix: weighted by grid import per step ---
+  let overallW = { wind: 0, solar: 0, gas: 0, coal: 0, biomass: 0, hydro: 0, other: 0 };
+  let overallTotal = 0;
+
+  // --- HP grid mix: proportional HP share × grid import ---
+  let hpW = { wind: 0, solar: 0, gas: 0, coal: 0, biomass: 0, hydro: 0, other: 0 };
+  let hpTotal = 0;
+
+  // --- Without PV/battery: all load is grid, weighted by hourly mix ---
+  let noPvW = { wind: 0, solar: 0, gas: 0, coal: 0, biomass: 0, hydro: 0, other: 0 };
+  let noPvTotal = 0;
+
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    const mix = electricityMixForStep(i);
+    const gi = result.gridImport[i];
+    const tl = totalLoad[i];
+
+    // Overall
+    if (gi > 0) {
+      overallW.wind += gi * mix.wind;
+      overallW.solar += gi * mix.solar;
+      overallW.gas += gi * mix.gas;
+      overallW.coal += gi * mix.coal;
+      overallW.biomass += gi * mix.biomass;
+      overallW.hydro += gi * mix.hydro;
+      overallW.other += gi * mix.other;
+      overallTotal += gi;
+    }
+
+    // HP (proportional allocation)
+    const hpLoad = loads.heatpump[i];
+    if (hpLoad > 0 && tl > 0) {
+      const hpGrid = hpLoad * (gi / tl);
+      hpW.wind += hpGrid * mix.wind;
+      hpW.solar += hpGrid * mix.solar;
+      hpW.gas += hpGrid * mix.gas;
+      hpW.coal += hpGrid * mix.coal;
+      hpW.biomass += hpGrid * mix.biomass;
+      hpW.hydro += hpGrid * mix.hydro;
+      hpW.other += hpGrid * mix.other;
+      hpTotal += hpGrid;
+    }
+
+    // Without PV/battery: entire load is grid-imported
+    if (tl > 0) {
+      noPvW.wind += tl * mix.wind;
+      noPvW.solar += tl * mix.solar;
+      noPvW.gas += tl * mix.gas;
+      noPvW.coal += tl * mix.coal;
+      noPvW.biomass += tl * mix.biomass;
+      noPvW.hydro += tl * mix.hydro;
+      noPvW.other += tl * mix.other;
+      noPvTotal += tl;
+    }
+  }
+
+  return {
+    heatpump: normalizeShares(hpW, hpTotal),
+    overall: normalizeShares(overallW, overallTotal),
+    withoutPv: normalizeShares(noPvW, noPvTotal),
+  };
+}
+
+function weightedCo2(shares: GridMixShares, totalKWh: number): number {
+  return totalKWh * (
+    shares.wind * CO2_EMISSION_FACTORS.wind +
+    shares.solar * CO2_EMISSION_FACTORS.solar +
+    shares.gas * CO2_EMISSION_FACTORS.gas +
+    shares.coal * CO2_EMISSION_FACTORS.coal +
+    shares.biomass * CO2_EMISSION_FACTORS.biomass +
+    shares.hydro * CO2_EMISSION_FACTORS.hydro +
+    shares.other * CO2_EMISSION_FACTORS.other
+  );
+}
+
+function computeCo2Analysis(
+  p: SimParams,
+  loads: ConsumerLoads,
+  result: SimResult,
+  gridMix: GridMix,
+): Co2Analysis {
+  const hpEnabled = p.consumers.heatpump.enabled;
+  const hpKWh = p.consumers.heatpump.annualKWh;
+  const jaz = p.heatpumpJaz;
+  const usefulHeatKWh = hpKWh * jaz;
+  const gasDirectKWh = usefulHeatKWh / DEFAULT_GAS_BOILER_EFFICIENCY;
+  const gasDirectCo2Kg = gasDirectKWh * CO2_GAS_DIRECT;
+
+  const sumArray = (arr: Float64Array) => annualSum(arr);
+
+  // Current scenario: actual grid import weighted by actual mix
+  const currentCo2Kg = weightedCo2(gridMix.overall, sumArray(result.gridImport));
+
+  // Without PV: entire load from grid, weighted by hourly mix
+  const withoutPvCo2Kg = weightedCo2(gridMix.withoutPv, sumArray(result.load));
+
+  // Baseline: household + EV only, no HP, no PV
+  const baselineLoadNoHp = new Float64Array(TOTAL_STEPS);
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    baselineLoadNoHp[i] = loads.household[i] + (p.consumers.ev.enabled ? loads.ev[i] : 0);
+  }
+  const baselineCo2Kg = weightedCo2(gridMix.withoutPv, sumArray(baselineLoadNoHp));
+
+  // Without HP: PV + battery, but no heat pump
+  const withoutHpLoad = new Float64Array(TOTAL_STEPS);
+  for (let i = 0; i < TOTAL_STEPS; i++) {
+    withoutHpLoad[i] = loads.household[i] + (p.consumers.ev.enabled ? loads.ev[i] : 0);
+  }
+  const totalLoadWithoutHp = sumArray(withoutHpLoad);
+  const selfConsumptionWithoutHp = Math.min(sumArray(result.pv), totalLoadWithoutHp);
+  const gridImportWithoutHp = totalLoadWithoutHp - selfConsumptionWithoutHp;
+  const withoutHpCo2Kg = weightedCo2(gridMix.overall, gridImportWithoutHp);
+
+  // Direct gas: HP replaced by gas boiler
+  const directGasCo2Kg = hpEnabled ? gasDirectCo2Kg : 0;
+
+  const fmt = (v: number) => Math.round(v);
+  const toT = (v: number) => Math.round(v / 10) / 100;
+
+  const currentLabel = hpEnabled ? "PV + Speicher + WP" : "PV + Speicher";
+
+  return {
+    current: {
+      label: currentLabel,
+      co2Kg: fmt(currentCo2Kg),
+      co2Tonnes: toT(currentCo2Kg),
+      source: "Netzbezug (aktuell)",
+    },
+    withoutPv: {
+      label: hpEnabled ? "WP + Netz (kein PV)" : "Nur Netz (kein PV)",
+      co2Kg: fmt(withoutPvCo2Kg),
+      co2Tonnes: toT(withoutPvCo2Kg),
+      source: "100% Netzstrom",
+    },
+    withoutHp: {
+      label: "PV + Speicher (keine WP)",
+      co2Kg: fmt(withoutHpCo2Kg),
+      co2Tonnes: toT(withoutHpCo2Kg),
+      source: "Netzbezug ohne WP",
+    },
+    baseline: {
+      label: "Basis (kein PV, keine WP)",
+      co2Kg: fmt(baselineCo2Kg),
+      co2Tonnes: toT(baselineCo2Kg),
+      source: "100% Netzstrom",
+    },
+    directGas: {
+      label: "Direktgas (keine WP)",
+      co2Kg: fmt(directGasCo2Kg),
+      co2Tonnes: toT(directGasCo2Kg),
+      source: "Erdgas-Heizkessel",
+    },
+    savedVsBaselineKg: fmt(baselineCo2Kg - currentCo2Kg),
+    savedVsGasKg: hpEnabled ? fmt(gasDirectCo2Kg - currentCo2Kg) : 0,
+  };
+}
+
 export function runSimulation(p: SimParams): SimReport {
   const result = simulate(toSimConfig(p));
   const city = cityForLocation(p.location);
@@ -749,6 +1002,31 @@ export function runSimulation(p: SimParams): SimReport {
   // Netz-Import is the residual so that Eigenverbrauch + Netz-Import = Verbrauch.
   // This includes both direct grid import and grid-charged battery discharge.
   const totalImportKWh = totalLoadKWh - selfConsumptionKWh;
+
+  // Gas savings analysis: compare heat pump electricity vs. direct gas heating.
+  // Pass the simulation dispatch (gridImport, totalLoad) so the HP's PV/grid
+  // split is correctly computed per step — this reflects load shifting with
+  // dynamic tariffs and battery storage.
+  const gasSavings = p.consumers.heatpump.enabled
+    ? computeGasSavings(loads.heatpump, {
+        heatpumpElectricKWh: p.consumers.heatpump.annualKWh,
+        jaz: p.heatpumpJaz,
+        gasPowerplantEfficiency: DEFAULT_GAS_SAVINGS_PARAMS.gasPowerplantEfficiency,
+        gasBoilerEfficiency: DEFAULT_GAS_SAVINGS_PARAMS.gasBoilerEfficiency,
+        gasPriceCtPerKWh: DEFAULT_GAS_SAVINGS_PARAMS.gasPriceCtPerKWh,
+      }, result.gridImport, result.load)
+    : null;
+
+  // ---- Grid mix computation ------------------------------------------------
+  // Compute the weighted electricity mix for grid-imported electricity:
+  //  - heatpump: HP's grid import (proportional allocation, PV-shifted)
+  //  - overall:  total grid import across all consumers
+  //  - withoutPv: hypothetical no-PV/battery scenario (100% grid)
+  const gridMix = computeGridMix(loads, result);
+
+  // ---- CO2 scenario analysis -----------------------------------------------
+  const co2Analysis = computeCo2Analysis(p, loads, result, gridMix);
+
   const summary: SimSummary = {
     totalPVKWh,
     totalLoadKWh,
@@ -776,6 +1054,9 @@ export function runSimulation(p: SimParams): SimReport {
     tariffCombinations: computeTariffCombinations(p),
     opportunityCosts,
     opportunityInvestment,
+    gasSavings,
+    gridMix,
+    co2Analysis,
   };
 }
 

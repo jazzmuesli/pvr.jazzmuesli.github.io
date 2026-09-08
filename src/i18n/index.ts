@@ -239,6 +239,39 @@ const de: Messages = {
   "heating.gas": "Erdgas",
   "heating.wood": "Holz",
 
+  // Gas savings section
+  "heating.gas_savings": "Gas-Einsparung durch Wärmepumpe",
+  "heating.gas_saved": "Gas einsparung",
+  "heating.gas_saved_pct": "Gas-Einsparung",
+  "heating.co2_saved": "CO₂-Einsparung",
+  "heating.gas_direct": "Gas bei direkter Verbrennung",
+  "heating.gas_for_elec": "Gas für Stromerzeugung",
+  "heating.gas_source_mix": "Strommix der Wärmepumpe",
+
+  // Grid mix section
+  "gridmix.title": "Strommix — Netzbezug",
+  "gridmix.hint": "Aus welchen Quellen kommt der Strom, den wir aus dem Netz beziehen? Der Mix hängt von der Stunde und dem Monat ab.",
+  "gridmix.heatpump": "Wärmepumpe (Netzbezug)",
+  "gridmix.heatpump_hint": "Anteiliger Netzbezug der Wärmepumpe nach PV-Verschiebung.",
+  "gridmix.overall": "Gesamt (Netzbezug)",
+  "gridmix.overall_hint": "Gewichteter Strommix aller Verbraucher über den Netzbezug.",
+  "gridmix.without_pv": "Ohne PV/Speicher (Szenario)",
+  "gridmix.without_pv_hint": "Wie der Mix aussehen würde, wenn kein Sonnenstrom ins Haus käme.",
+  "gridmix.gas_share": "Gas-Anteil im Netzstrom",
+
+  // CO2 scenario section
+  "co2.title": "CO₂-Emissionen — Szenarienvergleich",
+  "co2.hint": "Wie viel CO₂ wird in verschiedenen Szenarien ausgestoßen? Die Emissionen hängen vom Strommix und der Nutzung von PV, Speicher und Wärmepumpe ab.",
+  "co2.current": "Aktuelles Szenario",
+  "co2.without_pv": "Ohne PV/Speicher",
+  "co2.without_hp": "Ohne Wärmepumpe",
+  "co2.baseline": "Basis (kein PV, keine WP)",
+  "co2.direct_gas": "Direktgas (keine WP)",
+  "co2.saved_vs_baseline": "Eingespart vs. Basis",
+  "co2.saved_vs_gas": "Eingespart vs. Erdgas",
+  "co2.co2_tonnes": "t CO₂/Jahr",
+  "co2.co2_kg": "kg CO₂/Jahr",
+
   // BWWP section
   "bwwp.title": "Brauchwasser-Wärmepumpe",
   "bwwp.hint": "Warmwasser-Strombedarf und wie viel davon aus eigener PV+Speicher gedeckt wird (der Mittags-Block lädt bevorzugt aus der Sonne).",
@@ -941,6 +974,39 @@ const en: Messages = {
   "heating.oil": "Heating oil",
   "heating.gas": "Natural gas",
   "heating.wood": "Wood",
+
+  // Gas savings section
+  "heating.gas_savings": "Gas savings from heat pump",
+  "heating.gas_saved": "Gas saved",
+  "heating.gas_saved_pct": "Gas savings",
+  "heating.co2_saved": "CO₂ saved",
+  "heating.gas_direct": "Gas for direct combustion",
+  "heating.gas_for_elec": "Gas for electricity generation",
+  "heating.gas_source_mix": "Heat pump electricity mix",
+
+  // Grid mix section
+  "gridmix.title": "Grid mix — electricity import",
+  "gridmix.hint": "Which sources make up the electricity we import from the grid? The mix varies by hour and month.",
+  "gridmix.heatpump": "Heat pump (grid import)",
+  "gridmix.heatpump_hint": "Proportional grid import of the heat pump after PV shifting.",
+  "gridmix.overall": "Overall (grid import)",
+  "gridmix.overall_hint": "Weighted electricity mix of all consumers across grid import.",
+  "gridmix.without_pv": "Without PV/battery (scenario)",
+  "gridmix.without_pv_hint": "What the mix would look like without any solar electricity.",
+  "gridmix.gas_share": "Gas share in grid electricity",
+
+  // CO2 scenario section
+  "co2.title": "CO₂ emissions — scenario comparison",
+  "co2.hint": "How much CO₂ is emitted in various scenarios? Emissions depend on the electricity mix and the use of PV, battery, and heat pump.",
+  "co2.current": "Current scenario",
+  "co2.without_pv": "Without PV/battery",
+  "co2.without_hp": "Without heat pump",
+  "co2.baseline": "Baseline (no PV, no HP)",
+  "co2.direct_gas": "Direct gas (no HP)",
+  "co2.saved_vs_baseline": "Saved vs. baseline",
+  "co2.saved_vs_gas": "Saved vs. natural gas",
+  "co2.co2_tonnes": "t CO₂/year",
+  "co2.co2_kg": "kg CO₂/year",
 
   // BWWP section
   "bwwp.title": "Domestic hot water heat pump",

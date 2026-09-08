@@ -6,3 +6,5 @@ export * from "./revenue";
 export * from "./heating";
 export * from "./car";
 export * from "./opportunity";
+export * from "./electricityMix";
+export * from "./heatpumpGasSavings";

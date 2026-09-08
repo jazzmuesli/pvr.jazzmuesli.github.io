@@ -203,3 +203,90 @@ describe("simParamsFromQuery", () => {
     expect(r1.summary.exportRevenueEUR).toBeCloseTo(r0.summary.exportRevenueEUR, 10);
   });
 });
+
+describe("runSimulation > gridMix", () => {
+  const SOURCES = ["wind", "solar", "gas", "coal", "biomass", "hydro", "other"] as const;
+
+  function sumShares(s: { wind: number; solar: number; gas: number; coal: number; biomass: number; hydro: number; other: number }): number {
+    return SOURCES.reduce((a, k) => a + s[k], 0);
+  }
+
+  it("gridMix shares sum to 1.0 for all three views", () => {
+    const r = runSimulation(params());
+    expect(sumShares(r.gridMix.heatpump)).toBeCloseTo(1.0, 6);
+    expect(sumShares(r.gridMix.overall)).toBeCloseTo(1.0, 6);
+    expect(sumShares(r.gridMix.withoutPv)).toBeCloseTo(1.0, 6);
+  });
+
+  it("overall grid import has higher gas share than withoutPv (PV removes sunny hours)", () => {
+    const r = runSimulation(params());
+    // Self-consumed PV removes sunny daytime hours (high solar, low gas)
+    // from the grid import, so the remaining grid import is gas-heavier.
+    expect(r.gridMix.overall.gas).toBeGreaterThanOrEqual(r.gridMix.withoutPv.gas);
+  });
+
+  it("overall grid import has lower solar share than withoutPv", () => {
+    const r = runSimulation(params());
+    // Solar PV is self-consumed, so it doesn't appear in grid import.
+    expect(r.gridMix.overall.solar).toBeLessThanOrEqual(r.gridMix.withoutPv.solar);
+  });
+
+  it("heatpump grid mix is present when HP is enabled", () => {
+    const r = runSimulation(params({ consumers: { ...baseConsumers, heatpump: { enabled: true, annualKWh: 5000 } } }));
+    expect(sumShares(r.gridMix.heatpump)).toBeGreaterThan(0);
+  });
+
+  it("overall mix has non-zero shares for at least two sources", () => {
+    const r = runSimulation(params());
+    const nonZero = SOURCES.filter((k) => r.gridMix.overall[k] > 0.01).length;
+    expect(nonZero).toBeGreaterThanOrEqual(2);
+  });
+
+  it("all shares are between 0 and 1", () => {
+    const r = runSimulation(params());
+    for (const view of [r.gridMix.heatpump, r.gridMix.overall, r.gridMix.withoutPv]) {
+      for (const src of SOURCES) {
+        expect(view[src], `${src} should be >= 0`).toBeGreaterThanOrEqual(0);
+        expect(view[src], `${src} should be <= 1`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
+
+describe("runSimulation > co2Analysis", () => {
+  it("current scenario has lower CO2 than without PV", () => {
+    const r = runSimulation(params());
+    expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.withoutPv.co2Kg);
+  });
+
+  it("current scenario has lower CO2 than baseline (no PV, no HP)", () => {
+    const r = runSimulation(params());
+    expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+  });
+
+  it("savedVsBaseline is positive when PV reduces CO2", () => {
+    const r = runSimulation(params());
+    expect(r.co2Analysis.savedVsBaselineKg).toBeGreaterThan(0);
+  });
+
+  it("direct gas emits more CO2 than current HP scenario", () => {
+    const r = runSimulation(params({ consumers: { ...baseConsumers, heatpump: { enabled: true, annualKWh: 5000 } } }));
+    if (r.co2Analysis.directGas.co2Kg > 0) {
+      expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.directGas.co2Kg);
+    }
+  });
+
+  it("all scenario CO2 values are non-negative", () => {
+    const r = runSimulation(params());
+    const scenarios = [r.co2Analysis.current, r.co2Analysis.withoutPv, r.co2Analysis.withoutHp, r.co2Analysis.baseline, r.co2Analysis.directGas];
+    for (const s of scenarios) {
+      expect(s.co2Kg, `${s.label} CO2 should be >= 0`).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("co2Tonnes is consistent with co2Kg", () => {
+    const r = runSimulation(params());
+    const s = r.co2Analysis.current;
+    expect(s.co2Tonnes).toBeCloseTo(s.co2Kg / 1000, 1);
+  });
+});
