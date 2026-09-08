@@ -348,25 +348,57 @@ export interface GridMix {
 
 // ---- CO2 scenarios ----------------------------------------------------------
 
-/** Lifecycle emission factors in kg CO2 per kWh (German average). */
+/**
+ * Emission factors in kg CO₂ per kWh of *electricity generated* (not per kWh
+ * of primary fuel). Calibrated so that the modelled German grid mix
+ * (`electricityMix.ts`) yields an annual average intensity of ≈ 0.39 kg/kWh,
+ * matching the official German grid figure for 2023 (Umweltbundesamt: ~0.38 kg
+ * CO₂/kWh, trending down). Earlier values used *fuel* factors (gas ≈ 1.0),
+ * which over-counted electricity emissions by ~40 %.
+ *
+ * Note: the "coal" bucket in the mix model is a residual that absorbs all
+ * remaining dispatchable/fossil generation (lignite + hard coal + gas peaks +
+ * imports), so its factor (0.62) is a blended value between hard coal (~0.82)
+ * and cleaner dispatchable sources rather than pure lignite (~1.0).
+ */
 export const CO2_EMISSION_FACTORS: GridMixShares = {
-  wind: 0.011,
-  solar: 0.041,
-  gas: 1.0,     // at ~45% plant efficiency → ~1.0 kg CO₂/kWh electricity
-  coal: 0.95,
-  biomass: 0.05,
-  hydro: 0.005,
-  other: 0.5,
+  wind: 0.011,   // lifecycle (turbine manufacture + O&M)
+  solar: 0.045,  // lifecycle (module manufacture)
+  gas: 0.38,     // CCGT electricity output (~0.35–0.40 kg/kWh_el)
+  coal: 0.62,    // blended residual fossil/dispatchable bucket
+  biomass: 0.23, // lifecycle for biomass electricity
+  hydro: 0.006,  // lifecycle
+  other: 0.35,   // waste incineration, geothermal, misc.
 };
 
-/** CO2 emission factor for natural gas burned directly (heating). */
-export const CO2_GAS_DIRECT = 0.201; // kg CO₂/kWh (German gas)
+/**
+ * CO2 emission factor for natural gas burned directly for heating, on a
+ * well-to-burner basis. Direct combustion is ≈ 0.201 kg CO₂/kWh; adding the
+ * ~15–20 % upstream (extraction, transport, methane leakage, in CO₂-equiv.)
+ * gives ≈ 0.24 kg CO₂/kWh — consistent with the well-to-wheel diesel factor.
+ */
+export const CO2_GAS_DIRECT = 0.24; // kg CO₂/kWh (German gas, well-to-burner)
 
-/** CO2 emission factor for diesel (tank-to-wheel). */
-export const CO2_DIESEL = 0.264; // kg CO₂/kWh diesel ≈ 2.64 kg CO₂/liter
+/**
+ * CO2 emission factor for diesel on a *well-to-wheel* basis, **per litre of
+ * fuel** (the physically meaningful unit, since a car burns litres, not the
+ * EV's kWh). Tank-to-wheel combustion is ≈ 2.64 kg CO₂/litre; adding the ~20 %
+ * upstream well-to-tank emissions (extraction, refining, transport) gives
+ * ≈ 3.17 kg CO₂/litre.
+ *
+ * NOTE: diesel CO2 must be computed from the diesel car's *own* consumption
+ * (litres/100 km, ~5.5 l), NOT from the EV's 17 kWh/100 km. A diesel burns
+ * ~55 kWh of chemical energy per 100 km, so charging the diesel with the EV's
+ * 17 kWh/100 km silently erased the drivetrain-efficiency gap and made the EV
+ * look dirtier than diesel — which is physically wrong.
+ */
+export const CO2_DIESEL_PER_L = 3.17; // kg CO₂/litre diesel (well-to-wheel)
 
-/** Diesel car energy demand: ~17 kWh/100km (≈ 6 l/100km). */
-export const DIESEL_KWH_PER_100KM = 17;
+/**
+ * Legacy per-kWh diesel factor, kept for the UI tooltip only. Diesel's lower
+ * heating value is ≈ 9.8 kWh/litre, so 3.17 kg/L ÷ 9.8 kWh/L ≈ 0.32 kg/kWh.
+ */
+export const CO2_DIESEL = CO2_DIESEL_PER_L / 9.8; // ≈ 0.323 kg CO₂/kWh diesel
 
 /** Gas heating: useful heat / boiler efficiency. */
 export const GAS_HEAT_KWH_PER_KWH_USEFUL = 1 / DEFAULT_GAS_BOILER_EFFICIENCY; // ~1.087
@@ -397,6 +429,12 @@ export interface Co2Analysis {
   plusEvPv: Co2Scenario;
   /** Scenario 5: + EV + WP — EV + WP + PV (current config). */
   plusEvWp: Co2Scenario;
+  /** Scenario 6: + EV + WP, but NO PV — everything (household + HP + EV) from
+   *  the grid. Isolates the electrification benefit from the PV benefit. */
+  evWpNoPv: Co2Scenario;
+  /** Scenario 7: + WP but diesel car + grid (no PV, no EV) — heat is a heat
+   *  pump on grid electricity, mobility is still diesel. */
+  wpDieselGrid: Co2Scenario;
 }
 
 export interface SimReport {
@@ -754,11 +792,21 @@ function computeCo2Analysis(
   loads: ConsumerLoads,
   result: SimResult,
   gridMix: GridMix,
+  opportunityCosts: OpportunityCosts,
 ): Co2Analysis {
-  const hpKWh = p.consumers.heatpump.annualKWh;
+  const hpEnabled = p.consumers.heatpump.enabled;
+  const evEnabled = p.consumers.ev.enabled;
+  const hpKWh = hpEnabled ? p.consumers.heatpump.annualKWh : 0;
   const jaz = p.heatpumpJaz;
-  const evKWh = p.consumers.ev.annualKWh;
-  const annualKm = p.car.annualKm;
+  const evKWh = evEnabled ? p.consumers.ev.annualKWh : 0;
+  // Annual distance for the car comparison. When the EV is enabled, the
+  // opportunity module derives the distance from the EV's annual kWh
+  // (kWh × 100 / kWh-per-100km); the CO2 scenarios must use the SAME distance
+  // so the diesel baseline and the EV replacement cover identical km. Falling
+  // back to the raw param only when the EV is disabled.
+  const annualKm = evEnabled && evKWh > 0
+    ? Math.round((evKWh * 100) / p.car.evKwhPer100km)
+    : p.car.annualKm;
 
   const sum = (arr: Float64Array) => annualSum(arr);
 
@@ -770,9 +818,12 @@ function computeCo2Analysis(
   const gasForHeatKWh = usefulHeatKWh / DEFAULT_GAS_BOILER_EFFICIENCY;
   const gasHeatCo2Kg = gasForHeatKWh * CO2_GAS_DIRECT;
 
-  // Diesel car: annual km × energy per km × emission factor
-  const dieselKWh = annualKm * DIESEL_KWH_PER_100KM / 100;
-  const dieselCo2Kg = dieselKWh * CO2_DIESEL;
+  // Diesel car: annual km × litres per 100 km × emission factor per litre.
+  // Uses the diesel car's OWN consumption (p.car.dieselLPer100km, ~5.5 l), not
+  // the EV's kWh/100 km, so the drivetrain-efficiency gap is preserved and the
+  // EV comes out cleaner than diesel even on grid electricity.
+  const dieselLitres = annualKm * p.car.dieselLPer100km / 100;
+  const dieselCo2Kg = dieselLitres * CO2_DIESEL_PER_L;
 
   // Grid electricity CO2: use the actual grid import from simulation
   // weighted by the hourly mix (per-step integration for accuracy)
@@ -798,9 +849,30 @@ function computeCo2Analysis(
   // PV self-consumption: how much of the PV output covers load directly
   const selfConsumptionKWh = sum(result.directUse) + sum(result.dischargeToLoadPV);
 
-  // --- Scenario 1: Baseline — diesel car + gas heating + grid only (no PV) ---
-  // All household + HP load from grid, gas for heating, diesel for car
-  const baselineGridKWh = householdKWh + hpKWh;
+  // How much of the PV self-consumption is attributable to the *household*
+  // (i.e. usable in the gas-heating scenarios that have no heat pump). We cap
+  // it at the household demand so PV can never "save" more than the household
+  // actually consumes.
+  const householdPvKWh = Math.min(selfConsumptionKWh, householdKWh);
+
+  // Grid-import money savings from PV, per €/kWh of the import tariff. Used to
+  // credit the PV scenarios with the electricity cost they avoid.
+  const importCtPerKWh = p.importScheme === "fixed"
+    ? p.importFixedCt
+    : (opportunityCosts.heating.coverage?.gridPriceCt ?? p.importFixedCt);
+  const importEurPerKWh = importCtPerKWh / 100;
+
+  // Money components from the (already-correct) opportunity-cost module.
+  const gasHeatCostEUR = hpEnabled ? opportunityCosts.heating.gas.totalEUR : 0;
+  const hpHeatCostEUR = hpEnabled ? opportunityCosts.heating.heatpump.totalEUR : 0;
+  const dieselCostEUR = evEnabled ? opportunityCosts.car.diesel.totalEUR : 0;
+  const evCostEUR = evEnabled ? opportunityCosts.car.ev.totalEUR : 0;
+
+  // --- Scenario 1: Baseline — diesel car + gas heating + grid (no PV) -------
+  // Electricity in this scenario is ONLY the household (heat comes from gas,
+  // the car is diesel). Adding the heat-pump electricity here would double-
+  // count the heating (once as gas, once as electricity).
+  const baselineGridKWh = householdKWh;
   const baselineGridCo2 = computeGridCo2_fromKWh(baselineGridKWh);
   const baseline = makeScenario(
     "Basis: Diesel + Gas + Netz",
@@ -809,40 +881,43 @@ function computeCo2Analysis(
     dieselCo2Kg,
     0, 0, 0,
   );
+  baseline.savedEUR = 0;
 
-  // --- Scenario 2: + PV — diesel + gas + PV covers household deficit ---
-  // PV covers part of household, rest from grid; HP still on grid
-  const hpGridKWh = hpKWh - Math.min(selfConsumptionKWh * (hpKWh / (householdKWh + hpKWh)), hpKWh);
-  const householdGridKWh = Math.max(0, householdKWh - selfConsumptionKWh);
-  const pvGridKWh = householdGridKWh + hpGridKWh;
-  const pvGridCo2 = computeGridCo2_fromKWh(pvGridKWh);
+  // --- Scenario 2: + PV — diesel + gas + PV covers household deficit --------
+  // Only the household is electric here; PV reduces that household grid draw.
+  const pvHouseholdGridKWh = Math.max(0, householdKWh - householdPvKWh);
+  const pvGridCo2 = computeGridCo2_fromKWh(pvHouseholdGridKWh);
   const plusPv = makeScenario(
     "+ PV: Diesel + Gas + PV",
     gasHeatCo2Kg,
     pvGridCo2,
     dieselCo2Kg,
     0,
-    gasForHeatKWh, // gas stays same
-    baselineGridKWh - pvGridKWh, // grid kWh saved
+    0,                           // gas unchanged vs. baseline → 0 saved
+    householdPvKWh,              // grid kWh saved by PV
   );
+  // Money saved: PV self-consumption × import price.
+  plusPv.savedEUR = Math.round(householdPvKWh * importEurPerKWh);
 
-  // --- Scenario 3: + EV — EV replaces diesel + gas + grid ---
-  // EV on grid, gas heating, no PV
-  const evPlusHouseholdGridKWh = evKWh + householdKWh;
-  const evGridCo2 = computeGridCo2_fromKWh(evPlusHouseholdGridKWh);
+  // --- Scenario 3: + EV — EV replaces diesel; gas heating; grid (no PV) -----
+  // Electricity = household + EV. Heat is still gas.
+  const evGridKWh = householdKWh + evKWh;
+  const evGridCo2 = computeGridCo2_fromKWh(evGridKWh);
   const plusEv = makeScenario(
     "+ E-Auto: EV + Gas + Netz",
     gasHeatCo2Kg,
     evGridCo2,
-    0, // no diesel
+    0,                            // no diesel
     0,
-    gasForHeatKWh,
+    0,                            // gas unchanged vs. baseline → 0 saved
     0,
   );
+  // Money saved: diesel running cost − EV running cost (from opportunity module).
+  plusEv.savedEUR = Math.round(dieselCostEUR - evCostEUR);
 
-  // --- Scenario 4: + EV + PV — EV + gas + PV ---
-  const evPvHouseholdGridKWh = Math.max(0, householdKWh - selfConsumptionKWh);
-  const evPvGridKWh = evKWh + evPvHouseholdGridKWh;
+  // --- Scenario 4: + EV + PV — EV + gas + PV --------------------------------
+  // Electricity = household + EV; PV offsets the household part.
+  const evPvGridKWh = Math.max(0, householdKWh - householdPvKWh) + evKWh;
   const evPvGridCo2 = computeGridCo2_fromKWh(evPvGridKWh);
   const plusEvPv = makeScenario(
     "+ E-Auto + PV: EV + Gas + PV",
@@ -850,30 +925,84 @@ function computeCo2Analysis(
     evPvGridCo2,
     0,
     0,
-    gasForHeatKWh,
-    0,
+    0,                            // gas unchanged vs. baseline → 0 saved
+    householdPvKWh,
   );
+  plusEvPv.savedEUR = Math.round((dieselCostEUR - evCostEUR) + householdPvKWh * importEurPerKWh);
 
-  // --- Scenario 5: + EV + WP — EV + WP + PV (current config) ---
-  const hpTotalGridCo2 = computeGridCo2(result.gridImport);
+  // --- Scenario 5: + EV + WP — EV + WP + PV (the fully-electrified config) ---
+  // Here the heat pump IS the heating, so its electricity is legitimately part
+  // of the grid load. Use the actual simulated grid import (household + HP + EV,
+  // PV-shifted) for the electricity CO2.
+  const fullElectricGridCo2 = computeGridCo2(result.gridImport);
   const plusEvWp = makeScenario(
     "+ E-Auto + WP: EV + WP + PV",
-    0, // no gas heating
-    hpTotalGridCo2,
+    0,                            // no gas heating — heat is electric
+    fullElectricGridCo2,
     0,
-    gasForHeatKWh, // gas saved by WP
+    hpEnabled ? gasForHeatKWh : 0, // gas avoided by the heat pump
     0,
     0,
   );
+  // Money saved vs. baseline: diesel→EV saving + gas→heat-pump saving. The heat
+  // pump's own electricity cost is already inside hpHeatCostEUR (and PV lowers
+  // it via the coverage-adjusted price used by the opportunity module).
+  plusEvWp.savedEUR = Math.round(
+    (dieselCostEUR - evCostEUR) + (gasHeatCostEUR - hpHeatCostEUR),
+  );
 
-  // Compute savings vs baseline
-  addSavings(baseline, baseline);
-  addSavings(plusPv, baseline);
-  addSavings(plusEv, baseline);
-  addSavings(plusEvPv, baseline);
-  addSavings(plusEvWp, baseline);
+  // --- Scenario 6: + EV + WP but NO PV — everything from the grid -----------
+  // Same fully-electrified end-state as scenario 5 (EV + heat pump, no gas, no
+  // diesel), but WITHOUT any PV: household + heat-pump + EV electricity is all
+  // drawn from the grid. This isolates how much of scenario 5's benefit comes
+  // from electrification vs. from the PV system. Uses the average grid
+  // intensity (withoutPv mix) on the full electric load.
+  const evWpNoPvGridKWh = householdKWh + hpKWh + evKWh;
+  const evWpNoPvGridCo2 = computeGridCo2_fromKWh(evWpNoPvGridKWh);
+  const evWpNoPv = makeScenario(
+    "+ E-Auto + WP ohne PV: alles Netz",
+    0,                             // no gas heating — heat is electric
+    evWpNoPvGridCo2,
+    0,                             // no diesel
+    hpEnabled ? gasForHeatKWh : 0, // gas avoided by the heat pump
+    0,
+    0,
+  );
+  // Money saved vs. baseline: diesel→EV + gas→heat-pump savings. Note the
+  // heat-pump/EV running costs used here already reflect the current tariff;
+  // without PV they are marginally higher, but the opportunity module's
+  // coverage-adjusted price is the best per-scenario estimate available.
+  evWpNoPv.savedEUR = Math.round(
+    (dieselCostEUR - evCostEUR) + (gasHeatCostEUR - hpHeatCostEUR),
+  );
 
-  return { baseline, plusPv, plusEv, plusEvPv, plusEvWp };
+  // --- Scenario 7: + WP but diesel car + grid (no PV, no EV) ----------------
+  // Heat is a heat pump on grid electricity (gas avoided), but mobility is
+  // still diesel. No PV. Electricity = household + heat pump from the grid.
+  const wpDieselGridKWh = householdKWh + hpKWh;
+  const wpDieselGridCo2 = computeGridCo2_fromKWh(wpDieselGridKWh);
+  const wpDieselGrid = makeScenario(
+    "+ WP, Diesel + Netz (ohne PV)",
+    0,                             // no gas heating — heat is electric
+    wpDieselGridCo2,
+    dieselCo2Kg,                   // still driving diesel
+    hpEnabled ? gasForHeatKWh : 0, // gas avoided by the heat pump
+    0,
+    0,
+  );
+  // Money saved vs. baseline: only the gas→heat-pump saving (car unchanged).
+  wpDieselGrid.savedEUR = Math.round(gasHeatCostEUR - hpHeatCostEUR);
+
+  // CO2 savings vs. baseline for every scenario.
+  setCo2Saved(baseline, baseline);
+  setCo2Saved(plusPv, baseline);
+  setCo2Saved(plusEv, baseline);
+  setCo2Saved(plusEvPv, baseline);
+  setCo2Saved(plusEvWp, baseline);
+  setCo2Saved(evWpNoPv, baseline);
+  setCo2Saved(wpDieselGrid, baseline);
+
+  return { baseline, plusPv, plusEv, plusEvPv, plusEvWp, evWpNoPv, wpDieselGrid };
 
   function makeScenario(
     label: string,
@@ -898,12 +1027,8 @@ function computeCo2Analysis(
     };
   }
 
-  function addSavings(s: Co2Scenario, base: Co2Scenario): void {
+  function setCo2Saved(s: Co2Scenario, base: Co2Scenario): void {
     s.co2SavedKg = Math.round(base.co2Kg - s.co2Kg);
-    const baseGasKWh = base.heatingCo2Kg / CO2_GAS_DIRECT * DEFAULT_GAS_BOILER_EFFICIENCY / jaz;
-    const thisGasKWh = s.heatingCo2Kg / CO2_GAS_DIRECT * DEFAULT_GAS_BOILER_EFFICIENCY / jaz;
-    s.gasSavedKWh = Math.round(Math.max(0, baseGasKWh - thisGasKWh));
-    s.savedEUR = Math.round(s.gasSavedKWh * 0.11);
   }
 
   function computeGridCo2_fromKWh(totalGridKWh: number): number {
@@ -1036,6 +1161,12 @@ export function runSimulation(p: SimParams): SimReport {
     };
   }
 
+  // ---- Grid mix + CO2 scenario analysis ------------------------------------
+  // gridMix: weighted electricity mix for grid-imported electricity
+  // (heatpump/overall/withoutPv). co2Analysis uses opportunityCosts for money.
+  const gridMix = computeGridMix(loads, result);
+  const co2Analysis = computeCo2Analysis(p, loads, result, gridMix, opportunityCosts);
+
   // Calculate multi-year cashflow analysis
   const cashflowInput: CashflowInput = {
     annualBenefitEUR: amortisation.annualBenefitEUR,
@@ -1107,10 +1238,6 @@ export function runSimulation(p: SimParams): SimReport {
   //  - heatpump: HP's grid import (proportional allocation, PV-shifted)
   //  - overall:  total grid import across all consumers
   //  - withoutPv: hypothetical no-PV/battery scenario (100% grid)
-  const gridMix = computeGridMix(loads, result);
-
-  // ---- CO2 scenario analysis -----------------------------------------------
-  const co2Analysis = computeCo2Analysis(p, loads, result, gridMix);
 
   const summary: SimSummary = {
     totalPVKWh,

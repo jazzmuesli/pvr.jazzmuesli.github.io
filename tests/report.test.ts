@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { runSimulation, simParamsFromQuery, DEFAULT_SIM_PARAMS, SimParams, estimateInvestmentEUR } from "../src/calc/report";
-import { ConsumerConfig } from "../src/calc/consumers";
+import { runSimulation, simParamsFromQuery, DEFAULT_SIM_PARAMS, SimParams, estimateInvestmentEUR, CO2_EMISSION_FACTORS, CO2_GAS_DIRECT, CO2_DIESEL } from "../src/calc/report";
+import { ConsumerConfig, evLoad } from "../src/calc/consumers";
+import { annualAverageMix, electricityMixForStep } from "../src/calc/electricityMix";
 
 const baseConsumers: ConsumerConfig = {
   household: { enabled: true, annualKWh: 2400 },
@@ -259,10 +260,50 @@ describe("runSimulation > co2Analysis", () => {
     expect(r.co2Analysis.baseline.co2Kg).toBeGreaterThanOrEqual(r.co2Analysis.plusPv.co2Kg);
   });
 
-  it("+EV has lower CO2 than baseline (no diesel)", () => {
-    const r = runSimulation(params({ car: { ...DEFAULT_SIM_PARAMS.car, annualKm: 15000 } }));
-    // EV on grid should still save CO2 vs diesel
-    expect(r.co2Analysis.plusEv.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+  it("+EV (grid-only, no PV) is cleaner than the diesel baseline", () => {
+    // Physically honest: even charged 100% from the current German grid (no PV,
+    // no smart charging), an EV emits clearly LESS CO2 than a diesel over the
+    // same distance. The reason is the drivetrain-efficiency gap: a diesel burns
+    // ~55 kWh of chemical energy per 100 km (5.5 l × ~10 kWh/l) vs. the EV's
+    // ~17 kWh/100 km, so grid electricity at ~0.39 kg/kWh still beats diesel at
+    // ~3.17 kg/l well-to-wheel. The earlier model wrongly charged the diesel
+    // with the EV's 17 kWh/100 km, erasing this gap and making the EV look
+    // dirtier — a bug this test now guards against.
+    const r = runSimulation(params());
+    const b = r.co2Analysis.baseline;      // diesel + gas + household grid
+    const ev = r.co2Analysis.plusEv;       // EV + gas + (household+EV) grid
+    // Compare the mobility term directly: EV grid-charging CO2 vs. diesel CO2.
+    const evChargingCo2 = ev.electricityCo2Kg - b.electricityCo2Kg; // extra grid for EV
+    expect(evChargingCo2).toBeGreaterThan(0);
+    expect(b.carCo2Kg).toBeGreaterThan(0);
+    // The EV's grid-charging emissions must be well below the diesel's.
+    expect(evChargingCo2).toBeLessThan(b.carCo2Kg);
+    // And the whole +EV scenario must beat the diesel baseline overall.
+    expect(ev.co2Kg).toBeLessThan(b.co2Kg);
+  });
+
+  it("diesel CO2 is litre-based (dieselLPer100km), not the EV's kWh/100km", () => {
+    // Regression guard for the fixed bug: diesel CO2 must scale with the diesel
+    // car's own litre consumption × ~3.17 kg/l, so ~15000 km at 5.5 l/100km
+    // → ~825 l → ~2.6 t, NOT the ~0.8 t the old 17 kWh/100km path produced.
+    const km = 15000;
+    // Disable the EV so the diesel distance comes from p.car.annualKm directly
+    // (when the EV is on, the model derives the shared distance from EV kWh).
+    const r = runSimulation(params({
+      consumers: { ...baseConsumers, ev: { enabled: false, annualKWh: 0, pvShare: 0.8 } },
+      car: { ...DEFAULT_SIM_PARAMS.car, annualKm: km, dieselLPer100km: 5.5 },
+    }));
+    const carCo2 = r.co2Analysis.baseline.carCo2Kg;
+    const expectedLitres = (km / 100) * 5.5;           // 825 l
+    const expectedCo2 = expectedLitres * 3.17;         // ~2615 kg
+    expect(carCo2).toBeGreaterThan(expectedCo2 * 0.97);
+    expect(carCo2).toBeLessThan(expectedCo2 * 1.03);
+  });
+
+  it("+EV+PV beats the diesel baseline once PV covers part of the charging", () => {
+    // With PV in the mix the EV clearly wins on CO2 vs. the diesel baseline.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.plusEvPv.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
   });
 
   it("+EV+WP has the lowest CO2 of all scenarios", () => {
@@ -305,5 +346,183 @@ describe("runSimulation > co2Analysis", () => {
     const r = runSimulation(params());
     expect(r.co2Analysis.baseline.co2SavedKg).toBe(0);
     expect(r.co2Analysis.baseline.gasSavedKWh).toBe(0);
+  });
+
+  // ---- Plausibility guards (regression for the inflated-CO2 bug) ----------
+
+  it("the modelled grid intensity is in the realistic German band (~0.35-0.45 kg/kWh)", () => {
+    const m = annualAverageMix();
+    const intensity =
+      m.wind * CO2_EMISSION_FACTORS.wind +
+      m.solar * CO2_EMISSION_FACTORS.solar +
+      m.gas * CO2_EMISSION_FACTORS.gas +
+      m.coal * CO2_EMISSION_FACTORS.coal +
+      m.biomass * CO2_EMISSION_FACTORS.biomass +
+      m.hydro * CO2_EMISSION_FACTORS.hydro +
+      m.other * CO2_EMISSION_FACTORS.other;
+    expect(intensity).toBeGreaterThan(0.33);
+    expect(intensity).toBeLessThan(0.45);
+  });
+
+  it("baseline electricity CO2 reflects ONLY the household (no phantom heat-pump elec)", () => {
+    // 2400 kWh household at ~0.35-0.42 kg/kWh → ~840-1010 kg. Must NOT include
+    // the 5000 kWh heat-pump electricity (that heat is gas in the baseline).
+    const r = runSimulation(params());
+    const elec = r.co2Analysis.baseline.electricityCo2Kg;
+    expect(elec).toBeGreaterThan(700);
+    expect(elec).toBeLessThan(1100);
+    // Sanity: household-only intensity per kWh is realistic.
+    expect(elec / 2400).toBeGreaterThan(0.30);
+    expect(elec / 2400).toBeLessThan(0.45);
+  });
+
+  it("baseline heating uses gas (not electricity) and is the dominant term", () => {
+    const r = runSimulation(params());
+    const b = r.co2Analysis.baseline;
+    // 15000 kWh useful heat / 0.92 × gas factor → ~3.5-4.2 t
+    expect(b.heatingCo2Kg).toBeGreaterThan(3000);
+    expect(b.heatingCo2Kg).toBeLessThan(4500);
+    expect(b.heatingCo2Kg).toBeGreaterThan(b.electricityCo2Kg);
+  });
+
+  it("+EV+WP savedEUR aligns with the opportunity-cost module (diesel + gas savings)", () => {
+    const r = runSimulation(params());
+    const dieselSaving = r.opportunityInvestment.carSavingEUR;   // diesel − EV
+    const gasSaving = r.opportunityInvestment.heatingSavingEUR;  // gas − heat pump
+    const expected = dieselSaving + gasSaving;
+    // Allow small rounding (savedEUR is rounded to whole euros).
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBeGreaterThan(expected - 3);
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBeLessThan(expected + 3);
+    // And it must be substantial (thousands of €), not a few hundred.
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBeGreaterThan(1500);
+  });
+
+  it("+EV savedEUR equals the diesel→EV running-cost saving", () => {
+    const r = runSimulation(params());
+    const dieselSaving = r.opportunityInvestment.carSavingEUR;
+    expect(r.co2Analysis.plusEv.savedEUR).toBeGreaterThan(dieselSaving - 3);
+    expect(r.co2Analysis.plusEv.savedEUR).toBeLessThan(dieselSaving + 3);
+  });
+
+  it("diesel & gas emission factors are well-to-wheel (fair vs. grid electricity)", () => {
+    // Diesel WTW ≈ 3.17 kg/litre; expressed per kWh that is ~3.17/9.8 ≈ 0.32
+    // kg/kWh (tooltip only). Gas ≈ 0.24 kg/kWh well-to-burner.
+    expect(CO2_DIESEL).toBeGreaterThan(0.30);
+    expect(CO2_DIESEL).toBeLessThan(0.34);
+    expect(CO2_GAS_DIRECT).toBeGreaterThan(0.22);
+    expect(CO2_GAS_DIRECT).toBeLessThan(0.26);
+    // Gas *fuel* factor must be well below the old bogus 1.0 kg/kWh electricity.
+    expect(CO2_EMISSION_FACTORS.gas).toBeLessThan(0.5);
+  });
+
+  it("the fully-electrified scenario (+EV+WP) is the CO2 winner and saves multi-tonne", () => {
+    const r = runSimulation(params());
+    const all = [
+      r.co2Analysis.baseline,
+      r.co2Analysis.plusPv,
+      r.co2Analysis.plusEv,
+      r.co2Analysis.plusEvPv,
+      r.co2Analysis.plusEvWp,
+    ];
+    const min = Math.min(...all.map((s) => s.co2Kg));
+    expect(r.co2Analysis.plusEvWp.co2Kg).toBe(min);
+    expect(r.co2Analysis.plusEvWp.co2SavedKg).toBeGreaterThan(2000);
+  });
+
+  // ---- New scenarios: electrification without PV --------------------------
+
+  it("evWpNoPv (EV+WP, all grid) sits between the baseline and the PV-backed +EV+WP", () => {
+    // Fully electrified (heat pump + EV, no gas, no diesel) but WITHOUT PV.
+    // It must beat the fossil baseline (electrification helps even on grid
+    // power), yet emit MORE than the same config WITH PV (plusEvWp), so the
+    // PV contribution is isolated and positive.
+    const r = runSimulation(params());
+    const noPv = r.co2Analysis.evWpNoPv;
+    expect(noPv.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+    expect(noPv.co2Kg).toBeGreaterThan(r.co2Analysis.plusEvWp.co2Kg);
+    // No gas and no diesel in this scenario — heat and mobility are electric.
+    expect(noPv.heatingCo2Kg).toBe(0);
+    expect(noPv.carCo2Kg).toBe(0);
+    expect(noPv.co2SavedKg).toBeGreaterThan(0);
+  });
+
+  it("wpDieselGrid (WP + diesel, all grid, no PV) still drives diesel and avoids gas", () => {
+    const r = runSimulation(params());
+    const s = r.co2Analysis.wpDieselGrid;
+    // Heat is electric (no gas), mobility is still diesel.
+    expect(s.heatingCo2Kg).toBe(0);
+    expect(s.carCo2Kg).toBeGreaterThan(0);
+    // Same diesel car as the baseline, so identical diesel CO2.
+    expect(s.carCo2Kg).toBeCloseTo(r.co2Analysis.baseline.carCo2Kg, -1);
+    // Swapping gas heat for a grid heat pump reduces total CO2 vs. baseline.
+    expect(s.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+    // But keeping diesel makes it dirtier than the fully-electrified no-PV case.
+    expect(s.co2Kg).toBeGreaterThan(r.co2Analysis.evWpNoPv.co2Kg);
+    // Only the gas→heat-pump money saving (car unchanged).
+    expect(s.savedEUR).toBeGreaterThan(0);
+  });
+
+  it("the two new scenarios keep the heating+electricity+car identity", () => {
+    const r = runSimulation(params());
+    for (const s of [r.co2Analysis.evWpNoPv, r.co2Analysis.wpDieselGrid]) {
+      expect(s.heatingCo2Kg + s.electricityCo2Kg + s.carCo2Kg).toBeCloseTo(s.co2Kg, -1);
+      expect(s.co2Kg).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("EV charges at cleaner-than-average grid hours (no evening/morning dirty charging)", () => {
+    // The seasonal EV profile targets the sunny midday window (summer) and the
+    // wind-rich night window (winter), avoiding the dirty morning/evening peaks.
+    // So the grid-intensity-weighted average of the EV load must be at or below
+    // the flat annual grid average.
+    const ev = evLoad(2000, 0.8);
+    const intensity = (i: number): number => {
+      const x = electricityMixForStep(i);
+      return (
+        x.wind * CO2_EMISSION_FACTORS.wind +
+        x.solar * CO2_EMISSION_FACTORS.solar +
+        x.gas * CO2_EMISSION_FACTORS.gas +
+        x.coal * CO2_EMISSION_FACTORS.coal +
+        x.biomass * CO2_EMISSION_FACTORS.biomass +
+        x.hydro * CO2_EMISSION_FACTORS.hydro +
+        x.other * CO2_EMISSION_FACTORS.other
+      );
+    };
+    let evWeighted = 0;
+    let evTotal = 0;
+    for (let i = 0; i < ev.length; i++) {
+      if (ev[i] > 0) {
+        evWeighted += ev[i] * intensity(i);
+        evTotal += ev[i];
+      }
+    }
+    const evAvg = evWeighted / evTotal;
+
+    const flat = annualAverageMix();
+    const flatAvg =
+      flat.wind * CO2_EMISSION_FACTORS.wind +
+      flat.solar * CO2_EMISSION_FACTORS.solar +
+      flat.gas * CO2_EMISSION_FACTORS.gas +
+      flat.coal * CO2_EMISSION_FACTORS.coal +
+      flat.biomass * CO2_EMISSION_FACTORS.biomass +
+      flat.hydro * CO2_EMISSION_FACTORS.hydro +
+      flat.other * CO2_EMISSION_FACTORS.other;
+
+    // EV timing must be no dirtier than an all-hours-flat charge.
+    expect(evAvg).toBeLessThanOrEqual(flatAvg + 0.005);
+
+    // And crucially: even a PURE GRID charger (no own PV) still benefits from
+    // clean grid hours (sunny summer middays / windy winter nights), so its
+    // timing is strictly cleaner than charging flat across all hours.
+    const gridOnly = evLoad(2000, 0);
+    let gw = 0;
+    let gt = 0;
+    for (let i = 0; i < gridOnly.length; i++) {
+      if (gridOnly[i] > 0) {
+        gw += gridOnly[i] * intensity(i);
+        gt += gridOnly[i];
+      }
+    }
+    expect(gw / gt).toBeLessThan(flatAvg);
   });
 });

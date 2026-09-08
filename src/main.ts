@@ -253,7 +253,7 @@ function renderCo2(r: SimReport): void {
   co2Title.textContent = t("co2.title");
   co2Hint.textContent = t("co2.hint");
 
-  const scenarios = [c.baseline, c.plusPv, c.plusEv, c.plusEvPv, c.plusEvWp];
+  const scenarios = [c.baseline, c.wpDieselGrid, c.plusPv, c.plusEv, c.evWpNoPv, c.plusEvPv, c.plusEvWp];
   const maxCo2 = Math.max(...scenarios.map((s) => s.co2Kg), 1);
 
   const fmt = (v: number) => v.toLocaleString("de-DE");

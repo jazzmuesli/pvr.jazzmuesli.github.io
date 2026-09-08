@@ -89,7 +89,7 @@ Four load profiles, summed to total load:
 | `household` | H0 standard load profile | Morning/evening peaks |
 | `heatpump` | Heat pump (space heating only) | Winter-heavy, near-zero in summer; hourly demand peaks in the cold early morning, dips at midday |
 | `bwwp` | Domestic hot water heat pump | 4 h block 11:00–15:00 (mostly PV), default 480 kWh/year |
-| `ev` | Electric vehicle | `pvShare` at midday (10:00–15:00), the rest overnight (00:00–05:00, cheap tariff) |
+| `ev` | Electric vehicle | Charges only in the sunny midday window (10:00–15:00) or the cheap night window (00:00–05:00) — **never** in the morning/evening peaks. The midday vs. night split is **seasonal**: `pvShare × PV-availability`, so it charges on solar at midday in summer and shifts to the wind-rich, cheap night in winter |
 
 Each consumer can be individually enabled/disabled and calibrated by annual consumption. Load is tracked separately per consumer so that charts and effective prices can be reported per consumer.
 

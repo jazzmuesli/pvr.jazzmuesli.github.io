@@ -29,6 +29,15 @@ function sumOverMonths(load: Float64Array, months: number[]): number {
   return s;
 }
 
+/** Return a copy of `load` with everything outside the given hours zeroed. */
+function maskHours(load: Float64Array, hours: number[]): Float64Array {
+  const out = new Float64Array(load.length);
+  for (let i = 0; i < load.length; i++) {
+    if (hours.includes(hourOfStep(i))) out[i] = load[i];
+  }
+  return out;
+}
+
 const noConsumers: ConsumerConfig = {
   household: { enabled: false, annualKWh: 0 },
   heatpump: { enabled: false, annualKWh: 0 },
@@ -201,21 +210,91 @@ describe("evLoad", () => {
     expect(sum).toBeLessThan(2000 * 1.02);
   });
 
-  it("shifts load toward midday as pvShare increases, and to the cheap night window otherwise", () => {
+  it("charges only in the midday PV window or the cheap night window", () => {
+    const l = evLoad(2000, 0.8);
+    const midday = [10, 11, 12, 13, 14];
+    const night = [0, 1, 2, 3, 4];
+    const inWindows = sumOverHours(l, [...midday, ...night]);
+    // Essentially all of the annual demand sits in the two clean windows.
+    expect(inWindows).toBeCloseTo(2000, 0);
+  });
+
+  it("NEVER charges in the morning (07-09) or evening (17-21) peaks", () => {
+    for (const share of [0, 0.3, 0.5, 0.8, 1.0]) {
+      const l = evLoad(2000, share);
+      const morning = sumOverHours(l, [7, 8, 9]);
+      const evening = sumOverHours(l, [17, 18, 19, 20, 21]);
+      expect(morning, `pvShare=${share} morning peak must be empty`).toBe(0);
+      expect(evening, `pvShare=${share} evening peak must be empty`).toBe(0);
+    }
+  });
+
+  it("shifts load toward midday as pvShare increases, and to the cheap night otherwise", () => {
     const low = evLoad(2000, 0.0);
     const high = evLoad(2000, 1.0);
     const midday = [10, 11, 12, 13, 14];
     const night = [0, 1, 2, 3, 4];
-    const evening = [19, 20, 21];
-    // More PV share ⇒ more midday charging.
+    // More PV share ⇒ more midday charging overall.
     expect(sumOverHours(high, midday)).toBeGreaterThan(sumOverHours(low, midday));
-    // Less PV share ⇒ more overnight charging (cheap hours), not evening.
+    // Less PV share ⇒ more overnight charging (cheap hours) overall.
     expect(sumOverHours(low, night)).toBeGreaterThan(sumOverHours(high, night));
-    // With no PV share everything is charged at night; nothing in the evening peak.
-    expect(sumOverHours(low, night)).toBeCloseTo(2000, 0);
-    expect(sumOverHours(low, evening)).toBe(0);
-    // With full PV share everything is charged at midday.
-    expect(sumOverHours(high, midday)).toBeCloseTo(2000, 0);
+    // Even a pure grid charger (pvShare=0) still puts a meaningful chunk at
+    // midday — the grid-cleanliness floor exploits clean summer middays — but
+    // most of its annual charge is at night (winter + shoulder seasons).
+    expect(sumOverHours(low, night)).toBeGreaterThan(sumOverHours(low, midday));
+    expect(sumOverHours(low, midday)).toBeGreaterThan(0);
+  });
+
+  it("a pure grid charger (pvShare=0) still charges on clean summer middays and windy winter nights", () => {
+    // The user's point: even with no own PV, smart timing benefits from clean
+    // grid hours. Summer midday grid is solar-clean; winter night grid is
+    // wind-clean; summer NIGHT is actually the dirtiest. So a grid-only EV
+    // should NOT blindly charge every night.
+    const l = evLoad(3650, 0.0);
+    const midday = [10, 11, 12, 13, 14];
+    const night = [0, 1, 2, 3, 4];
+    const summerMidday = sumOverMonths(maskHours(l, midday), [6, 7, 8]);
+    const summerNight = sumOverMonths(maskHours(l, night), [6, 7, 8]);
+    const winterMidday = sumOverMonths(maskHours(l, midday), [12, 1, 2]);
+    const winterNight = sumOverMonths(maskHours(l, night), [12, 1, 2]);
+    // Summer: prefer the clean midday grid over the dirty summer night.
+    expect(summerMidday).toBeGreaterThan(summerNight);
+    // Winter: prefer the clean/cheap night over the dirtier winter midday.
+    expect(winterNight).toBeGreaterThan(winterMidday);
+  });
+
+  it("charges midday in summer (sunny) and shifts to night in winter (little sun)", () => {
+    // With a strong PV preference, the summer EV should sit mostly at midday
+    // (own PV + cleanest grid hour) while the winter EV should sit mostly at
+    // night (no PV, wind-rich/cheaper night, and NOT the dirtier winter midday).
+    const l = evLoad(3650, 1.0); // 10 kWh/day, easy to reason about
+    const midday = [10, 11, 12, 13, 14];
+    const night = [0, 1, 2, 3, 4];
+
+    const summerMidday = sumOverMonths(
+      // restrict to summer months first, then to midday hours
+      maskHours(l, midday),
+      [6, 7, 8],
+    );
+    const summerNight = sumOverMonths(maskHours(l, night), [6, 7, 8]);
+    const winterMidday = sumOverMonths(maskHours(l, midday), [12, 1, 2]);
+    const winterNight = sumOverMonths(maskHours(l, night), [12, 1, 2]);
+
+    // Summer: midday dominates.
+    expect(summerMidday).toBeGreaterThan(summerNight);
+    // Winter: night dominates.
+    expect(winterNight).toBeGreaterThan(winterMidday);
+    // The seasonal contrast is strong: summer midday share ≫ winter midday share.
+    const summerMiddayShare = summerMidday / (summerMidday + summerNight);
+    const winterMiddayShare = winterMidday / (winterMidday + winterNight);
+    expect(summerMiddayShare).toBeGreaterThan(0.7);
+    expect(winterMiddayShare).toBeLessThan(0.35);
+  });
+
+  it("keeps the annual total exact regardless of the seasonal split", () => {
+    for (const share of [0, 0.25, 0.6, 1.0]) {
+      expect(annualSum(evLoad(2500, share))).toBeCloseTo(2500, 0);
+    }
   });
 });
 

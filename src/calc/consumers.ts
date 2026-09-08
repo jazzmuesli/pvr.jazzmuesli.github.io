@@ -196,14 +196,65 @@ export function heatpumpHotWaterLoad(annualKWh: number): Float64Array {
 }
 
 /**
- * Electric-vehicle load (kWh/step).
- * The owner charges either when the sun is up (midday) or, when it isn't, at
- * night on the cheap tariff:
- *  - `pvShare` of the daily demand is placed in the sunny midday window
- *    (10:00–15:00) so PV can cover it directly.
- *  - the remaining `1 − pvShare` is charged overnight (00:00–05:00), the
- *    cheapest hours (low spot / § 14a night tariff) — NOT in the evening peak.
- * The dispatch later decides whether PV, battery or grid actually serves it.
+ * Monthly PV-availability weight (0..1), peak-normalised so high-summer ≈ 1.0
+ * and deep-winter ≈ small. Mirrors the seasonal solar shape used elsewhere in
+ * the model. Drives *when* the EV prefers to charge: on sunny midday hours in
+ * summer, and at night the rest of the year.
+ *
+ * Physical justification (see `electricityMix.ts` + emission factors): in
+ * summer the midday grid is the cleanest hour of the day (solar-rich) and the
+ * owner's own PV is abundant, so midday charging is ideal. In winter there is
+ * almost no PV and the midday grid actually leans harder on coal/gas than the
+ * wind-rich night, so the cheap, cleaner night window is preferable. Either
+ * way we never target the morning (07–09) or evening (17–21) peaks, which are
+ * the dirtiest/most expensive hours.
+ */
+const EV_PV_AVAIL_MONTHLY = [
+  0.20, 0.30, 0.50, 0.72, 0.90, 1.0, 1.0, 0.92, 0.68, 0.42, 0.24, 0.16,
+];
+
+/**
+ * Monthly *grid-cleanliness* midday floor (0..1). This is the fraction of the
+ * daily charge that is placed at midday **even for a pure grid charger with no
+ * own PV** (pvShare = 0), because in the sunny half-year the midday grid is the
+ * cleanest hour of the day (solar-rich, low residual coal/gas) — so a smart
+ * grid-only charger should still prefer it. In the dark winter months the
+ * midday grid is *dirtier* than the wind-rich night, so the floor drops to ~0
+ * and grid-only charging correctly shifts to the night.
+ *
+ * Derived from the modelled grid intensity (`electricityMix.ts`): where summer
+ * midday is markedly cleaner than the same day's night, the floor is high;
+ * where winter night beats midday, it is ~0. `evLoad` uses the *maximum* of
+ * this floor and the owner's PV preference, so the EV always lands in whichever
+ * clean window is best that month and never in the dirty morning/evening peaks.
+ */
+const EV_GRID_CLEAN_MIDDAY_FLOOR = [
+  0.05, 0.10, 0.30, 0.55, 0.75, 0.85, 0.85, 0.75, 0.50, 0.25, 0.08, 0.03,
+];
+
+/**
+ * Electric-vehicle load (kWh/step) with a *seasonal* midday/night split.
+ *
+ * The daily demand is placed only in two clean windows — the sunny midday
+ * window (10:00–15:00) and the cheap night window (00:00–05:00) — and **never**
+ * in the morning (07–09) or evening (17–21) peaks, which carry the dirtiest and
+ * most expensive electricity.
+ *
+ * How the midday vs. night split is chosen per day:
+ *  - `pvShare` (0..1) is the owner's *own-PV* preference. Scaled by seasonal PV
+ *    availability it gives a "PV-driven" midday fraction (`share × pvAvail`).
+ *  - Independently, a *grid-cleanliness floor* (`EV_GRID_CLEAN_MIDDAY_FLOOR`)
+ *    says how much midday charging makes sense on grid cleanliness ALONE — high
+ *    in summer (clean solar midday), ~0 in winter (dirtier midday than night).
+ *  - The actual midday fraction is the **maximum** of the two. So even a pure
+ *    grid charger (`pvShare = 0`) still exploits clean summer middays and the
+ *    windy, cleaner winter nights, rather than blindly charging every night
+ *    (summer nights are in fact the dirtiest hours — no solar, low wind).
+ *  - The remaining `1 − middayFraction` always goes to the night window.
+ *
+ * The annual energy still equals `annualKWh` exactly (both windows sum to the
+ * daily demand every day). The dispatch later decides whether PV, battery or
+ * grid actually serves each kWh.
  */
 export function evLoad(annualKWh: number, pvShare: number): Float64Array {
   const out = new Float64Array(TOTAL_STEPS);
@@ -214,10 +265,15 @@ export function evLoad(annualKWh: number, pvShare: number): Float64Array {
   const nightSteps = 5 * STEPS_PER_HOUR; // 00:00–05:00 = 5 h (cheap night window)
   const middayStart = 10 * STEPS_PER_HOUR;
   const nightStart = 0 * STEPS_PER_HOUR;
-  const middayPerStep = (dailyKWh * share) / middaySteps;
-  const nightPerStep = (dailyKWh * (1 - share)) / nightSteps;
   for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
     const dayStart = d * STEPS_PER_DAY;
+    const m = monthOfStep(dayStart);
+    // PV-driven midday fraction (own solar), and the grid-cleanliness floor
+    // that applies even without own PV. Take the better of the two.
+    const pvDriven = share * EV_PV_AVAIL_MONTHLY[m - 1];
+    const middayFraction = Math.max(pvDriven, EV_GRID_CLEAN_MIDDAY_FLOOR[m - 1]);
+    const middayPerStep = (dailyKWh * middayFraction) / middaySteps;
+    const nightPerStep = (dailyKWh * (1 - middayFraction)) / nightSteps;
     for (let k = 0; k < middaySteps; k++) out[dayStart + middayStart + k] += middayPerStep;
     for (let k = 0; k < nightSteps; k++) out[dayStart + nightStart + k] += nightPerStep;
   }
