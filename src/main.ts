@@ -1,4 +1,4 @@
-import { runSimulation, SimReport } from "./calc/report";
+import { runSimulation, SimReport, CO2_EMISSION_FACTORS, CO2_GAS_DIRECT, CO2_DIESEL } from "./calc/report";
 import { DEFAULT_GAS_BOILER_EFFICIENCY, DEFAULT_GAS_POWERPLANT_EFFICIENCY } from "./calc/heatpumpGasSavings";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimParams } from "./ui/state";
@@ -214,7 +214,7 @@ function renderGridMix(r: SimReport): void {
       <div class="pie-chart-card-title">${t("gridmix.heatpump")}</div>
       <div class="pie-chart-card-hint">${t("gridmix.heatpump_hint")}</div>
       <div class="pie-chart-card-body"></div>
-      <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(hpGas)}</strong></div>
+      <div class="pie-chart-card-footer" data-tooltip="Gas → ${CO2_EMISSION_FACTORS.gas * 1000} g CO₂/kWh Strom · Erdgas-Heizkessel → ${CO2_GAS_DIRECT * 1000} g CO₂/kWh Wärme">${t("gridmix.gas_share")}: <strong>${fmtPct(hpGas)}</strong></div>
     </div>`;
   }
 
@@ -223,7 +223,7 @@ function renderGridMix(r: SimReport): void {
     <div class="pie-chart-card-title">${t("gridmix.overall")}</div>
     <div class="pie-chart-card-hint">${t("gridmix.overall_hint")}</div>
     <div class="pie-chart-card-body"></div>
-    <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(overallGas)}</strong></div>
+    <div class="pie-chart-card-footer" data-tooltip="Gas → ${CO2_EMISSION_FACTORS.gas * 1000} g CO₂/kWh Strom">${t("gridmix.gas_share")}: <strong>${fmtPct(overallGas)}</strong></div>
   </div>`;
 
   // Without PV pie chart
@@ -231,7 +231,7 @@ function renderGridMix(r: SimReport): void {
     <div class="pie-chart-card-title">${t("gridmix.without_pv")}</div>
     <div class="pie-chart-card-hint">${t("gridmix.without_pv_hint")}</div>
     <div class="pie-chart-card-body"></div>
-    <div class="pie-chart-card-footer">${t("gridmix.gas_share")}: <strong>${fmtPct(noPvGas)}</strong></div>
+    <div class="pie-chart-card-footer" data-tooltip="Gas → ${CO2_EMISSION_FACTORS.gas * 1000} g CO₂/kWh Strom">${t("gridmix.gas_share")}: <strong>${fmtPct(noPvGas)}</strong></div>
   </div>`;
 
   gridMixBody.innerHTML = html;
@@ -253,40 +253,50 @@ function renderCo2(r: SimReport): void {
   co2Title.textContent = t("co2.title");
   co2Hint.textContent = t("co2.hint");
 
-  const scenarios = [c.current, c.withoutPv, c.withoutHp, c.baseline, c.directGas];
+  const scenarios = [c.baseline, c.plusPv, c.plusEv, c.plusEvPv, c.plusEvWp];
   const maxCo2 = Math.max(...scenarios.map((s) => s.co2Kg), 1);
 
-  const kwh = (v: number) => v.toLocaleString("de-DE");
-  const fmt = (v: number) => (v / 1000).toFixed(1);
+  const fmt = (v: number) => v.toLocaleString("de-DE");
+  const fmtT = (v: number) => (v / 1000).toFixed(1);
+  const fmtEur = (v: number) => v.toLocaleString("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
-  let html = `<div class="co2-scenarios">`;
-  for (const s of scenarios) {
+  // CO2 per kWh factors for tooltips
+  const factorRows = Object.entries(CO2_EMISSION_FACTORS)
+    .filter(([, v]) => v > 0)
+    .map(([src, factor]) => `${src}: ${(factor * 1000).toFixed(0)} g CO₂/kWh`)
+    .join(" · ");
+
+  let html = `<div class="co2-steps">`;
+
+  for (let i = 0; i < scenarios.length; i++) {
+    const s = scenarios[i];
     const pct = (s.co2Kg / maxCo2) * 100;
-    const isCurrent = s === c.current;
+    const isBest = s.co2Kg === Math.min(...scenarios.map((x) => x.co2Kg));
+    const isFirst = i === 0;
+
     html += `
-      <div class="co2-row${isCurrent ? " co2-row-hl" : ""}">
-        <div class="co2-label">${s.label}</div>
+      <div class="co2-step${isBest ? " co2-step-hl" : ""}">
+        <div class="co2-step-header">
+          <div class="co2-step-label">${s.label}</div>
+          <div class="co2-step-total">
+            ${fmtT(s.co2Kg)} t <span class="co2-sub">(${fmt(s.co2Kg)} kg)</span>
+          </div>
+        </div>
         <div class="co2-bar-wrap">
           <div class="co2-bar" style="width:${pct}%"></div>
         </div>
-        <div class="co2-value">${fmt(s.co2Kg)} t <span class="co2-sub">(${kwh(s.co2Kg)} kg)</span></div>
+        <div class="co2-breakdown">
+          <span class="co2-tag co2-tag-heat" data-tooltip="${CO2_GAS_DIRECT * 1000} g CO₂/kWh (Erdgas-Heizkessel)">${t("co2.heating")}: ${fmt(s.heatingCo2Kg)} kg</span>
+          <span class="co2-tag co2-tag-elec" data-tooltip="${factorRows}">${t("co2.electricity")}: ${fmt(s.electricityCo2Kg)} kg</span>
+          <span class="co2-tag co2-tag-car" data-tooltip="${CO2_DIESEL * 1000} g CO₂/kWh Diesel">${t("co2.car")}: ${fmt(s.carCo2Kg)} kg</span>
+        </div>
+        ${!isFirst ? `
+        <div class="co2-saved">
+          <span class="co2-saved-item co2-saved-co2">−${fmt(s.co2SavedKg)} kg CO₂</span>
+          <span class="co2-saved-item co2-saved-gas">${s.gasSavedKWh > 0 ? "−" + fmt(s.gasSavedKWh) + " kWh Gas" : ""}</span>
+          <span class="co2-saved-item co2-saved-eur">${s.savedEUR > 0 ? "−" + fmtEur(s.savedEUR) : ""}</span>
+        </div>` : ""}
       </div>`;
-  }
-  html += `</div>`;
-
-  // Savings summary
-  html += `<div class="co2-savings">`;
-  if (c.savedVsBaselineKg > 0) {
-    html += `<div class="co2-saving-card">
-      <div class="co2-saving-val">−${fmt(c.savedVsBaselineKg)} t</div>
-      <div class="co2-saving-key">${t("co2.saved_vs_baseline")}</div>
-    </div>`;
-  }
-  if (c.savedVsGasKg > 0) {
-    html += `<div class="co2-saving-card">
-      <div class="co2-saving-val">−${fmt(c.savedVsGasKg)} t</div>
-      <div class="co2-saving-key">${t("co2.saved_vs_gas")}</div>
-    </div>`;
   }
   html += `</div>`;
 

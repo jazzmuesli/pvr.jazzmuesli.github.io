@@ -254,31 +254,34 @@ describe("runSimulation > gridMix", () => {
 });
 
 describe("runSimulation > co2Analysis", () => {
-  it("current scenario has lower CO2 than without PV", () => {
+  it("baseline has higher CO2 than +PV", () => {
     const r = runSimulation(params());
-    expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.withoutPv.co2Kg);
+    expect(r.co2Analysis.baseline.co2Kg).toBeGreaterThanOrEqual(r.co2Analysis.plusPv.co2Kg);
   });
 
-  it("current scenario has lower CO2 than baseline (no PV, no HP)", () => {
-    const r = runSimulation(params());
-    expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+  it("+EV has lower CO2 than baseline (no diesel)", () => {
+    const r = runSimulation(params({ car: { ...DEFAULT_SIM_PARAMS.car, annualKm: 15000 } }));
+    // EV on grid should still save CO2 vs diesel
+    expect(r.co2Analysis.plusEv.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
   });
 
-  it("savedVsBaseline is positive when PV reduces CO2", () => {
-    const r = runSimulation(params());
-    expect(r.co2Analysis.savedVsBaselineKg).toBeGreaterThan(0);
-  });
-
-  it("direct gas emits more CO2 than current HP scenario", () => {
+  it("+EV+WP has the lowest CO2 of all scenarios", () => {
     const r = runSimulation(params({ consumers: { ...baseConsumers, heatpump: { enabled: true, annualKWh: 5000 } } }));
-    if (r.co2Analysis.directGas.co2Kg > 0) {
-      expect(r.co2Analysis.current.co2Kg).toBeLessThan(r.co2Analysis.directGas.co2Kg);
-    }
+    const all = [r.co2Analysis.baseline, r.co2Analysis.plusPv, r.co2Analysis.plusEv, r.co2Analysis.plusEvPv, r.co2Analysis.plusEvWp];
+    const min = Math.min(...all.map((s) => s.co2Kg));
+    expect(r.co2Analysis.plusEvWp.co2Kg).toBe(min);
+  });
+
+  it("baseline has non-zero CO2 (diesel + gas + grid)", () => {
+    const r = runSimulation(params({ car: { ...DEFAULT_SIM_PARAMS.car, annualKm: 15000 } }));
+    expect(r.co2Analysis.baseline.co2Kg).toBeGreaterThan(0);
+    expect(r.co2Analysis.baseline.carCo2Kg).toBeGreaterThan(0);
+    expect(r.co2Analysis.baseline.heatingCo2Kg).toBeGreaterThan(0);
   });
 
   it("all scenario CO2 values are non-negative", () => {
     const r = runSimulation(params());
-    const scenarios = [r.co2Analysis.current, r.co2Analysis.withoutPv, r.co2Analysis.withoutHp, r.co2Analysis.baseline, r.co2Analysis.directGas];
+    const scenarios = [r.co2Analysis.baseline, r.co2Analysis.plusPv, r.co2Analysis.plusEv, r.co2Analysis.plusEvPv, r.co2Analysis.plusEvWp];
     for (const s of scenarios) {
       expect(s.co2Kg, `${s.label} CO2 should be >= 0`).toBeGreaterThanOrEqual(0);
     }
@@ -286,7 +289,21 @@ describe("runSimulation > co2Analysis", () => {
 
   it("co2Tonnes is consistent with co2Kg", () => {
     const r = runSimulation(params());
-    const s = r.co2Analysis.current;
-    expect(s.co2Tonnes).toBeCloseTo(s.co2Kg / 1000, 1);
+    for (const s of [r.co2Analysis.baseline, r.co2Analysis.plusEvWp]) {
+      expect(s.co2Tonnes).toBeCloseTo(s.co2Kg / 1000, 1);
+    }
+  });
+
+  it("heating + electricity + car sums to total CO2", () => {
+    const r = runSimulation(params({ car: { ...DEFAULT_SIM_PARAMS.car, annualKm: 15000 } }));
+    for (const s of [r.co2Analysis.baseline, r.co2Analysis.plusEvWp]) {
+      expect(s.heatingCo2Kg + s.electricityCo2Kg + s.carCo2Kg).toBeCloseTo(s.co2Kg, -1);
+    }
+  });
+
+  it("savings are zero for baseline", () => {
+    const r = runSimulation(params());
+    expect(r.co2Analysis.baseline.co2SavedKg).toBe(0);
+    expect(r.co2Analysis.baseline.gasSavedKWh).toBe(0);
   });
 });

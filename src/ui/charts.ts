@@ -22,6 +22,7 @@ import {
   DayChartDatum,
   ScenarioDatum,
   TariffCombination,
+  CO2_EMISSION_FACTORS,
 } from "../calc/report";
 import { t, fmtEUR as i18nFmtEUR, fmtKWh as i18nFmtKWh, getLocale } from "../i18n";
 
@@ -839,8 +840,10 @@ export function renderPieChart(
   legend.className = "pie-legend";
   for (const [src, share] of sources) {
     const pct = (share * 100).toFixed(1);
+    const co2 = (CO2_EMISSION_FACTORS[src as keyof typeof CO2_EMISSION_FACTORS] ?? 0) * 1000;
     const item = document.createElement("span");
     item.className = "legend-item";
+    item.setAttribute("data-tooltip", `${co2.toFixed(0)} g CO₂/kWh`);
     const sw = document.createElement("span");
     sw.className = "legend-swatch";
     sw.style.background = SOURCE_COLORS[src] ?? SOURCE_COLORS.other;

@@ -352,7 +352,7 @@ export interface GridMix {
 export const CO2_EMISSION_FACTORS: GridMixShares = {
   wind: 0.011,
   solar: 0.041,
-  gas: 1.0,     // at ~45% plant efficiency → ~1.0 kg CO2/kWh electricity
+  gas: 1.0,     // at ~45% plant efficiency → ~1.0 kg CO₂/kWh electricity
   coal: 0.95,
   biomass: 0.05,
   hydro: 0.005,
@@ -360,34 +360,43 @@ export const CO2_EMISSION_FACTORS: GridMixShares = {
 };
 
 /** CO2 emission factor for natural gas burned directly (heating). */
-export const CO2_GAS_DIRECT = 0.201; // kg CO2/kWh (German gas)
+export const CO2_GAS_DIRECT = 0.201; // kg CO₂/kWh (German gas)
+
+/** CO2 emission factor for diesel (tank-to-wheel). */
+export const CO2_DIESEL = 0.264; // kg CO₂/kWh diesel ≈ 2.64 kg CO₂/liter
+
+/** Diesel car energy demand: ~17 kWh/100km (≈ 6 l/100km). */
+export const DIESEL_KWH_PER_100KM = 17;
+
+/** Gas heating: useful heat / boiler efficiency. */
+export const GAS_HEAT_KWH_PER_KWH_USEFUL = 1 / DEFAULT_GAS_BOILER_EFFICIENCY; // ~1.087
 
 export interface Co2Scenario {
-  /** Label for the scenario. */
   label: string;
-  /** Total CO2 emissions in kg/year. */
   co2Kg: number;
-  /** CO2 in t/year (rounded to 2 decimals). */
   co2Tonnes: number;
-  /** Energy source description. */
-  source: string;
+  heatingCo2Kg: number;
+  electricityCo2Kg: number;
+  carCo2Kg: number;
+  /** Gas saved vs. baseline (kWh). */
+  gasSavedKWh: number;
+  /** CO2 saved vs. baseline (kg). */
+  co2SavedKg: number;
+  /** Money saved vs. baseline (EUR). */
+  savedEUR: number;
 }
 
 export interface Co2Analysis {
-  /** Current scenario: PV + battery + HP (actual grid import). */
-  current: Co2Scenario;
-  /** Without PV/battery: HP draws 100% from grid. */
-  withoutPv: Co2Scenario;
-  /** Without HP: PV + battery, household + EV only on grid. */
-  withoutHp: Co2Scenario;
-  /** Baseline: no PV, no battery, no HP — all load from grid. */
+  /** Scenario 1: Baseline — diesel car + gas heating + grid only. */
   baseline: Co2Scenario;
-  /** Direct gas: HP replaced by gas boiler. */
-  directGas: Co2Scenario;
-  /** CO2 saved vs. baseline (kg/year). */
-  savedVsBaselineKg: number;
-  /** CO2 saved vs. direct gas (kg/year). */
-  savedVsGasKg: number;
+  /** Scenario 2: + PV — diesel + gas + PV (grid deficit). */
+  plusPv: Co2Scenario;
+  /** Scenario 3: + EV — EV replaces diesel + gas heating + grid. */
+  plusEv: Co2Scenario;
+  /** Scenario 4: + EV + PV — EV + gas + PV. */
+  plusEvPv: Co2Scenario;
+  /** Scenario 5: + EV + WP — EV + WP + PV (current config). */
+  plusEvWp: Co2Scenario;
 }
 
 export interface SimReport {
@@ -740,98 +749,174 @@ function computeGridMix(
   };
 }
 
-function weightedCo2(shares: GridMixShares, totalKWh: number): number {
-  return totalKWh * (
-    shares.wind * CO2_EMISSION_FACTORS.wind +
-    shares.solar * CO2_EMISSION_FACTORS.solar +
-    shares.gas * CO2_EMISSION_FACTORS.gas +
-    shares.coal * CO2_EMISSION_FACTORS.coal +
-    shares.biomass * CO2_EMISSION_FACTORS.biomass +
-    shares.hydro * CO2_EMISSION_FACTORS.hydro +
-    shares.other * CO2_EMISSION_FACTORS.other
-  );
-}
-
 function computeCo2Analysis(
   p: SimParams,
   loads: ConsumerLoads,
   result: SimResult,
   gridMix: GridMix,
 ): Co2Analysis {
-  const hpEnabled = p.consumers.heatpump.enabled;
   const hpKWh = p.consumers.heatpump.annualKWh;
   const jaz = p.heatpumpJaz;
+  const evKWh = p.consumers.ev.annualKWh;
+  const annualKm = p.car.annualKm;
+
+  const sum = (arr: Float64Array) => annualSum(arr);
+
+  // Household load (always present)
+  const householdKWh = sum(loads.household);
+
+  // Gas heating: useful heat / boiler efficiency
   const usefulHeatKWh = hpKWh * jaz;
-  const gasDirectKWh = usefulHeatKWh / DEFAULT_GAS_BOILER_EFFICIENCY;
-  const gasDirectCo2Kg = gasDirectKWh * CO2_GAS_DIRECT;
+  const gasForHeatKWh = usefulHeatKWh / DEFAULT_GAS_BOILER_EFFICIENCY;
+  const gasHeatCo2Kg = gasForHeatKWh * CO2_GAS_DIRECT;
 
-  const sumArray = (arr: Float64Array) => annualSum(arr);
+  // Diesel car: annual km × energy per km × emission factor
+  const dieselKWh = annualKm * DIESEL_KWH_PER_100KM / 100;
+  const dieselCo2Kg = dieselKWh * CO2_DIESEL;
 
-  // Current scenario: actual grid import weighted by actual mix
-  const currentCo2Kg = weightedCo2(gridMix.overall, sumArray(result.gridImport));
-
-  // Without PV: entire load from grid, weighted by hourly mix
-  const withoutPvCo2Kg = weightedCo2(gridMix.withoutPv, sumArray(result.load));
-
-  // Baseline: household + EV only, no HP, no PV
-  const baselineLoadNoHp = new Float64Array(TOTAL_STEPS);
-  for (let i = 0; i < TOTAL_STEPS; i++) {
-    baselineLoadNoHp[i] = loads.household[i] + (p.consumers.ev.enabled ? loads.ev[i] : 0);
-  }
-  const baselineCo2Kg = weightedCo2(gridMix.withoutPv, sumArray(baselineLoadNoHp));
-
-  // Without HP: PV + battery, but no heat pump
-  const withoutHpLoad = new Float64Array(TOTAL_STEPS);
-  for (let i = 0; i < TOTAL_STEPS; i++) {
-    withoutHpLoad[i] = loads.household[i] + (p.consumers.ev.enabled ? loads.ev[i] : 0);
-  }
-  const totalLoadWithoutHp = sumArray(withoutHpLoad);
-  const selfConsumptionWithoutHp = Math.min(sumArray(result.pv), totalLoadWithoutHp);
-  const gridImportWithoutHp = totalLoadWithoutHp - selfConsumptionWithoutHp;
-  const withoutHpCo2Kg = weightedCo2(gridMix.overall, gridImportWithoutHp);
-
-  // Direct gas: HP replaced by gas boiler
-  const directGasCo2Kg = hpEnabled ? gasDirectCo2Kg : 0;
-
-  const fmt = (v: number) => Math.round(v);
-  const toT = (v: number) => Math.round(v / 10) / 100;
-
-  const currentLabel = hpEnabled ? "PV + Speicher + WP" : "PV + Speicher";
-
-  return {
-    current: {
-      label: currentLabel,
-      co2Kg: fmt(currentCo2Kg),
-      co2Tonnes: toT(currentCo2Kg),
-      source: "Netzbezug (aktuell)",
-    },
-    withoutPv: {
-      label: hpEnabled ? "WP + Netz (kein PV)" : "Nur Netz (kein PV)",
-      co2Kg: fmt(withoutPvCo2Kg),
-      co2Tonnes: toT(withoutPvCo2Kg),
-      source: "100% Netzstrom",
-    },
-    withoutHp: {
-      label: "PV + Speicher (keine WP)",
-      co2Kg: fmt(withoutHpCo2Kg),
-      co2Tonnes: toT(withoutHpCo2Kg),
-      source: "Netzbezug ohne WP",
-    },
-    baseline: {
-      label: "Basis (kein PV, keine WP)",
-      co2Kg: fmt(baselineCo2Kg),
-      co2Tonnes: toT(baselineCo2Kg),
-      source: "100% Netzstrom",
-    },
-    directGas: {
-      label: "Direktgas (keine WP)",
-      co2Kg: fmt(directGasCo2Kg),
-      co2Tonnes: toT(directGasCo2Kg),
-      source: "Erdgas-Heizkessel",
-    },
-    savedVsBaselineKg: fmt(baselineCo2Kg - currentCo2Kg),
-    savedVsGasKg: hpEnabled ? fmt(gasDirectCo2Kg - currentCo2Kg) : 0,
+  // Grid electricity CO2: use the actual grid import from simulation
+  // weighted by the hourly mix (per-step integration for accuracy)
+  const computeGridCo2 = (gridImportArr: Float64Array): number => {
+    let co2 = 0;
+    for (let i = 0; i < TOTAL_STEPS; i++) {
+      const gi = gridImportArr[i];
+      if (gi <= 0) continue;
+      const mix = electricityMixForStep(i);
+      co2 += gi * (
+        mix.wind * CO2_EMISSION_FACTORS.wind +
+        mix.solar * CO2_EMISSION_FACTORS.solar +
+        mix.gas * CO2_EMISSION_FACTORS.gas +
+        mix.coal * CO2_EMISSION_FACTORS.coal +
+        mix.biomass * CO2_EMISSION_FACTORS.biomass +
+        mix.hydro * CO2_EMISSION_FACTORS.hydro +
+        mix.other * CO2_EMISSION_FACTORS.other
+      );
+    }
+    return co2;
   };
+
+  // PV self-consumption: how much of the PV output covers load directly
+  const selfConsumptionKWh = sum(result.directUse) + sum(result.dischargeToLoadPV);
+
+  // --- Scenario 1: Baseline — diesel car + gas heating + grid only (no PV) ---
+  // All household + HP load from grid, gas for heating, diesel for car
+  const baselineGridKWh = householdKWh + hpKWh;
+  const baselineGridCo2 = computeGridCo2_fromKWh(baselineGridKWh);
+  const baseline = makeScenario(
+    "Basis: Diesel + Gas + Netz",
+    gasHeatCo2Kg,
+    baselineGridCo2,
+    dieselCo2Kg,
+    0, 0, 0,
+  );
+
+  // --- Scenario 2: + PV — diesel + gas + PV covers household deficit ---
+  // PV covers part of household, rest from grid; HP still on grid
+  const hpGridKWh = hpKWh - Math.min(selfConsumptionKWh * (hpKWh / (householdKWh + hpKWh)), hpKWh);
+  const householdGridKWh = Math.max(0, householdKWh - selfConsumptionKWh);
+  const pvGridKWh = householdGridKWh + hpGridKWh;
+  const pvGridCo2 = computeGridCo2_fromKWh(pvGridKWh);
+  const plusPv = makeScenario(
+    "+ PV: Diesel + Gas + PV",
+    gasHeatCo2Kg,
+    pvGridCo2,
+    dieselCo2Kg,
+    0,
+    gasForHeatKWh, // gas stays same
+    baselineGridKWh - pvGridKWh, // grid kWh saved
+  );
+
+  // --- Scenario 3: + EV — EV replaces diesel + gas + grid ---
+  // EV on grid, gas heating, no PV
+  const evPlusHouseholdGridKWh = evKWh + householdKWh;
+  const evGridCo2 = computeGridCo2_fromKWh(evPlusHouseholdGridKWh);
+  const plusEv = makeScenario(
+    "+ E-Auto: EV + Gas + Netz",
+    gasHeatCo2Kg,
+    evGridCo2,
+    0, // no diesel
+    0,
+    gasForHeatKWh,
+    0,
+  );
+
+  // --- Scenario 4: + EV + PV — EV + gas + PV ---
+  const evPvHouseholdGridKWh = Math.max(0, householdKWh - selfConsumptionKWh);
+  const evPvGridKWh = evKWh + evPvHouseholdGridKWh;
+  const evPvGridCo2 = computeGridCo2_fromKWh(evPvGridKWh);
+  const plusEvPv = makeScenario(
+    "+ E-Auto + PV: EV + Gas + PV",
+    gasHeatCo2Kg,
+    evPvGridCo2,
+    0,
+    0,
+    gasForHeatKWh,
+    0,
+  );
+
+  // --- Scenario 5: + EV + WP — EV + WP + PV (current config) ---
+  const hpTotalGridCo2 = computeGridCo2(result.gridImport);
+  const plusEvWp = makeScenario(
+    "+ E-Auto + WP: EV + WP + PV",
+    0, // no gas heating
+    hpTotalGridCo2,
+    0,
+    gasForHeatKWh, // gas saved by WP
+    0,
+    0,
+  );
+
+  // Compute savings vs baseline
+  addSavings(baseline, baseline);
+  addSavings(plusPv, baseline);
+  addSavings(plusEv, baseline);
+  addSavings(plusEvPv, baseline);
+  addSavings(plusEvWp, baseline);
+
+  return { baseline, plusPv, plusEv, plusEvPv, plusEvWp };
+
+  function makeScenario(
+    label: string,
+    heatingCo2: number,
+    elecCo2: number,
+    carCo2: number,
+    gasSavedKWh: number,
+    _gasUsedKWh: number,
+    _gridSavedKWh: number,
+  ): Co2Scenario {
+    const total = heatingCo2 + elecCo2 + carCo2;
+    return {
+      label,
+      co2Kg: Math.round(total),
+      co2Tonnes: Math.round(total / 10) / 100,
+      heatingCo2Kg: Math.round(heatingCo2),
+      electricityCo2Kg: Math.round(elecCo2),
+      carCo2Kg: Math.round(carCo2),
+      gasSavedKWh: Math.round(gasSavedKWh),
+      co2SavedKg: 0,
+      savedEUR: 0,
+    };
+  }
+
+  function addSavings(s: Co2Scenario, base: Co2Scenario): void {
+    s.co2SavedKg = Math.round(base.co2Kg - s.co2Kg);
+    const baseGasKWh = base.heatingCo2Kg / CO2_GAS_DIRECT * DEFAULT_GAS_BOILER_EFFICIENCY / jaz;
+    const thisGasKWh = s.heatingCo2Kg / CO2_GAS_DIRECT * DEFAULT_GAS_BOILER_EFFICIENCY / jaz;
+    s.gasSavedKWh = Math.round(Math.max(0, baseGasKWh - thisGasKWh));
+    s.savedEUR = Math.round(s.gasSavedKWh * 0.11);
+  }
+
+  function computeGridCo2_fromKWh(totalGridKWh: number): number {
+    // Use the withoutPv mix (average grid intensity)
+    const avgCo2 = gridMix.withoutPv.wind * CO2_EMISSION_FACTORS.wind +
+      gridMix.withoutPv.solar * CO2_EMISSION_FACTORS.solar +
+      gridMix.withoutPv.gas * CO2_EMISSION_FACTORS.gas +
+      gridMix.withoutPv.coal * CO2_EMISSION_FACTORS.coal +
+      gridMix.withoutPv.biomass * CO2_EMISSION_FACTORS.biomass +
+      gridMix.withoutPv.hydro * CO2_EMISSION_FACTORS.hydro +
+      gridMix.withoutPv.other * CO2_EMISSION_FACTORS.other;
+    return totalGridKWh * avgCo2;
+  }
 }
 
 export function runSimulation(p: SimParams): SimReport {

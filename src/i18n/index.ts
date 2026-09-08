@@ -261,16 +261,18 @@ const de: Messages = {
 
   // CO2 scenario section
   "co2.title": "CO₂-Emissionen — Szenarienvergleich",
-  "co2.hint": "Wie viel CO₂ wird in verschiedenen Szenarien ausgestoßen? Die Emissionen hängen vom Strommix und der Nutzung von PV, Speicher und Wärmepumpe ab.",
-  "co2.current": "Aktuelles Szenario",
-  "co2.without_pv": "Ohne PV/Speicher",
-  "co2.without_hp": "Ohne Wärmepumpe",
-  "co2.baseline": "Basis (kein PV, keine WP)",
-  "co2.direct_gas": "Direktgas (keine WP)",
-  "co2.saved_vs_baseline": "Eingespart vs. Basis",
-  "co2.saved_vs_gas": "Eingespart vs. Erdgas",
+  "co2.hint": "Schrittweise Reduktion: Was bringt PV, E-Auto und Wärmepumpe jeweils gegenuber dem Diesel- und Gas-Standard? Ersparnis in CO₂, Gas und Euro.",
+  "co2.baseline": "Basis: Diesel + Gas + Netz",
+  "co2.plus_pv": "+ PV: Diesel + Gas + PV",
+  "co2.plus_ev": "+ E-Auto: EV + Gas + Netz",
+  "co2.plus_ev_pv": "+ E-Auto + PV: EV + Gas + PV",
+  "co2.plus_ev_wp": "+ E-Auto + WP: EV + WP + PV",
+  "co2.heating": "Heizung",
+  "co2.electricity": "Strom",
+  "co2.car": "Auto",
   "co2.co2_tonnes": "t CO₂/Jahr",
   "co2.co2_kg": "kg CO₂/Jahr",
+  "co2.co2_per_kwh": "CO₂-Faktor",
 
   // BWWP section
   "bwwp.title": "Brauchwasser-Wärmepumpe",
@@ -997,16 +999,18 @@ const en: Messages = {
 
   // CO2 scenario section
   "co2.title": "CO₂ emissions — scenario comparison",
-  "co2.hint": "How much CO₂ is emitted in various scenarios? Emissions depend on the electricity mix and the use of PV, battery, and heat pump.",
-  "co2.current": "Current scenario",
-  "co2.without_pv": "Without PV/battery",
-  "co2.without_hp": "Without heat pump",
-  "co2.baseline": "Baseline (no PV, no HP)",
-  "co2.direct_gas": "Direct gas (no HP)",
-  "co2.saved_vs_baseline": "Saved vs. baseline",
-  "co2.saved_vs_gas": "Saved vs. natural gas",
+  "co2.hint": "Step-by-step reduction: what does PV, EV, and heat pump each save compared to diesel + gas baseline? Savings in CO₂, gas, and EUR.",
+  "co2.baseline": "Baseline: diesel + gas + grid",
+  "co2.plus_pv": "+ PV: diesel + gas + PV",
+  "co2.plus_ev": "+ EV: EV + gas + grid",
+  "co2.plus_ev_pv": "+ EV + PV: EV + gas + PV",
+  "co2.plus_ev_wp": "+ EV + HP: EV + HP + PV",
+  "co2.heating": "Heating",
+  "co2.electricity": "Electricity",
+  "co2.car": "Car",
   "co2.co2_tonnes": "t CO₂/year",
   "co2.co2_kg": "kg CO₂/year",
+  "co2.co2_per_kwh": "CO₂ factor",
 
   // BWWP section
   "bwwp.title": "Domestic hot water heat pump",
