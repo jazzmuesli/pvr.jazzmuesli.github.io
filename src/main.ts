@@ -253,7 +253,11 @@ function renderCo2(r: SimReport): void {
   co2Title.textContent = t("co2.title");
   co2Hint.textContent = t("co2.hint");
 
-  const scenarios = [c.baseline, c.wpDieselGrid, c.plusPv, c.plusEv, c.evWpNoPv, c.plusEvPv, c.plusEvWp];
+  // Main progression: each step adds one technology layer
+  const mainSteps = [c.baseline, c.plusPv, c.plusEv, c.plusEvPv, c.plusEvWp];
+  // Alternatives: no-PV variants that show electrification without own generation
+  const altSteps = [c.wpDieselGrid, c.evWpNoPv];
+  const scenarios = [...mainSteps, ...altSteps];
   const maxCo2 = Math.max(...scenarios.map((s) => s.co2Kg), 1);
 
   const fmt = (v: number) => v.toLocaleString("de-DE");
@@ -273,11 +277,34 @@ function renderCo2(r: SimReport): void {
     const pct = (s.co2Kg / maxCo2) * 100;
     const isBest = s.co2Kg === Math.min(...scenarios.map((x) => x.co2Kg));
     const isFirst = i === 0;
+    const isMain = i < mainSteps.length;
+    const isAlt = !isMain;
+
+    // Incremental delta vs. previous step in the main progression
+    let deltaLabel = "";
+    if (!isFirst && isMain) {
+      const prev = mainSteps[i - 1];
+      if (prev) {
+        const deltaCo2 = prev.co2Kg - s.co2Kg;
+        if (deltaCo2 > 0) {
+          deltaLabel = ` ▸ −${fmt(deltaCo2)} kg`;
+        }
+      }
+    }
+
+    // Separator before alternative scenarios
+    if (isAlt && i === mainSteps.length) {
+      html += `<div class="co2-step-separator"><span>${t("co2.alternatives_label") || "Ohne PV (Alternativen):"}</span></div>`;
+    }
+
+    const stepNum = isMain && !isFirst ? `<span class="co2-step-num">${i}</span>` : "";
+    const hlClass = isBest ? " co2-step-hl" : "";
+    const altClass = isAlt ? " co2-step-alt" : "";
 
     html += `
-      <div class="co2-step${isBest ? " co2-step-hl" : ""}">
+      <div class="co2-step${hlClass}${altClass}">
         <div class="co2-step-header">
-          <div class="co2-step-label">${s.label}</div>
+          <div class="co2-step-label">${stepNum}${s.label}</div>
           <div class="co2-step-total">
             ${fmtT(s.co2Kg)} t <span class="co2-sub">(${fmt(s.co2Kg)} kg)</span>
           </div>
@@ -292,7 +319,7 @@ function renderCo2(r: SimReport): void {
         </div>
         ${!isFirst ? `
         <div class="co2-saved">
-          <span class="co2-saved-item co2-saved-co2">−${fmt(s.co2SavedKg)} kg CO₂</span>
+          <span class="co2-saved-item co2-saved-co2">−${fmt(s.co2SavedKg)} kg CO₂${deltaLabel}</span>
           <span class="co2-saved-item co2-saved-gas">${s.gasSavedKWh > 0 ? "−" + fmt(s.gasSavedKWh) + " kWh Gas" : ""}</span>
           <span class="co2-saved-item co2-saved-eur">${s.savedEUR > 0 ? "−" + fmtEur(s.savedEUR) : ""}</span>
         </div>` : ""}

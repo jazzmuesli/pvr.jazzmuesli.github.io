@@ -968,12 +968,21 @@ function computeCo2Analysis(
     0,
     0,
   );
-  // Money saved vs. baseline: diesel→EV + gas→heat-pump savings. Note the
-  // heat-pump/EV running costs used here already reflect the current tariff;
-  // without PV they are marginally higher, but the opportunity module's
-  // coverage-adjusted price is the best per-scenario estimate available.
+  // Money saved vs. baseline: diesel→EV + gas→heat-pump savings. Without PV the
+  // HP and EV run 100% on grid electricity at the full tariff, so we must NOT
+  // use the PV-adjusted opportunity costs (which already credit self-consumption).
+  // The EV cost includes maintenance/tax/insurance — only the electricity part changes.
+  const evWpNoPvHpCostEUR = (hpKWh * importCtPerKWh) / 100;
+  const evWpNoPvElectricityCostEUR = evEnabled ? (evKWh * importCtPerKWh) / 100 : 0;
+  // Non-electricity EV cost: maintenance + vehicle tax + insurance (unchanged regardless of PV).
+  const evNonElectricityCostEUR = evEnabled
+    ? (annualKm * p.car.evMaintenanceCtPerKm) / 100 +
+      p.car.evVehicleTaxEUR +
+      p.car.evOtherNebenkostenEUR
+    : 0;
+  const evWpNoPvEvFullCostEUR = evWpNoPvElectricityCostEUR + evNonElectricityCostEUR;
   evWpNoPv.savedEUR = Math.round(
-    (dieselCostEUR - evCostEUR) + (gasHeatCostEUR - hpHeatCostEUR),
+    (dieselCostEUR - evWpNoPvEvFullCostEUR) + (gasHeatCostEUR - evWpNoPvHpCostEUR),
   );
 
   // --- Scenario 7: + WP but diesel car + grid (no PV, no EV) ----------------
@@ -991,7 +1000,9 @@ function computeCo2Analysis(
     0,
   );
   // Money saved vs. baseline: only the gas→heat-pump saving (car unchanged).
-  wpDieselGrid.savedEUR = Math.round(gasHeatCostEUR - hpHeatCostEUR);
+  // Must subtract the HP's grid electricity cost (full tariff, no PV).
+  const wpDieselGridHpCostEUR = (hpKWh * importCtPerKWh) / 100;
+  wpDieselGrid.savedEUR = Math.round(gasHeatCostEUR - wpDieselGridHpCostEUR);
 
   // CO2 savings vs. baseline for every scenario.
   setCo2Saved(baseline, baseline);

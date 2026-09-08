@@ -525,4 +525,89 @@ describe("runSimulation > co2Analysis", () => {
     }
     expect(gw / gt).toBeLessThan(flatAvg);
   });
+
+  // ---- Sector coupling (Sektorenkopplung) plausibility --------------------
+
+  it("+EV+WP+PV saves more money than +EV+WP without PV (PV lowers electricity costs)", () => {
+    // With PV, the HP and EV consume partly self-generated electricity at ~0 ct
+    // marginal cost. Without PV, the same electricity costs the full grid tariff.
+    // So the gas→HP and diesel→EV savings are LARGER when PV is present.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBeGreaterThan(r.co2Analysis.evWpNoPv.savedEUR);
+  });
+
+  it("+EV+WP without PV still saves money vs. baseline (electrification alone helps)", () => {
+    // Even without PV, replacing diesel with EV and gas with HP saves money
+    // because the electric alternatives are cheaper per unit of useful energy.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.evWpNoPv.savedEUR).toBeGreaterThan(0);
+  });
+
+  it("+EV+WP+PV has the highest money savings of all scenarios", () => {
+    const r = runSimulation(params());
+    const all = [
+      r.co2Analysis.baseline,
+      r.co2Analysis.plusPv,
+      r.co2Analysis.plusEv,
+      r.co2Analysis.plusEvPv,
+      r.co2Analysis.plusEvWp,
+      r.co2Analysis.evWpNoPv,
+      r.co2Analysis.wpDieselGrid,
+    ];
+    const maxSaved = Math.max(...all.map((s) => s.savedEUR));
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBe(maxSaved);
+  });
+
+  it("wpDieselGrid accounts for HP electricity cost (savings < gas heating cost alone)", () => {
+    // The WP+diesel+grid scenario saves gas by switching to a heat pump, but
+    // must pay for the HP's grid electricity. So the net saving is less than
+    // the full gas heating cost.
+    const r = runSimulation(params());
+    const gasCost = r.opportunityCosts.heating.gas.totalEUR;
+    expect(r.co2Analysis.wpDieselGrid.savedEUR).toBeLessThan(gasCost);
+    // But it should still be positive (gas is more expensive than HP electricity).
+    expect(r.co2Analysis.wpDieselGrid.savedEUR).toBeGreaterThan(0);
+  });
+
+  it("CO2 hierarchy: +EV+WP+PV < +EV+WP no PV < baseline", () => {
+    // Full sector coupling with PV is cleanest; electrification without PV
+    // still beats the fossil baseline because the grid is cleaner than diesel+gas.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.plusEvWp.co2Kg).toBeLessThan(r.co2Analysis.evWpNoPv.co2Kg);
+    expect(r.co2Analysis.evWpNoPv.co2Kg).toBeLessThan(r.co2Analysis.baseline.co2Kg);
+  });
+
+  it("partial sector coupling (EV only or WP only) saves less than full coupling", () => {
+    // Full coupling (EV+WP+PV) should save more CO2 than just adding EV or just WP.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.plusEvWp.co2SavedKg).toBeGreaterThan(r.co2Analysis.plusEv.co2SavedKg);
+    // +EV+PV (no WP) saves less than full EV+WP+PV.
+    expect(r.co2Analysis.plusEvWp.co2SavedKg).toBeGreaterThan(r.co2Analysis.plusEvPv.co2SavedKg);
+  });
+
+  it("adding PV to any configuration improves CO2 (PV always helps)", () => {
+    const r = runSimulation(params());
+    // +EV+PV is cleaner than +EV alone.
+    expect(r.co2Analysis.plusEvPv.co2Kg).toBeLessThan(r.co2Analysis.plusEv.co2Kg);
+    // +EV+WP+PV is cleaner than +EV+WP no PV.
+    expect(r.co2Analysis.plusEvWp.co2Kg).toBeLessThan(r.co2Analysis.evWpNoPv.co2Kg);
+  });
+
+  it("money savings increase with each added technology layer", () => {
+    // Each technology (PV, EV, WP) adds incremental savings.
+    const r = runSimulation(params());
+    // +PV saves money vs. baseline.
+    expect(r.co2Analysis.plusPv.savedEUR).toBeGreaterThan(0);
+    // +EV saves more than +PV alone (EV savings are large).
+    expect(r.co2Analysis.plusEvPv.savedEUR).toBeGreaterThan(r.co2Analysis.plusPv.savedEUR);
+    // +EV+WP saves the most (full Sektorenkopplung).
+    expect(r.co2Analysis.plusEvWp.savedEUR).toBeGreaterThan(r.co2Analysis.plusEvPv.savedEUR);
+  });
+
+  it("gas savings are the same for +EV+WP with and without PV (same heat pump)", () => {
+    // Both scenarios replace gas heating with the same HP, so gasSavedKWh is identical.
+    const r = runSimulation(params());
+    expect(r.co2Analysis.plusEvWp.gasSavedKWh).toBe(r.co2Analysis.evWpNoPv.gasSavedKWh);
+    expect(r.co2Analysis.plusEvWp.gasSavedKWh).toBeGreaterThan(0);
+  });
 });

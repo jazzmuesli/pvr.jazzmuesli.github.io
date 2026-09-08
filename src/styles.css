@@ -444,3 +444,37 @@ body {
   color: #6b7280;
   font-size: 0.75rem;
 }
+.co2-step-separator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+.co2-step-separator::before,
+.co2-step-separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+.co2-step-alt {
+  opacity: 0.85;
+  border-style: dashed;
+}
+.co2-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3em;
+  height: 1.3em;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
