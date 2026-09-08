@@ -386,7 +386,7 @@ const de: Messages = {
   "import.label_dynamic14a": "dynamisch + §14a/3",
 
   // Excel workbook
-  "workbook.creator": "Energiewenderechner",
+  "workbook.creator": "Energiewendeamortisationsrechner",
   "workbook.legend": "Legende:",
   "workbook.input": "Eingabe",
   "workbook.calibration": "Kalibr.",
@@ -776,7 +776,7 @@ const de: Messages = {
   // UI
   "ui.sidebar_toggle": "⚙️ Eingaben",
   "ui.sidebar_toggle_title": "Eingaben ein-/ausblenden",
-  "ui.title": "Energiewenderechner",
+  "ui.title": "Energiewendeamortisationsrechner",
   "ui.subtitle": "Wie funktioniert Energiewende zu Hause — mit PV, Batterie, Wärmepumpe, E-Auto, dynamischen Tarifen und Direktvermarktung.",
   "ui.excel_button": "📊 Excel-Export (.xlsx)",
   "ui.excel_button_title": "Excel-Datei mit allen Berechnungen und Formeln herunterladen",
@@ -1128,7 +1128,7 @@ const en: Messages = {
   "import.label_dynamic14a": "dynamic + §14a/3",
 
   // Excel workbook
-  "workbook.creator": "Energiewenderechner",
+  "workbook.creator": "Energiewendeamortisationsrechner",
   "workbook.legend": "Legend:",
   "workbook.input": "Input",
   "workbook.calibration": "Calibr.",
