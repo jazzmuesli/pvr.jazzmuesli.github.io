@@ -183,9 +183,9 @@ describe("i18n", () => {
       vi.resetModules();
       const { t, setLocale } = await loadI18n();
       setLocale("de");
-      expect(t("wizard.title")).toBe("PV-Szenario-Baukasten & Berater");
+      expect(t("wizard.title")).toBe("Energiewende-Szenario-Baukasten & Berater");
       setLocale("en");
-      expect(t("wizard.title")).toBe("PV scenario builder & advisor");
+      expect(t("wizard.title")).toBe("Energy transition scenario builder & advisor");
     });
 
     it("handles chat keys", async () => {

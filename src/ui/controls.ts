@@ -7,6 +7,7 @@ import { t } from "../i18n";
 
 interface SliderOpts {
   label: string;
+  title?: string;
   min: number;
   max: number;
   step: number;
@@ -32,6 +33,7 @@ function slider(opts: SliderOpts, state: AppState, onChange: () => void): HTMLEl
   };
   const txt = document.createElement("span");
   txt.textContent = opts.label;
+  if (opts.title) lab.title = opts.title;
   lab.appendChild(txt);
   lab.appendChild(valSpan);
   const input = document.createElement("input");
@@ -145,7 +147,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section(t("control.investment"));
   host.appendChild(
-    slider({ label: t("control.total_investment"), min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+    slider({ label: t("control.total_investment"), title: t("tooltip.total_investment"), min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
   );
 
   section(t("control.pv_system"));

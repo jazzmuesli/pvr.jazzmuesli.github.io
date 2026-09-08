@@ -337,7 +337,8 @@ const de: Messages = {
   "tooltip.net_balance": "Netto-Bilanz: Export-Erlös minus Import-Kosten. Positiv = mehr verdient als verbraucht; negativ = teurer als ohne PV.",
   "tooltip.eff_price": "Effektiver Strompreis: Durchschnittlicher Preis pro kWh, den Sie tatsächlich bezahlen. Eigenverbrauch zählt als 0 ct/kWh (verlorene Einspeisung = Opportunitätskosten). Berechnung: (Importkosten − Exporterlös) / Gesamtverbrauch.",
   "tooltip.amortisation": "Amortisation: Wie viele Jahre es dauert, bis die Investition durch die jährlichen Ersparnisse zurückverdient ist. Berechnung: Investition / Jahresersparnis. Die Ersparnis = Baseline-Kosten (100% Netzbezug) − tatsächliche Netzkosten + Exporterlös.",
-  "tooltip.investment": "Gesamte Systeminvestition für PV-Anlage und Batterie in Euro.",
+  "tooltip.investment": "Gesamtinvestition: PV-Anlage + Batterie (Speicher) in Euro.",
+  "tooltip.total_investment": "Gesamtinvestition = PV-Anlage (Module, Wechselrichter, Montage) + Batterie (Speicher).",
   "tooltip.export_revenue": "Erlös aus dem Verkauf des eingespeisten Stroms an das Netz.",
   "tooltip.grid_cost": "Kosten für den Strom, der aus dem Netz bezogen werden muss.",
   "tooltip.marktpraemie": "Marktprämie: Differenz zwischen anzulegendem Wert (EEG-Referenz) und dem durchschnittlichen Börsenstrompreis der Solarerzeugung. Schützt vor niedrigen Spotpreisen. Berechnung: max(0, anzulegender Wert − Monatsmarktwert Solar).",
@@ -385,7 +386,7 @@ const de: Messages = {
   "import.label_dynamic14a": "dynamisch + §14a/3",
 
   // Excel workbook
-  "workbook.creator": "PV-Erlösrechner",
+  "workbook.creator": "Energiewenderechner",
   "workbook.legend": "Legende:",
   "workbook.input": "Eingabe",
   "workbook.calibration": "Kalibr.",
@@ -655,7 +656,7 @@ const de: Messages = {
   "excel.bwwp_title": "Brauchwasser-Wärmepumpe",
 
   // Wizard
-  "wizard.title": "PV-Szenario-Baukasten & Berater",
+  "wizard.title": "Energiewende-Szenario-Baukasten & Berater",
   "wizard.subtitle": "Was-wäre-wenn? — Schieberegler links, intelligenter Energiewende-Berater rechts. Beides steuert dasselbe Szenario.",
   "wizard.monthly_title": "Energiefluss pro Monat",
   "wizard.monthly_hint": "Klicke auf einen Monat, um die Stundendetail-Ansicht (inkl. Batterie-SoC) zu sehen.",
@@ -775,8 +776,8 @@ const de: Messages = {
   // UI
   "ui.sidebar_toggle": "⚙️ Eingaben",
   "ui.sidebar_toggle_title": "Eingaben ein-/ausblenden",
-  "ui.title": "PV-Erlösrechner",
-  "ui.subtitle": "Direktvermarktung mit Batterie — Simulation von PV-Produktion, Speicher-Verschiebung und Spotmarkt-Erlösen.",
+  "ui.title": "Energiewenderechner",
+  "ui.subtitle": "Wie funktioniert Energiewende zu Hause — mit PV, Batterie, Wärmepumpe, E-Auto, dynamischen Tarifen und Direktvermarktung.",
   "ui.excel_button": "📊 Excel-Export (.xlsx)",
   "ui.excel_button_title": "Excel-Datei mit allen Berechnungen und Formeln herunterladen",
   "ui.excel_loading": "⏳ Erzeuge…",
@@ -1078,7 +1079,8 @@ const en: Messages = {
   "tooltip.net_balance": "Net balance: Export revenue minus import cost. Positive = earned more than consumed; negative = more expensive than without PV.",
   "tooltip.eff_price": "Effective electricity price: Average price per kWh you actually pay. Self-consumption counts as 0 ct/kWh (forgone feed-in = opportunity cost). Formula: (import cost − export revenue) / total consumption.",
   "tooltip.amortisation": "Payback: How many years until the investment is recouped through annual savings. Formula: investment / annual savings. Savings = baseline cost (100% grid) − actual grid cost + export revenue.",
-  "tooltip.investment": "Total system investment for PV and battery in euros.",
+  "tooltip.investment": "Total investment: PV system + battery (storage) in euros.",
+  "tooltip.total_investment": "Total investment = PV system (modules, inverter, installation) + battery (storage).",
   "tooltip.export_revenue": "Revenue from selling exported electricity to the grid.",
   "tooltip.grid_cost": "Cost of electricity drawn from the grid.",
   "tooltip.marktpraemie": "Market premium: Difference between the EEG reference value and the average spot price of solar generation. Protects against low spot prices. Formula: max(0, reference value − monthly solar market value).",
@@ -1126,7 +1128,7 @@ const en: Messages = {
   "import.label_dynamic14a": "dynamic + §14a/3",
 
   // Excel workbook
-  "workbook.creator": "PV-Erlösrechner",
+  "workbook.creator": "Energiewenderechner",
   "workbook.legend": "Legend:",
   "workbook.input": "Input",
   "workbook.calibration": "Calibr.",
@@ -1396,7 +1398,7 @@ const en: Messages = {
   "excel.bwwp_title": "Domestic hot water heat pump",
 
   // Wizard
-  "wizard.title": "PV scenario builder & advisor",
+  "wizard.title": "Energy transition scenario builder & advisor",
   "wizard.subtitle": "What-if? — Sliders on the left, smart energy advisor on the right. Both control the same scenario.",
   "wizard.monthly_title": "Energy flow per month",
   "wizard.monthly_hint": "Click a month to see the hourly detail view (incl. battery SoC).",
@@ -1516,8 +1518,8 @@ const en: Messages = {
   // UI
   "ui.sidebar_toggle": "⚙️ Inputs",
   "ui.sidebar_toggle_title": "Show/hide inputs",
-  "ui.title": "PV revenue calculator",
-  "ui.subtitle": "Direct marketing with battery — simulation of PV production, storage shifting and spot market revenue.",
+  "ui.title": "Energy Transition Calculator",
+  "ui.subtitle": "How the energy transition works at home — with PV, battery, heat pump, EV, dynamic tariffs and direct marketing.",
   "ui.excel_button": "📊 Excel export (.xlsx)",
   "ui.excel_button_title": "Download Excel file with all calculations and formulas",
   "ui.excel_loading": "⏳ Generating…",
