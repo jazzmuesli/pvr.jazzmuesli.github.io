@@ -23,7 +23,7 @@ function baseInput(): CashflowInput {
     inverterLifetimeYears: 13,
     inverterReplacementCostEUR: 1500,
     batteryLifetimeYears: 13,
-    batteryReplacementCostEUR: 3000, // 5 kWh × 600 €/kWh
+    batteryReplacementCostEUR: 3000, // 10 kWh × 300 €/kWh
     batteryDegradationPct: 0.01,
     pvDegradationPct: 0.005,
     standbyWattage: 5,

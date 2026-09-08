@@ -154,7 +154,7 @@ export interface SimParams {
   inverterLifetimeYears: number;  // Inverter lifespan (default 13)
   inverterReplacementCostEUR: number; // Inverter replacement cost (default 1500)
   batteryLifetimeYears: number;   // Battery lifespan (default 13)
-  batteryReplacementCostEUR: number; // Battery replacement cost (default 500 * capacityKWh)
+  batteryReplacementCostEUR: number; // Battery replacement cost (default 300 * capacityKWh)
   batteryDegradationPct: number;  // Annual battery degradation (default 0.01 = 1%)
   pvDegradationPct: number;       // Annual PV degradation (default 0.005 = 0.5%)
   standbyWattage: number;         // Battery standby consumption (default 5W)
@@ -199,7 +199,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   inverterLifetimeYears: 13,
   inverterReplacementCostEUR: 1500,
   batteryLifetimeYears: 13,
-  batteryReplacementCostEUR: 6000,
+  batteryReplacementCostEUR: 3000,
   batteryDegradationPct: 0.01,
   pvDegradationPct: 0.005,
   standbyWattage: 5,
@@ -304,7 +304,7 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
 // PV costs are slightly degressive with size; battery at ~€/kWh.
 
 export const DEFAULT_COST_PER_KWP = 1300; // €/kWp (degressive as size grows)
-export const DEFAULT_COST_PER_KWH = 600; // €/kWh battery
+export const DEFAULT_COST_PER_KWH = 300; // €/kWh battery
 
 /** Estimate a realistic all-in system investment from PV and battery size. */
 export function estimateInvestmentEUR(

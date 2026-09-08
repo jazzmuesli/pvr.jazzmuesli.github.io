@@ -101,7 +101,7 @@ export const DEFAULT_STATE: AppState = {
   inverterLifetimeYears: 13,
   inverterReplacementCostEUR: 1500,
   batteryLifetimeYears: 13,
-  batteryReplacementCostEUR: 6000,
+  batteryReplacementCostEUR: 3000,
   batteryDegradationPct: 0.01,
   pvDegradationPct: 0.005,
   standbyWattage: 5,

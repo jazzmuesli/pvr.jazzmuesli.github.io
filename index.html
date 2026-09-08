@@ -103,6 +103,193 @@
         </div>
       </section>
     </main>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <h2>Annahmen &amp; Simulationsregeln</h2>
+
+        <section>
+          <h3>Solarertrag &amp; PVGIS-Hintergrund</h3>
+          <ul>
+            <li>Einstrahlungsmodell: Vereinfachtes Clear-Sky-Modell (Ineichen/Perez-typ) mit Luftmasse <code>min(20, 1/sin(el))</code> und Haurwitz-DNI. Quellen: <a href="https://energy-charts.info" target="_blank" rel="noopener">energy-charts.info</a>, <a href="https://doi.org/10.1016/j.solener.2006.06.013" target="_blank" rel="noopener">Ineichen &amp; Perez 2002</a></li>
+            <li>Referenz-Erträge je Standort (kWh/kWp/a, inkl. Wechselrichterverluste): Hamburg 1 000, Berlin 1 050, München 1 100, Köln 1 050, Boizenburg 1 000 — empirische Werte aus <a href="https://re.jrc.ec.europa.eu/pvg_tools/de/" target="_blank" rel="noopener">PVGIS</a>.</li>
+            <li>Neigungsoptimum: <code>0,76 × Breitengrad − 3,1°</code> (etwa 34–39° für deutsche Breiten 48–54°). Empirische Faustregel, s. <a href="https://www.pv-comparison.org/tilt/optimale-neigung.php" target="_blank" rel="noopener">pv-comparison.org</a>.</li>
+            <li>Orientierungsverhältnisse (gegenüber Süden): Ost/West je 0,86, geteiltes Ost-West 0,88, Nord 0,42 — kalibriert an <a href="https://www.pv-planner.de/" target="_blank" rel="noopener">PV-Planer</a>-Daten.</li>
+            <li>Solarabstrahlung: Solarkonstante 1 361 W/m² mit ±3,3 % jährlicher Variation (Exzentrizitätskorrektur). Quelle: <a href="https://www.nrel.gov/solar/solar-resource.html" target="_blank" rel="noopener">NREL</a>.</li>
+            <li>Bodenreflexion (Albedo): 0,2 (Standardannahme für Grünflächen, s. <a href="https://www.ipcc.ch/report/ar6/wg1/chapter/chapter-7/" target="_blank" rel="noopener">IPCC AR6 WG1 Kap. 7</a>).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Batterie-Simulation</h3>
+          <ul>
+            <li>Auflösung: 15-Minuten-Schritte (96 Schritte/Tag, 35 040/Jahr).</li>
+            <li>Dispatch-Priorität: 1. PV → Last, 2. PV-Überschuss → Batterie, 3. Export, 4. Batterie → Last, 5. Batterie → Netz (strategisch).</li>
+            <li>Laden und Entladen schließen sich im selben 15-Min-Schritt gegenseitig aus.</li>
+            <li>Negative Spot-Preise: Batterie lädt aus dem Netz (kostenlos) — kein PV-Anteil im SoC.</li>
+            <li>Strategische Entladung: Tägliches Fenster mit dem teuersten, nicht-negativen Spot-Preis (ganzstündig ausgerichtet).</li>
+            <li>Rundwirkungsgrad: 95 % (halbe Zyklen), jährliche Degradation 1 %.</li>
+            <li>SoC-Band: 10–90 % (Expert) bzw. 10–95 % (Wizard).</li>
+            <li>C-Rate (Simple-Modus): <code>min(Kapazität × 0,33; 20 kW)</code>.</li>
+            <li>Batteriekosten: 300 €/kWh (Marktdurchschnitt LiFePO4/NMC, s. <a href="https://www.ise.fraunhofer.de/de/publikationsdatenbank/veroeffentlichungen-veroeffentlichungen-detail/marktstufenmonitor-fuer-fotovoltaik-2024.html" target="_blank" rel="noopener">Fraunhofer ISE Marktstufenmonitor</a>).</li>
+            <li>Quellen: <a href="https://www.bdew.de" target="_blank" rel="noopener">BDEW</a> H0-Standardlastprofil, Batterie-Spezifikationen (Herstellerdatenblatt).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Spotmarkt-Preisdaten</h3>
+          <ul>
+            <li>Datenquelle: Bundesnetzagentur / SMARD via <a href="https://energy-charts.info/charts/spot.htm" target="_blank" rel="noopener">energy-charts.info</a> (CC BY 4.0).</li>
+            <li>2026 wird anhand des Durchschnitts 2023–2025 hochgerechnet.</li>
+            <li>Stündliche Preise werden auf 15-Min-Schritte erweitert (Stufenfunktion).</li>
+            <li>Synthetisches Fallback-Modell: Mittelwert 75 €/MWh, saisonale Amplitude ±18 €/MWh, Morgen-/Abendspitzen, Mittagssenke. Basierend auf <a href="https://www.epexspot.com/en/historicaldayaheadmarketprices" target="_blank" rel="noopener">EPEX Spot</a>-Historik.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>EEG-Einspeisevergütung &amp; Marktprämie</h3>
+          <ul>
+            <li>Anzulegender Wert (Referenzwerte 2023–2026) nach <a href="https://www.gesetze-im-internet.de/eeg_2014/__23.html" target="_blank" rel="noopener">§23 EEG 2023</a>, gestaffelt nach Anlagengröße (≤10 kWp, 10–40 kWp, &gt;40 kWp).</li>
+            <li>Marktprämie: <code>max(0, anzulegender Wert − Monatsmarktwert Solar)</code> gem. §23a EEG 2023.</li>
+            <li>Monatsmarktwert Solar: flottenweiter, PV-produktionsgewichteter Spot-Durchschnitt (nicht anlagenbezogen). Quelle: <a href="https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/Ausschreibungen/MonatlicherMarktstromwert/start.html" target="_blank" rel="noopener">Bundesnetzagentur — Monatlicher Marktstromwert</a>.</li>
+            <li>Feste Einspeisevergütung (§14a/2): 7,2 ct/kWh (Standardannahme).</li>
+            <li>Direktvermarkter-Marge: 1 ct/kWh (abzüglich Markterlös).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Netzgebühre &amp; Strompreis</h3>
+          <ul>
+            <li>Arbeitspreis Netzentgelt (Modul 1, netto, 2026): Hamburg 11,80, München 8,63, Berlin 8,55, Köln 9,73, Boizenburg 7,50 ct/kWh — <a href="https://www.verivox.de/strom/verbraucheratlas/" target="_blank" rel="noopener">Verivox Verbraucheratlas</a> / <a href="https://www.vbe.de" target="_blank" rel="noopener">VBE</a> Preisblatt.</li>
+            <li>Stromsteuer: 2,05 ct/kWh (<a href="https://www.gesetze-im-internet.de/estg/__10.html" target="_blank" rel="noopener">§10 EstG</a>).</li>
+            <li>Konzessionsabgabe: 1,1 ct/kWh (<a href="https://www.gesetze-im-internet.de/kabag/__5.html" target="_blank" rel="noopener">§5 KAbG</a>).</li>
+            <li>Messkosten: 0,5 ct/kWh.</li>
+            <li>Versorgermarge/Sonstiges: 1,5 ct/kWh.</li>
+            <li>Standard-Grundpreis/Abschlag: 24 ct/kWh (fix).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>§14a EnWG — Modul 3 (dynamische Netzentgelte)</h3>
+          <ul>
+            <li>Niedriglasttarif (00:00–05:00, ganzjährig): 2,25 ct/kWh (VBE Boizenburg 2026) bzw. 30 % des Basistarifs (andere Städte).</li>
+            <li>Hochtarif (18:00–20:00, Q1 + Q4): 12,85 ct/kWh (VBE) bzw. 170 % des Basistarifs.</li>
+            <li>Rechtsgrundlage: <a href="https://www.gesetze-im-internet.de/enwg_2005/__14a.html" target="_blank" rel="noopener">§14a EnWG</a> i.V.m. BNetzA-Verordnung (Modul 3).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Strommix (Netzbezug)</h3>
+          <ul>
+            <li>Modellbasiert auf Monthly × 24h-Profilen für Wind, Solar, Gas, Biomasse, Hydro. Quelle: <a href="https://energy-charts.info/charts/energy.htm" target="_blank" rel="noopener">energy-charts.info / Bundesnetzagentur</a>, 2022–2024.</li>
+            <li>Anteile (annähernd): Wind 25–30 %, Solar 12–15 %, Biomasse 6 %, Wasser 3 %, Sonstiges 2 %.</li>
+            <li>Gas: Basis-8 %, Sonnenabzug, Abendspitze +5 %, Nachtschwankung +3 %.</li>
+            <li>Kohle: Restlast (flexible Baseload). Quelle: <a href="https://www.kohleausstieg.de/" target="_blank" rel="noopener">Bundesregierung — Kohleausstieg</a>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>CO₂-Emissionsfaktoren</h3>
+          <ul>
+            <li>Stromerzeugung (Lebenszyklus, kg CO₂/kWh): Wind 0,011, Solar 0,045, Gas 0,38, Kohle 0,62, Biomasse 0,23, Wasser 0,006, Sonstiges 0,35.</li>
+            <li>Kalibriert auf ~0,39 kg CO₂/kWh (deutscher Strommix 2023). Quelle: <a href="https://www.umweltbundesamt.de/daten/klima/treibhausgasemissionen-in-deutschland" target="_blank" rel="noopener">Umweltbundesamt</a>: ~0,38 kg CO₂/kWh, sinkend.</li>
+            <li>Erdgas (direkt): 0,24 kg CO₂/kWh (inkl. Vorkette); reiner Verbrennungsanteil 0,201. Quelle: <a href="https://www.iea.org/reports/the-role-of-gas-in-todays-energy-transitions" target="_blank" rel="noopener">IEA Gas Report</a>.</li>
+            <li>Diesel: 3,17 kg CO₂/Liter (inkl. Vorkette); tank-to-wheel ~2,64. Quelle: <a href="https://www.gem.wiki/Emissions_factor" target="_blank" rel="noopener">GEM Wiki</a>.</li>
+            <li>Strommix-Quellen: <a href="https://www.ipcc.ch/report/ar6/wg1/" target="_blank" rel="noopener">IPCC AR6 WG1</a>, <a href="https://ourworldindata.org/co2-emissions" target="_blank" rel="noopener">Our World in Data</a>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Heizkostenvergleich (Wärmepumpe vs. Öl/Gas)</h3>
+          <ul>
+            <li>Heizöl: 130 €/100 L (~1,30 €/L), unterer Heizwert 10 kWh/L, Wirkungsgrad 85 %. Quelle: <a href="https://www.heizoel24.de/heizoel-preis/" target="_blank" rel="noopener">Heizoel24</a>, <a href="https://de.statistik.de/Webdaten/SHOW_GPIO_ENRG.html" target="_blank" rel="noopener">DESTATIS</a>.</li>
+            <li>Erdgas: 11 ct/kWh (inkl. Steuer + Netzgebühr), Kondensationskessel 92 %, Netzentgelt 2,0 ct/kWh, Nebenkosten 120 €/a. Quelle: <a href="https://www.bdew.de/service/daten-und-grafiken/gaspreisanalyse/" target="_blank" rel="noopener">BDEW Gaspreisanalyse</a>.</li>
+            <li>Schornsteinfeger: 200 €/a (Öl und Gas). Quelle: <a href="https://www.schornsteinfeger.de/kosten/" target="_blank" rel="noopener">Schornsteinfeger.de</a>.</li>
+            <li>Wärmepumpe (Strompreis): 24 ct/kWh (WP-Sondertarif).</li>
+            <li>Jahresarbeitszahl (JAZ): 3,0 (Luft-Wasser-WP, typischer Bereich 3,0–4,0). Quelle: <a href="https://www.iva-berlin.de/themen/waermepumpe" target="_blank" rel="noopener">IVA</a>, <a href="https://www.bwpw.de/" target="_blank" rel="noopener">BWP</a>.</li>
+            <li>Nutz-Wärme = Stromverbrauch × JAZ. Quelle: <a href="https://www.effizienthausbauen.de/heizung/waermepumpe/jahresarbeitszahl/" target="_blank" rel="noopener">effizienthausbauen.de</a>.</li>
+            <li>Energiepreisindex: <a href="https://ec.europa.eu/eurostat/databrowser/view/nrg_pc_202/default/table" target="_blank" rel="noopener">EUROSTAT nrg_pc_202</a>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>E-Auto vs. Diesel</h3>
+          <ul>
+            <li>E-Auto: 18 kWh/100 km (realistisch, WLTP ~15–16, Autobahn ~18–20), 30 ct/kWh (Ladestrom), Wartung 6 ct/km, Kfz-Steuer 0 € (BEV bis 2030), Versicherung + TÜV 900 €/a. Quelle: <a href="https://www.adac.de/rund-ums-fahrzeug/auto-kaufen-verkaufen/autokosten/elektroauto-kosten/" target="_blank" rel="noopener">ADAC — E-Auto-Kosten</a>.</li>
+            <li>Diesel: 5,5 L/100 km (realistisch, WLTP ~4,3–4,6), 2,15 €/L, Wartung 10 ct/km, Kfz-Steuer 200 €/a, Versicherung + TÜV 1 000 €/a. Quelle: <a href="https://www.adac.de/rund-ums-fahrzeug/auto-kaufen-verkaufen/autokosten/" target="_blank" rel="noopener">ADAC — Autokosten</a>.</li>
+            <li>Standardfahrleistung: 15 000 km/a. Quelle: <a href="https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Verkehr/Pkw-Fahrzeugbestand/Tabellen/km-pro-jahr.html" target="_blank" rel="noopener">DESTATIS</a>.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Verbrauchsprofile (Haushalt, WP, BWWP, EV)</h3>
+          <ul>
+            <li>Haushalt: BDEW H0-Standardlastprofil, 2 400 kWh/a (Standard), Morgen-/Abendspitzen.</li>
+            <li>Wärmepumpe (Heizen): Nachtschwer, nahezu null im Sommer (nur Heizwärme), 5 000 kWh/a (Standard).</li>
+            <li>Brauchwasser-WP: 480 kWh/a, Mittagsblock 11–15 Uhr (PV-fenster).</li>
+            <li>EV-Laden: Nur Mittags (10–15 Uhr) oder Nacht (00–05 Uhr), nie in Morgen-/Abendspitzen, saisonale PV-Verfügbarkeit und Netz-Sauberkeit.</li>
+            <li>Monatliche Gewichtungen: BDEW H0 (Jan 1,15, Jun 0,88), WP (Jan 2,15, Jul 0,00), Warmwasser (Jan 1,15, Jul 0,85).</li>
+            <li>Quellen: <a href="https://www.bdew.de/service/daten-und-grafiken/bdew-lastprofile/" target="_blank" rel="noopener">BDEW H0</a>, eigeneLastdaten, Hersteller BWWP-Spezifikation, Wallbox-Daten.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Investition &amp; Cashflow</h3>
+          <ul>
+            <li>Analysedauer: 20 Jahre, Kalkulationszinssatz 3 %, Preissteigerung 2 %/a.</li>
+            <li>Instandhaltung: 1,5 % des Invests pro Jahr (+ 2 % Inflation).</li>
+            <li>Wechselrichter-Lebensdauer: 13 Jahre, Ersatz 1 500 €.</li>
+            <li>Batterie-Lebensdauer: 13 Jahre, Ersatz 300 €/kWh, Degradation 1 %/a. Quelle: <a href="https://www.ise.fraunhofer.de/de/publikationsdatenbank/veroeffentlichungen-veroeffentlichungen-detail/marktstufenmonitor-fuer-fotovoltaik-2024.html" target="_blank" rel="noopener">Fraunhofer ISE Marktstufenmonitor 2024</a>.</li>
+            <li>PV-Degradation: 0,5 %/a. Quelle: <a href="https://www.nrel.gov/docs/fy19osti/74062.pdf" target="_blank" rel="noopener">NREL PV Degradation Study</a>.</li>
+            <li>Standby-Verbrauch Batterie: 5 W.</li>
+            <li>Invest-Schätzung: 1 300 €/kWp (degressiv ab 10 kWp), Batterie 300 €/kWh. Quellen: <a href="https://www.photovoltaikforum.com/" target="_blank" rel="noopener">Photovoltaikforum</a>, <a href="https://www.ise.fraunhofer.de/" target="_blank" rel="noopener">Fraunhofer ISE</a>.</li>
+            <li>LCOE-Formel nach <a href="https://www.ikem.de/" target="_blank" rel="noopener">IKEM</a> / <a href="https://www.bundesnetzagentur.de/" target="_blank" rel="noopener">Bundesnetzagentur</a> (deutscher Standard).</li>
+            <li>Quellen: <a href="https://www.bmwk.de/Redaktion/DE/Artikel/Energie/foerderprogramme.html" target="_blank" rel="noopener">BMWK Förderrichtlinien</a>, Marktdurchschnitte.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3>Rechtliche Hinweise</h3>
+          <ul>
+            <li><a href="https://www.gesetze-im-internet.de/eeg_2014/" target="_blank" rel="noopener">EEG 2023</a> (Erneuerbare-Energien-Gesetz) — Vergütung und Marktprämie.</li>
+            <li><a href="https://www.gesetze-im-internet.de/enwg_2005/__14a.html" target="_blank" rel="noopener">§14a EnWG</a> (Energiewirtschaftsgesetz) — Dynamische Netzentgelte (Modul 3).</li>
+            <li><a href="https://www.bdew.de/service/daten-und-grafiken/bdew-lastprofile/" target="_blank" rel="noopener">BDEW H0</a> — Standardlastprofil Haushalt.</li>
+            <li><a href="https://www.bundesnetzagentur.de/" target="_blank" rel="noopener">Bundesnetzagentur</a> / <a href="https://www.smard.de" target="_blank" rel="noopener">SMARD</a> / <a href="https://energy-charts.info" target="_blank" rel="noopener">energy-charts.info</a> — Spotpreise und Strommix (CC BY 4.0).</li>
+            <li><a href="https://www.umweltbundesamt.de/" target="_blank" rel="noopener">Umweltbundesamt</a> — CO₂-Emissionsfaktoren.</li>
+            <li><a href="https://www.ikem.de/" target="_blank" rel="noopener">IKEM</a> — LCOE-Berechnungsmethode.</li>
+          </ul>
+        </section>
+
+        <div class="footer-feedback">
+          <p>
+            Bugs gefunden? Feedback? Schreib uns:
+            <a id="bug-report-link" href="#" onclick="return false">pvrechner@openfun.org</a>
+          </p>
+        </div>
+
+        <div class="footer-privacy">
+          <p>
+            <strong>Datenschutz:</strong> Diese Website verwendet keine Cookies, kein Tracking, keine Analytics-Dienste und speichert keine personenbezogenen Daten.
+            Es werden ausschließlich technisch notwendige <code>localStorage</code>-Einträge für die Spracheinstellung (DE/EN) verwendet.
+            Alle Berechnungen finden ausschließlich lokal in Ihrem Browser statt — es werden keine Daten an Server übertragen.
+          </p>
+        </div>
+
+        <p class="footer-copy">PV-Erlösrechner &copy; 2025 — Alle Angaben ohne Gewähr.</p>
+      </div>
+    </footer>
     <script type="module" src="/src/main.ts"></script>
+    <script>
+      (function(){
+        var m=["p","v","r","e","c","h","n","e","r","@","o","p","e","n","f","u","n",`.`,`o`,`r`,`g`];
+        var a=document.getElementById("bug-report-link");
+        if(!a)return;
+        var e=window.location.href;
+        var s="Bug-Report PV-Erl%C3%B6srechner%20%E2%80%94%20"+encodeURIComponent(e);
+        var b="Beschreibung%20des%20Bugs%3A%0A%0A%0AErwartetes%20Verhalten%3A%0A%0A%0ATats%C3%A4chliches%20Verhalten%3A%0A%0A%0AEingaben%20(URL%20oder%20Screenshot)%3A%0A%0A%0ABrowser%20%2F%20Ger%C3%A4t%3A%0A%0A";
+        var addr=m.join("");
+        a.href="mailto:"+addr+"?subject="+s+"&body="+b;
+        a.onclick=null;
+      })();
+    </script>
   </body>
 </html>

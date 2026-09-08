@@ -44,7 +44,7 @@ export interface CashflowInput {
   inverterReplacementCostEUR: number;
   /** Battery lifetime in years (default 13). */
   batteryLifetimeYears: number;
-  /** Battery replacement cost (€) (default 600 × capacityKWh). */
+  /** Battery replacement cost (€) (default 300 × capacityKWh). */
   batteryReplacementCostEUR: number;
   /** Annual battery capacity degradation as a fraction (default 0.01 = 1 %/yr). */
   batteryDegradationPct: number;
@@ -130,7 +130,7 @@ export function computeCashflow(input: CashflowInput): CashflowAnalysis {
   const inverterReplacementCostEUR = input.inverterReplacementCostEUR ?? DEFAULTS.inverterReplacementCostEUR;
   const batteryLifetimeYears = input.batteryLifetimeYears ?? DEFAULTS.batteryLifetimeYears;
   const batteryReplacementCostEUR =
-    input.batteryReplacementCostEUR ?? Math.round(input.capacityKWh * 600);
+    input.batteryReplacementCostEUR ?? Math.round(input.capacityKWh * 300);
   const batteryDegradationPct = input.batteryDegradationPct ?? DEFAULTS.batteryDegradationPct;
   const pvDegradationPct = input.pvDegradationPct ?? DEFAULTS.pvDegradationPct;
   const standbyWattage = input.standbyWattage ?? DEFAULTS.standbyWattage;
