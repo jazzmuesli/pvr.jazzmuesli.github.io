@@ -56,6 +56,7 @@ const de: Messages = {
   "chart.monthly.y_axis_net": "Netto €/Monat (0 = gestrichelt)",
   "chart.monthly.hint": "Klick auf einen Monat → Stundendetail. Gestapelte Balken = Verbrauch pro Verbraucher; Linien: PV-Ertrag (gold) und Netto-€ (türkis).",
   "chart.monthly.legend_pv": "PV-Ertrag",
+  "chart.monthly.legend_wind": "Wind-Ertrag",
   "chart.monthly.legend_net": "Netto €",
   "chart.monthly.tooltip_sum": "Summe Verbrauch",
 
@@ -189,6 +190,21 @@ const de: Messages = {
   "control.bwwp": "Brauchwasser-WP",
   "control.ev": "E-Auto",
 
+  // Wind turbine (Expert mode)
+  "wind.title": "Kleinwindkraftanlage",
+  "wind.enabled": "Windkraft aktiv",
+  "wind.turbine": "Windkraftanlage",
+  "wind.count": "Anzahl Anlagen",
+  "wind.hub_height": "Nabenhöhe",
+  "wind.investment": "Windkraft-Investition",
+  "wind.annual_yield": "Wind-Jahresertrag",
+  "wind.specific_yield": "Spezifischer Ertrag",
+  "wind.full_load_hours": "Volllaststunden",
+  "wind.mean_wind": "Ø Windgeschw. Nabenhöhe",
+  "wind.monthly_title": "Monatlicher Wind-Jahresertrag",
+  "wind.hint": "Realistische Kleinwindkraftanlagen mit Leistungskurven. Winddaten: DWD + Global Wind Atlas (10m Höhe).",
+  "wind.winter_bonus": "Windenergie speziell im Winter — ergänzt PV optimal.",
+
   // Charge strategies
   "strategy.morning": "Morgens (PV-Überschuss)",
   "strategy.midday": "Mittags (nur PV)",
@@ -205,6 +221,8 @@ const de: Messages = {
 
   // Summary cards
   "summary.pv_yield": "PV-Ertrag",
+  "summary.wind_yield": "Wind-Ertrag",
+  "summary.total_generation": "Eigenproduktion",
   "summary.consumption": "Verbrauch",
   "summary.self_consumption": "Eigenverbrauch",
   "summary.grid_import": "Netz-Import",
@@ -324,6 +342,8 @@ const de: Messages = {
   // Tooltips — summary cards & sections
   "tooltip.pv_yield": "PV-Ertrag",
   "tooltip.pv_yield_calc": "Jahresertrag der PV-Anlage in kWh, berechnet aus Spezifischem Ertrag × Peak-Leistung. Hängt von Standort, Neigung und Ausrichtung ab.",
+  "tooltip.wind_yield": "Wind-Ertrag",
+  "tooltip.wind_yield_calc": "Jahresertrag der Windkraftanlage in kWh, basierend auf Leistungskurve und Standort-Windgeschwindigkeit.",
   "tooltip.consumption": "Verbrauch",
   "tooltip.consumption_calc": "Gesamter Stromverbrauch aller Verbraucher (Haushalt, Wärmepumpe, Brauchwasser-Wärmepumpe, E-Auto) in kWh pro Jahr.",
   "tooltip.self_use": "Eigenverbrauch",
@@ -798,6 +818,7 @@ const en: Messages = {
   "chart.monthly.y_axis_net": "Net €/month (0 = dashed)",
   "chart.monthly.hint": "Click a month → hourly detail. Stacked bars = consumption per appliance; lines: PV yield (gold) and net € (teal).",
   "chart.monthly.legend_pv": "PV yield",
+  "chart.monthly.legend_wind": "Wind yield",
   "chart.monthly.legend_net": "Net €",
   "chart.monthly.tooltip_sum": "Total consumption",
 
@@ -931,6 +952,21 @@ const en: Messages = {
   "control.bwwp": "DHW HP",
   "control.ev": "EV",
 
+  // Wind turbine (Expert mode)
+  "wind.title": "Small Wind Turbine",
+  "wind.enabled": "Wind power active",
+  "wind.turbine": "Wind turbine",
+  "wind.count": "Number of turbines",
+  "wind.hub_height": "Hub height",
+  "wind.investment": "Wind investment",
+  "wind.annual_yield": "Wind annual yield",
+  "wind.specific_yield": "Specific yield",
+  "wind.full_load_hours": "Full load hours",
+  "wind.mean_wind": "Avg. wind speed at hub",
+  "wind.monthly_title": "Monthly wind yield",
+  "wind.hint": "Realistic small wind turbines with power curves. Wind data: DWD + Global Wind Atlas (10m height).",
+  "wind.winter_bonus": "Wind energy especially in winter — perfectly complements PV.",
+
   // Charge strategies
   "strategy.morning": "Morning (PV surplus)",
   "strategy.midday": "Midday (PV only)",
@@ -947,6 +983,8 @@ const en: Messages = {
 
   // Summary cards
   "summary.pv_yield": "PV yield",
+  "summary.wind_yield": "Wind yield",
+  "summary.total_generation": "Self-production",
   "summary.consumption": "Consumption",
   "summary.self_consumption": "Self-consumption",
   "summary.grid_import": "Grid import",
@@ -1066,6 +1104,8 @@ const en: Messages = {
   // Tooltips — summary cards & sections
   "tooltip.pv_yield": "PV yield",
   "tooltip.pv_yield_calc": "Annual PV system yield in kWh, calculated from specific yield × peak power. Depends on location, tilt and orientation.",
+  "tooltip.wind_yield": "Wind yield",
+  "tooltip.wind_yield_calc": "Annual wind turbine yield in kWh, based on power curve and site wind speed.",
   "tooltip.consumption": "Consumption",
   "tooltip.consumption_calc": "Total electricity consumption of all consumers (household, heat pump, domestic hot water heat pump, EV) in kWh per year.",
   "tooltip.self_use": "Self-consumption",

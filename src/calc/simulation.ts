@@ -101,6 +101,11 @@ export function simulate(config: SimConfig): SimResult {
     orientation: config.pv.orientation,
     location: config.pv.location,
   });
+  const wind = config.wind ?? new Float64Array(TOTAL_STEPS);
+  // Combined generation for battery dispatch (PV + Wind treated equally).
+  const generation = new Float64Array(TOTAL_STEPS);
+  for (let i = 0; i < TOTAL_STEPS; i++) generation[i] = pv[i] + wind[i];
+
   const price = config.prices ?? generatePrices();
   const load = config.load ?? new Float64Array(TOTAL_STEPS);
   const b = config.battery;
@@ -112,16 +117,21 @@ export function simulate(config: SimConfig): SimResult {
   const maxSOCkWh = b.maxSOC * cap;
   const minSOCkWh = b.minSOC * cap;
   let soc = active ? b.startSOC * cap : 0;
-  let pvSOC = active ? b.startSOC * cap : 0; // PV-originated kWh in battery
+  let pvSOC = active ? b.startSOC * cap : 0;
+  let windSOC = active ? b.startSOC * cap * 0 : 0; // wind-originated kWh in battery
 
   const loadArr = new Float64Array(TOTAL_STEPS);
   const socArr = new Float64Array(TOTAL_STEPS);
   const directUse = new Float64Array(TOTAL_STEPS);
+  const directUseWind = new Float64Array(TOTAL_STEPS);
   const chargeSolar = new Float64Array(TOTAL_STEPS);
+  const chargeWind = new Float64Array(TOTAL_STEPS);
   const chargeGrid = new Float64Array(TOTAL_STEPS);
   const dischargeToLoad = new Float64Array(TOTAL_STEPS);
   const dischargeToLoadPV = new Float64Array(TOTAL_STEPS);
+  const dischargeToLoadWind = new Float64Array(TOTAL_STEPS);
   const exportSolar = new Float64Array(TOTAL_STEPS);
+  const exportWind = new Float64Array(TOTAL_STEPS);
   const exportBattery = new Float64Array(TOTAL_STEPS);
   const gridImport = new Float64Array(TOTAL_STEPS);
   const exportTotal = new Float64Array(TOTAL_STEPS);
@@ -129,28 +139,43 @@ export function simulate(config: SimConfig): SimResult {
   const maxStepEnergy = b.maxPowerKW * STEP_HOURS;
 
   for (let i = 0; i < TOTAL_STEPS; i++) {
-    let p = pv[i];
+    let gen = generation[i];
+    let pRemain = pv[i]; // track PV remainder for export split
+    let wRemain = wind[i]; // track wind remainder for export split
     let L = load[i];
     const pr = price[i];
 
     if (!active) {
       // No battery: direct use + export; load deficit is grid import.
-      const du = Math.min(p, L);
-      directUse[i] = du;
-      p -= du;
+      const du = Math.min(gen, L);
+      // Split direct use between PV and wind proportionally
+      if (gen > 0) {
+        directUse[i] = du * (pRemain / gen);
+        directUseWind[i] = du * (wRemain / gen);
+      }
+      gen -= du;
+      pRemain = Math.max(0, pRemain - du * (pRemain / (generation[i] || 1)));
+      wRemain = Math.max(0, wRemain - du * (wRemain / (generation[i] || 1)));
       L -= du;
-      if (p > 0 && pr >= 0) exportSolar[i] = p;
+      if (gen > 0 && pr >= 0) {
+        exportSolar[i] = pRemain;
+        exportWind[i] = wRemain;
+      }
       if (L > 0) gridImport[i] = L;
       loadArr[i] = load[i];
       socArr[i] = 0;
-      exportTotal[i] = exportSolar[i];
+      exportTotal[i] = exportSolar[i] + exportWind[i];
       continue;
     }
 
     // Negative / free price: take from the grid (cheap) and store free energy.
     if (pr < 0) {
-      directUse[i] = Math.min(p, L);
-      L -= directUse[i];
+      const du = Math.min(gen, L);
+      if (gen > 0) {
+        directUse[i] = du * (pRemain / gen);
+        directUseWind[i] = du * (wRemain / gen);
+      }
+      L -= du;
       if (L > 0) gridImport[i] = L;
       if (soc < maxSOCkWh) {
         const room = (maxSOCkWh - soc) / eff;
@@ -158,115 +183,125 @@ export function simulate(config: SimConfig): SimResult {
         if (e > 0) {
           chargeGrid[i] = e;
           soc += e * eff;
-          // Grid-charged energy is NOT counted as PV; pvSOC stays unchanged.
         }
       }
       loadArr[i] = load[i];
       socArr[i] = soc;
-      exportTotal[i] = exportSolar[i] + exportBattery[i];
+      exportTotal[i] = exportSolar[i] + exportWind[i] + exportBattery[i];
       continue;
     }
 
-    // 1) Direct self-consumption: PV covers load first.
-    const du = Math.min(p, L);
-    directUse[i] = du;
-    p -= du;
+    // 1) Direct self-consumption: generation covers load first.
+    const du = Math.min(gen, L);
+    if (gen > 0) {
+      directUse[i] = du * (pRemain / gen);
+      directUseWind[i] = du * (wRemain / gen);
+    }
+    gen -= du;
+    pRemain = Math.max(0, pRemain - directUse[i]);
+    wRemain = Math.max(0, wRemain - directUseWind[i]);
     L -= du;
 
-    // 2) Charge battery from PV surplus (no charge while a strategic export
-    //    discharge is scheduled this step — keeps charge/discharge mutually
-    //    exclusive within a quarter hour).
+    // 2) Charge battery from generation surplus.
     const discharging = flags.discharge[i] === 1;
     let charged = false;
-    // Charge from PV surplus whenever it exists (free energy is always worth
-    // storing) — this must NOT be blocked by the discharge-window flag, or a
-    // "discharge in the morning" window would prevent the battery from soaking
-    // up morning PV. Only grid-based charging is restricted to non-discharge
-    // windows (see step 1).
-    if (p > 0 && soc < maxSOCkWh) {
-      const pvChargeAllowed =
+    if (gen > 0 && soc < maxSOCkWh) {
+      const chargeAllowed =
         b.chargeMode === "morning" || b.chargeMode === "gridNegative"
           ? true
           : b.chargeMode === "midday"
             ? Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) >= MIDDAY_START &&
               Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) < MIDDAY_END
             : false;
-      if (pvChargeAllowed) {
+      if (chargeAllowed) {
         const room = (maxSOCkWh - soc) / eff;
-        const e = Math.min(maxStepEnergy, room, p);
+        const e = Math.min(maxStepEnergy, room, gen);
         if (e > 0) {
-          chargeSolar[i] = e;
-          p -= e;
+          // Split charge between PV and wind proportionally
+          const pvFrac = gen > 0 ? pRemain / gen : 0;
+          const windFrac = gen > 0 ? wRemain / gen : 0;
+          const pvCharge = e * pvFrac;
+          const windCharge = e * windFrac;
+          chargeSolar[i] = pvCharge;
+          chargeWind[i] = windCharge;
+          pRemain = Math.max(0, pRemain - pvCharge);
+          wRemain = Math.max(0, wRemain - windCharge);
+          gen -= e;
           soc += e * eff;
-          pvSOC += e * eff;
+          pvSOC += pvCharge * eff;
+          windSOC += windCharge * eff;
           charged = true;
         }
       }
     }
 
-    // 3) Export remaining PV directly (price >= 0 here).
-    if (p > 0) exportSolar[i] = p;
+    // 3) Export remaining generation directly (price >= 0 here).
+    if (gen > 0) {
+      exportSolar[i] = pRemain;
+      exportWind[i] = wRemain;
+    }
 
-    // 4) Cover remaining load from the battery whenever it has charge, then
-    //    the grid. A self-consumption battery should serve *any* load deficit
-    //    (not just inside fixed windows): exported PV is worth only the feed-in
-    //    rate while grid import costs the full retail rate, so storing PV and
-    //    discharging it against load is always the better arbitrage.
+    // 4) Cover remaining load from the battery, then the grid.
     if (L > 0 && soc > minSOCkWh) {
       const avail = soc - minSOCkWh;
       const e = Math.min(maxStepEnergy, avail, L);
       if (e > 0) {
         dischargeToLoad[i] = e;
-        // Compute PV fraction BEFORE reducing SOC (otherwise pvFrac is inflated).
-        const pvFrac = soc > 0 ? pvSOC / soc : 0;
-        const pvPart = e * Math.min(1, pvFrac);
+        const totalSOC = pvSOC + windSOC;
+        const pvFrac = totalSOC > 0 ? pvSOC / totalSOC : 0;
+        const windFrac = totalSOC > 0 ? windSOC / totalSOC : 0;
+        const pvPart = e * pvFrac;
+        const windPart = e * windFrac;
         dischargeToLoadPV[i] = pvPart;
+        dischargeToLoadWind[i] = windPart;
         soc -= e;
         pvSOC = Math.max(0, pvSOC - pvPart);
+        windSOC = Math.max(0, windSOC - windPart);
         L -= e;
       }
     }
     if (L > 0) gridImport[i] = L;
 
-    // 5) Strategic export: sell surplus battery energy whenever the spot is
-    //    positive. A daily-cycling battery cannot store energy long-term, so
-    //    unused surplus would otherwise be curtailed — exporting it (plus the
-    //    EEG Marktprämie when the export VWAP is low) always beats wasting it.
-    //    The profitable arbitrage is: discharge to cover load in expensive
-    //    windows (step 4) and recharge from the grid when the spot is low or
-    //    negative, so selling stored energy at a high spot while buying it
-    //    back cheaply is exactly what we want.
-    if (discharging && !charged && soc > minSOCkWh && p > 0) {
+    // 5) Strategic export: sell surplus battery energy.
+    if (discharging && !charged && soc > minSOCkWh && gen > 0) {
       const maxAdd = maxStepEnergy - dischargeToLoad[i];
       if (maxAdd > 0) {
         const avail = soc - minSOCkWh;
         const e = Math.min(maxAdd, avail);
         if (e > 0) {
           exportBattery[i] = e;
-          // Compute PV fraction BEFORE reducing SOC.
-          const pvFrac = soc > 0 ? pvSOC / soc : 0;
+          const totalSOC = pvSOC + windSOC;
+          const pvFrac = totalSOC > 0 ? pvSOC / totalSOC : 0;
+          const windFrac = totalSOC > 0 ? windSOC / totalSOC : 0;
           soc -= e;
-          pvSOC = Math.max(0, pvSOC - e * Math.min(1, pvFrac));
+          pvSOC = Math.max(0, pvSOC - e * pvFrac);
+          windSOC = Math.max(0, windSOC - e * windFrac);
         }
       }
     }
 
     loadArr[i] = load[i];
     socArr[i] = soc;
-    exportTotal[i] = exportSolar[i] + exportBattery[i];
+    exportTotal[i] = exportSolar[i] + exportWind[i] + exportBattery[i];
   }
 
   return {
     pv,
+    wind,
+    generation,
     price,
     load: loadArr,
     soc: socArr,
     directUse,
+    directUseWind,
     chargeSolar,
+    chargeWind,
     chargeGrid,
     dischargeToLoad,
     dischargeToLoadPV,
+    dischargeToLoadWind,
     exportSolar,
+    exportWind,
     exportBattery,
     gridImport,
     exportTotal,

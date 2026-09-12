@@ -58,6 +58,14 @@ export interface AppState {
   car: CarParams;
   // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
   marketMarginCt: number;
+  // Kleinwindkraftanlage (nur im Expert-Modus)
+  windEnabled: boolean;
+  /** Anzahl der Windkraftanlagen */
+  windCount: number;
+  /** Nabenhöhe in Metern (0–15 m) */
+  windHubHeightM: number;
+  /** ID der Windkraftanlage aus dem Katalog */
+  windTurbineId: string;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -83,8 +91,6 @@ export const DEFAULT_STATE: AppState = {
   commissioningYear: 2025,
   priceYear: "2025",
   consumers: {
-    // Profile calibrated to the real household data in ~/MyDocuments/ha:
-    // heat pump ~6.6 MWh/yr (temp-driven, winter-heavy), base load ~2.4 MWh/yr.
     household: { enabled: true, annualKWh: 2400 },
     heatpump: { enabled: true, annualKWh: 5000 },
     bwwp: { enabled: true, annualKWh: 480 },
@@ -109,6 +115,10 @@ export const DEFAULT_STATE: AppState = {
   heatpumpElectricCt: 24,
   car: { ...DEFAULT_CAR_PARAMS },
   marketMarginCt: 1,
+  windEnabled: false,
+  windCount: 1,
+  windHubHeightM: 10,
+  windTurbineId: "skywind_ng",
 };
 
 /** Map the UI state onto the pure simulation parameters. */
@@ -168,6 +178,10 @@ export function toSimParams(s: AppState): SimParams {
     heatpumpElectricCt: s.importFixedCt,
     car: { ...s.car },
     marketMarginCt: s.marketMarginCt,
+    windEnabled: s.windEnabled,
+    windCount: s.windCount,
+    windHubHeightM: s.windHubHeightM,
+    windTurbineId: s.windTurbineId,
   };
 }
 

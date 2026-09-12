@@ -3,6 +3,7 @@ import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
 import { TariffScheme } from "../calc/tariff";
+import { WIND_TURBINES, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE } from "../calc/wind";
 import { t } from "../i18n";
 
 interface SliderOpts {
@@ -147,12 +148,12 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section(t("control.investment"));
   host.appendChild(
-    slider({ label: t("control.total_investment"), title: t("tooltip.total_investment"), min: 100, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+    slider({ label: t("control.total_investment"), title: t("tooltip.total_investment"), min: 0, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
   );
 
   section(t("control.pv_system"));
   host.appendChild(
-    slider({ label: t("control.peak_power"), min: 0.4, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
+    slider({ label: t("control.peak_power"), min: 0, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
   );
   host.appendChild(
     slider({ label: t("control.tilt"), min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
@@ -183,6 +184,35 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       onChange,
     ),
   );
+
+  // Kleinwindkraftanlage (nur im Expert-Modus, direkt nach PV)
+  if (expert) {
+    section(t("wind.title"));
+    host.appendChild(checkbox(t("wind.enabled"), (s) => s.windEnabled, (s, v) => { s.windEnabled = v; buildControls(host, state, onChange); }, state, onChange));
+    if (state.windEnabled) {
+      host.appendChild(
+        selectControl(
+          t("wind.turbine"),
+          WIND_TURBINES.map((t) => ({ value: t.id, label: `${t.name} (${t.ratedPowerKW * 1000}W)` })),
+          (s) => s.windTurbineId,
+          (s, v) => { s.windTurbineId = v; buildControls(host, state, onChange); },
+          state,
+          onChange,
+        ),
+      );
+      host.appendChild(
+        slider({ label: t("wind.count"), min: 1, max: 10, step: 1, unit: "", get: (s) => s.windCount, set: (s, v) => (s.windCount = v) }, state, onChange),
+      );
+      host.appendChild(
+        slider({ label: t("wind.hub_height"), min: 3, max: 15, step: 0.5, unit: " m", get: (s) => s.windHubHeightM, set: (s, v) => (s.windHubHeightM = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+      );
+      const turbine = WIND_TURBINE_MAP[state.windTurbineId] ?? DEFAULT_WIND_TURBINE;
+      const info = document.createElement("div");
+      info.className = "wind-info";
+      info.innerHTML = `<small>${turbine.manufacturer} · ${turbine.rotorDiameterM}m Rotor · ${turbine.cutInMs}–${turbine.cutOutMs} m/s · ~${Math.round(turbine.priceEUR).toLocaleString("de-DE")} €</small>`;
+      host.appendChild(info);
+    }
+  }
 
   section(t("control.battery"));
   host.appendChild(
@@ -253,7 +283,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   host.appendChild(checkbox(t("control.ev"), (s) => s.consumers.ev.enabled, (s, v) => { s.consumers.ev.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.ev.enabled) {
     host.appendChild(
-      slider({ label: t("control.consumption"), min: 500, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
+      slider({ label: t("control.consumption"), min: 0, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
     );
     host.appendChild(
       slider({ label: t("control.pv_share"), min: 0, max: 1, step: 0.05, unit: "", get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),

@@ -86,11 +86,17 @@ export interface SimConfig {
   prices?: Float64Array;
   /** Total household + device load per step (kWh), length TOTAL_STEPS. */
   load?: Float64Array;
+  /** Optional wind turbine production per step (kWh), length TOTAL_STEPS. */
+  wind?: Float64Array;
 }
 
 export interface SimResult {
   /** PV production per step (kWh). */
   pv: Float64Array;
+  /** Wind turbine production per step (kWh). */
+  wind: Float64Array;
+  /** Combined PV + Wind generation per step (kWh) — used for battery dispatch. */
+  generation: Float64Array;
   /** Price per step (EUR/MWh). */
   price: Float64Array;
   /** Total load per step (kWh). */
@@ -99,30 +105,41 @@ export interface SimResult {
   soc: Float64Array;
   /** PV used directly to cover load per step (kWh). */
   directUse: Float64Array;
+  /** Wind used directly to cover load per step (kWh). */
+  directUseWind: Float64Array;
   /** PV stored in the battery per step (kWh). */
   chargeSolar: Float64Array;
+  /** Wind stored in the battery per step (kWh). */
+  chargeWind: Float64Array;
   /** Grid energy used to charge the battery per step (kWh). */
   chargeGrid: Float64Array;
   /** Battery energy discharged to cover load per step (kWh). */
   dischargeToLoad: Float64Array;
   /** Portion of dischargeToLoad that originated from PV (kWh). */
   dischargeToLoadPV: Float64Array;
+  /** Portion of dischargeToLoad that originated from wind (kWh). */
+  dischargeToLoadWind: Float64Array;
   /** Energy exported directly from PV per step (kWh). */
   exportSolar: Float64Array;
+  /** Energy exported directly from wind per step (kWh). */
+  exportWind: Float64Array;
   /** Energy exported from the battery per step (kWh). */
   exportBattery: Float64Array;
   /** Energy drawn from the grid per step (kWh). */
   gridImport: Float64Array;
-  /** Total exported energy (solar + battery) per step (kWh). */
+  /** Total exported energy (solar + wind + battery) per step (kWh). */
   exportTotal: Float64Array;
 }
 
 export interface MonthlyRow {
   month: number; // 1..12
   pvKWh: number;
+  windKWh: number;
   exportSolarKWh: number;
+  exportWindKWh: number;
   exportBatteryKWh: number;
   chargeSolarKWh: number;
+  chargeWindKWh: number;
   chargeGridKWh: number;
   exportKWh: number;
   marketValueEUR: number;
@@ -133,6 +150,7 @@ export interface MonthlyRow {
 
 export interface RevenueSummary {
   totalPVKWh: number;
+  totalWindKWh: number;
   totalExportKWh: number;
   totalChargeGridKWh: number;
   marketValueEUR: number;

@@ -56,8 +56,12 @@ function renderSummary(r: SimReport): void {
   const eff = r.effectivePrice;
   const selfPct = s.totalLoadKWh > 0 ? (s.selfConsumptionKWh / s.totalLoadKWh) * 100 : 0;
   const expert = state.expertMode;
+  const hasWind = s.totalWindKWh > 0;
+  const hasPV = s.totalPVKWh > 0;
+  const totalGenLabel = (hasPV && hasWind) ? t("summary.total_generation") : hasWind ? t("summary.wind_yield") : t("summary.pv_yield");
+  const totalGenKWh = s.totalPVKWh + s.totalWindKWh;
   const cards: [string, string, string, string][] = [
-    [t("summary.pv_yield"), `${Math.round(s.totalPVKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year"), t("tooltip.pv_yield_calc")],
+    [totalGenLabel, `${Math.round(totalGenKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year"), t("tooltip.pv_yield_calc")],
     [t("summary.consumption"), `${Math.round(s.totalLoadKWh).toLocaleString("de-DE")} kWh`, t("summary.per_year"), t("tooltip.consumption_calc")],
     [t("summary.self_consumption"), `${Math.round(s.selfConsumptionKWh).toLocaleString("de-DE")} kWh`, `${selfPct.toFixed(0)}% ${t("summary.of_consumption")}`, t("tooltip.self_consumption")],
     [t("summary.grid_import"), `${Math.round(s.totalImportKWh).toLocaleString("de-DE")} kWh`, "", t("tooltip.grid_import_calc")],

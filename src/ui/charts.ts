@@ -52,6 +52,7 @@ export const COLORS = {
   ev: "#a855f7", // violet
   // energy flows
   pv: "#d97706", // strong solar amber
+  wind: "#6366f1", // indigo (wind)
   selfUse: "#22c55e",
   import: "#ef4444", // red
   exportK: "#2563eb", // blue
@@ -237,7 +238,7 @@ export function renderMonthlyChart(
   const plotH = H - m.top - m.bottom;
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
 
-  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh)));
+  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh, d.windKWh)));
   const e = niceScale(eMaxRaw, 5);
   const eScale = (v: number) => m.top + plotH - (v / e.max) * plotH;
 
@@ -265,6 +266,7 @@ export function renderMonthlyChart(
   }
 
   const pvPts: string[] = [];
+  const windPts: string[] = [];
   const netPts: string[] = [];
 
   data.forEach((d, i) => {
@@ -298,8 +300,22 @@ export function renderMonthlyChart(
     pvPts.push(`${cx},${pvY}`);
     haloDot(svg, cx, pvY, 4, COLORS.pv, "pv");
     const pvHit = el("circle", { cx, cy: pvY, r: 11, fill: "transparent", "data-key": "pv" });
-    bindTip(pvHit, () => `<strong>${d.label}</strong><br>${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b>`);
+    bindTip(pvHit, () => {
+      let tip = `<strong>${d.label}</strong><br>${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b>`;
+      if (d.windKWh > 0) tip += `<br>${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b>`;
+      return tip;
+    });
     svg.appendChild(pvHit);
+
+    // Wind line point (left axis) — only if wind data present
+    if (d.windKWh > 0) {
+      const windY = eScale(d.windKWh);
+      windPts.push(`${cx},${windY}`);
+      haloDot(svg, cx, windY, 3.5, COLORS.wind, "wind");
+      const windHit = el("circle", { cx, cy: windY, r: 10, fill: "transparent", "data-key": "wind" });
+      bindTip(windHit, () => `<strong>${d.label}</strong><br>${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b>`);
+      svg.appendChild(windHit);
+    }
 
     // net € line point (right axis)
     const netY = nScale(d.netEUR);
@@ -318,6 +334,7 @@ export function renderMonthlyChart(
     bindTip(hit, () =>
       `<strong>${d.label}</strong><br>` +
       `${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b><br>` +
+      (d.windKWh > 0 ? `${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b><br>` : "") +
       `${t("tooltip.consumption")}: ${fmtKWh(d.totalLoadKWh)} kWh<br>` +
       `${t("tooltip.self_use")}: ${fmtKWh(d.selfConsumptionKWh)} kWh<br>` +
       `${t("tooltip.export")}: ${fmtKWh(d.exportKWh)} kWh<br>` +
@@ -330,8 +347,9 @@ export function renderMonthlyChart(
     svg.appendChild(txt);
   });
 
-  // emphasised PV + net lines (halo makes them pop over the bars)
+  // emphasised PV + wind + net lines (halo makes them pop over the bars)
   haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5, "pv");
+  if (windPts.length > 0) haloLine(svg, windPts.join(" "), COLORS.wind, 3, "wind");
   haloLine(svg, netPts.join(" "), COLORS.net, 3, "net");
 
   // zero reference for net axis
@@ -362,6 +380,7 @@ export function renderMonthlyChart(
     { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp", tip: t("tooltip.dhw_hp") },
     { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev", tip: t("tooltip.consumption_calc") },
     { label: t("chart.monthly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv", tip: t("tooltip.pv_yield_calc") },
+    ...(data.some((d) => d.windKWh > 0) ? [{ label: t("chart.monthly.legend_wind"), color: COLORS.wind, shape: "line" as const, key: "wind", tip: t("tooltip.wind_yield_calc") }] : []),
     { label: t("chart.monthly.legend_net"), color: COLORS.net, shape: "line", key: "net", tip: t("tooltip.net_balance") },
   ], svg);
 }

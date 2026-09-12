@@ -40,6 +40,7 @@ import {
   DEFAULT_GAS_BOILER_EFFICIENCY,
 } from "./heatpumpGasSavings";
 import { electricityMixForStep } from "./electricityMix";
+import { windProductionPerStep, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE, WIND_LOCATIONS } from "./wind";
 
 // ---- Domain types shared with the UI ----------------------------------------
 
@@ -57,6 +58,7 @@ export interface MonthlyChartDatum {
   month: number;
   label: string;
   pvKWh: number;
+  windKWh: number;
   load: ConsumerBreakdown;
   totalLoadKWh: number;
   selfConsumptionKWh: number;
@@ -168,6 +170,11 @@ export interface SimParams {
   car: CarParams;
   // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
   marketMarginCt: number;
+  // Kleinwindkraftanlage (Expert-Modus)
+  windEnabled: boolean;
+  windCount: number;
+  windHubHeightM: number;
+  windTurbineId: string;
 }
 
 export const DEFAULT_SIM_PARAMS: SimParams = {
@@ -223,6 +230,10 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   // the heat-pump consumer above.
   car: { ...DEFAULT_CAR_PARAMS },
   marketMarginCt: 1,
+  windEnabled: false,
+  windCount: 1,
+  windHubHeightM: 10,
+  windTurbineId: "skywind_ng",
 };
 
 // Parse URL-style query parameters into SimParams. Mirrors the names used by
@@ -294,6 +305,11 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.car.evElectricCtPerKwh = num("ec", p.car.evElectricCtPerKwh);
   // Direktvermarkter-Marge.
   p.marketMarginCt = num("mm", p.marketMarginCt);
+  // Kleinwindkraftanlage.
+  p.windEnabled = str("wen", p.windEnabled ? "1" : "0") === "1";
+  p.windCount = num("wc", p.windCount);
+  p.windHubHeightM = num("wh", p.windHubHeightM);
+  p.windTurbineId = str("wt", p.windTurbineId);
   return p;
 }
 
@@ -480,6 +496,7 @@ export interface OpportunityInvestment {
 
 export interface SimSummary {
   totalPVKWh: number;
+  totalWindKWh: number;
   totalLoadKWh: number;
   selfConsumptionKWh: number;
   totalExportKWh: number;
@@ -489,7 +506,7 @@ export interface SimSummary {
   netSelectedEUR: number;
   marktPraemieCt: number;
   referenceValueCt: number;
-  /** Self-consumption rate: Eigenverbrauch / PV-Produktion (%). */
+  /** Self-consumption rate: Eigenverbrauch / Erzeugung (%). */
   selfConsumptionRatePct: number;
   /** Self-sufficiency (Autarkiegrad): Eigenverbrauch / Gesamtlast (%). */
   selfSufficiencyPct: number;
@@ -497,6 +514,17 @@ export interface SimSummary {
 
 function toSimConfig(p: SimParams): SimConfig {
   const hasBattery = p.capacityKWh > 0;
+  // Compute wind production if enabled.
+  let wind: Float64Array | undefined;
+  if (p.windEnabled && p.windCount > 0) {
+    const loc = WIND_LOCATIONS[p.location] ?? WIND_LOCATIONS.hamburg;
+    const turbine = WIND_TURBINE_MAP[p.windTurbineId] ?? DEFAULT_WIND_TURBINE;
+    wind = windProductionPerStep(turbine, loc, p.windHubHeightM);
+    // Scale by number of turbines.
+    if (p.windCount > 1) {
+      for (let i = 0; i < wind.length; i++) wind[i] *= p.windCount;
+    }
+  }
   return {
     pv: {
       peakKWp: p.peakKWp,
@@ -523,6 +551,7 @@ function toSimConfig(p: SimParams): SimConfig {
       feedInEUR: p.feedInCt / 100,
       commissioningYear: p.commissioningYear,
     },
+    wind,
     prices: getYearPrices(p.priceYear),
     load: totalLoad(p.consumers),
   };
@@ -577,7 +606,7 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
     d.load.heatpump += loads.heatpump[i];
     d.load.bwwp += loads.bwwp[i];
     d.load.ev += loads.ev[i];
-    d.selfUseKWh += result.directUse[i] + result.dischargeToLoadPV[i];
+    d.selfUseKWh += result.directUse[i] + result.directUseWind[i] + result.dischargeToLoadPV[i] + result.dischargeToLoadWind[i];
     d.importKWh += result.gridImport[i];
     d.exportKWh += result.exportTotal[i];
     d.avgPrice += result.price[i];
@@ -846,8 +875,13 @@ function computeCo2Analysis(
     return co2;
   };
 
-  // PV self-consumption: how much of the PV output covers load directly
-  const selfConsumptionKWh = sum(result.directUse) + sum(result.dischargeToLoadPV);
+  // PV+Wind self-consumption: how much of the generation covers load directly.
+  // Cap at total generation to avoid phantom self-consumption from initial battery SOC.
+  const totalGenerationCO2 = sum(result.pv) + sum(result.wind);
+  const selfConsumptionKWh = Math.min(
+    totalGenerationCO2,
+    sum(result.directUse) + sum(result.directUseWind) + sum(result.dischargeToLoadPV) + sum(result.dischargeToLoadWind),
+  );
 
   // How much of the PV self-consumption is attributable to the *household*
   // (i.e. usable in the gas-heating scenarios that have no heat pump). We cap
@@ -1097,6 +1131,7 @@ export function runSimulation(p: SimParams): SimReport {
       month: i + 1,
       label: MONTH_LABELS[i],
       pvKWh: r.pvKWh,
+      windKWh: r.windKWh,
       load: { household: s.household, heatpump: s.heatpump, bwwp: s.bwwp, ev: s.ev },
       totalLoadKWh: r.loadKWh,
       selfConsumptionKWh: r.selfConsumptionKWh,
@@ -1224,8 +1259,15 @@ export function runSimulation(p: SimParams): SimReport {
   };
 
   const totalPVKWh = annualSum(result.pv);
+  const totalWindKWh = annualSum(result.wind);
+  const totalGenerationKWh = totalPVKWh + totalWindKWh;
   const totalLoadKWh = annualSum(result.load);
-  const selfConsumptionKWh = annualSum(result.directUse) + annualSum(result.dischargeToLoadPV);
+  // Self-consumption = all generation that covers load (direct + battery-discharged).
+  // Cap at total generation to avoid phantom self-consumption from initial battery SOC.
+  const selfConsumptionKWh = Math.min(
+    totalGenerationKWh,
+    annualSum(result.directUse) + annualSum(result.directUseWind) + annualSum(result.dischargeToLoadPV) + annualSum(result.dischargeToLoadWind),
+  );
   // Netz-Import is the residual so that Eigenverbrauch + Netz-Import = Verbrauch.
   // This includes both direct grid import and grid-charged battery discharge.
   const totalImportKWh = totalLoadKWh - selfConsumptionKWh;
@@ -1252,6 +1294,7 @@ export function runSimulation(p: SimParams): SimReport {
 
   const summary: SimSummary = {
     totalPVKWh,
+    totalWindKWh,
     totalLoadKWh,
     selfConsumptionKWh,
     totalExportKWh: annualSum(result.exportTotal),
@@ -1261,7 +1304,7 @@ export function runSimulation(p: SimParams): SimReport {
     netSelectedEUR: econ.netSelectedEUR,
     marktPraemieCt: econ.marktPraemieCt,
     referenceValueCt: econ.referenceValueCt,
-    selfConsumptionRatePct: totalPVKWh > 0 ? (selfConsumptionKWh / totalPVKWh) * 100 : 0,
+    selfConsumptionRatePct: totalGenerationKWh > 0 ? (selfConsumptionKWh / totalGenerationKWh) * 100 : 0,
     selfSufficiencyPct: totalLoadKWh > 0 ? (selfConsumptionKWh / totalLoadKWh) * 100 : 0,
   };
 
