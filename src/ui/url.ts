@@ -64,6 +64,10 @@ export function serializeState(s: AppState): string {
   p.set("batdeg", String(s.batteryDegradationPct));
   p.set("pvdeg", String(s.pvDegradationPct));
   p.set("stdby", String(s.standbyWattage));
+  p.set("wen", s.windEnabled ? "1" : "0");
+  p.set("wc", String(s.windCount));
+  p.set("wh", String(s.windHubHeightM));
+  p.set("wt", s.windTurbineId);
   return p.toString();
 }
 
@@ -123,6 +127,10 @@ export function deserializeState(qs: string): AppState {
   num(p, "batdeg", (v) => (s.batteryDegradationPct = v));
   num(p, "pvdeg", (v) => (s.pvDegradationPct = v));
   num(p, "stdby", (v) => (s.standbyWattage = v));
+  bool(p, "wen", (v) => (s.windEnabled = v));
+  num(p, "wc", (v) => (s.windCount = v));
+  num(p, "wh", (v) => (s.windHubHeightM = v));
+  str(p, "wt", (v) => (s.windTurbineId = v));
   return s;
 }
 

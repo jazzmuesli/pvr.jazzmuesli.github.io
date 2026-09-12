@@ -1270,7 +1270,7 @@ export function runSimulation(p: SimParams): SimReport {
   );
   // Netz-Import is the residual so that Eigenverbrauch + Netz-Import = Verbrauch.
   // This includes both direct grid import and grid-charged battery discharge.
-  const totalImportKWh = totalLoadKWh - selfConsumptionKWh;
+  const totalImportKWh = Math.max(0, totalLoadKWh - selfConsumptionKWh);
 
   // Gas savings analysis: compare heat pump electricity vs. direct gas heating.
   // Pass the simulation dispatch (gridImport, totalLoad) so the HP's PV/grid

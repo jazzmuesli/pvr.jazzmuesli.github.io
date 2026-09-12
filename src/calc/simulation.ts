@@ -170,21 +170,63 @@ export function simulate(config: SimConfig): SimResult {
 
     // Negative / free price: take from the grid (cheap) and store free energy.
     if (pr < 0) {
+      // 1) Direct self-consumption: generation covers load first.
       const du = Math.min(gen, L);
       if (gen > 0) {
         directUse[i] = du * (pRemain / gen);
         directUseWind[i] = du * (wRemain / gen);
       }
+      gen -= du;
+      pRemain = Math.max(0, pRemain - directUse[i]);
+      wRemain = Math.max(0, wRemain - directUseWind[i]);
       L -= du;
-      if (L > 0) gridImport[i] = L;
-      if (soc < maxSOCkWh) {
+
+      let gridImpVal = L > 0 ? L : 0;
+
+      // 2) Charge battery from generation surplus first if allowed.
+      const chargeAllowed =
+        b.chargeMode === "morning" || b.chargeMode === "gridNegative"
+          ? true
+          : b.chargeMode === "midday"
+            ? Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) >= MIDDAY_START &&
+              Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) < MIDDAY_END
+            : false;
+
+      if (chargeAllowed && gen > 0 && soc < maxSOCkWh) {
+        const room = (maxSOCkWh - soc) / eff;
+        const e = Math.min(maxStepEnergy, room, gen);
+        if (e > 0) {
+          const pvFrac = gen > 0 ? pRemain / gen : 0;
+          const windFrac = gen > 0 ? wRemain / gen : 0;
+          const pvCharge = e * pvFrac;
+          const windCharge = e * windFrac;
+          chargeSolar[i] = pvCharge;
+          chargeWind[i] = windCharge;
+          pRemain = Math.max(0, pRemain - pvCharge);
+          wRemain = Math.max(0, wRemain - windCharge);
+          gen -= e;
+          soc += e * eff;
+          pvSOC += pvCharge * eff;
+          windSOC += windCharge * eff;
+        }
+      }
+
+      // 3) Charge battery from grid if chargeMode is gridNegative and there's still room.
+      if (b.chargeMode === "gridNegative" && soc < maxSOCkWh) {
         const room = (maxSOCkWh - soc) / eff;
         const e = Math.min(maxStepEnergy, room);
         if (e > 0) {
           chargeGrid[i] = e;
           soc += e * eff;
+          gridImpVal += e;
         }
       }
+
+      gridImport[i] = gridImpVal;
+
+      // 4) Export remaining generation. At negative prices, any remaining generation is curtailed (not exported).
+      // exportSolar and exportWind remain 0.
+
       loadArr[i] = load[i];
       socArr[i] = soc;
       exportTotal[i] = exportSolar[i] + exportWind[i] + exportBattery[i];
