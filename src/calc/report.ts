@@ -70,6 +70,7 @@ export interface MonthlyChartDatum {
 export interface DayChartDatum {
   hour: number;
   pvKWh: number;
+  windKWh: number;
   load: ConsumerBreakdown;
   totalLoadKWh: number;
   selfUseKWh: number;
@@ -574,6 +575,7 @@ function monthlyConsumerSums(loads: ConsumerLoads): ConsumerBreakdown[] {
 interface DayAccumulator {
   hour: number;
   pvKWh: number;
+  windKWh: number;
   load: ConsumerBreakdown;
   selfUseKWh: number;
   importKWh: number;
@@ -587,6 +589,7 @@ function emptyDay(hour: number): DayAccumulator {
   return {
     hour,
     pvKWh: 0,
+    windKWh: 0,
     load: { household: 0, heatpump: 0, bwwp: 0, ev: 0 },
     selfUseKWh: 0,
     importKWh: 0,
@@ -606,6 +609,7 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
     const h = hourOfStep(i);
     const d = data[m][h];
     d.pvKWh += result.pv[i];
+    d.windKWh += result.wind[i];
     d.load.household += loads.household[i];
     d.load.heatpump += loads.heatpump[i];
     d.load.bwwp += loads.bwwp[i];
@@ -630,6 +634,7 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
       return {
         hour: d.hour,
         pvKWh: (d.pvKWh / n) * stepsPerHour,
+        windKWh: (d.windKWh / n) * stepsPerHour,
         load,
         totalLoadKWh: load.household + load.heatpump + load.bwwp + load.ev,
         selfUseKWh: (d.selfUseKWh / n) * stepsPerHour,

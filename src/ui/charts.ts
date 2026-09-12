@@ -400,7 +400,7 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", width: "100%" });
 
   // Import can go negative (grid export) — extend axis below zero
-  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh)));
+  const eMaxRaw = Math.max(1, ...data.map((d) => Math.max(d.totalLoadKWh, d.pvKWh, d.windKWh || 0)));
   const eMinRaw = Math.min(0, ...data.map((d) => d.importKWh));
   const e = niceScaleRange(eMinRaw, eMaxRaw, 5);
   const eScale = (v: number) => m.top + plotH - ((v - e.min) / (e.max - e.min)) * plotH;
@@ -457,6 +457,13 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
   const pvPts = data.map((d, h) => `${m.left + h * band + band / 2},${eScale(d.pvKWh)}`);
   haloLine(svg, pvPts.join(" "), COLORS.pv, 3.5, "pv");
 
+  // Wind production line (emphasised, if active)
+  const hasWind = data.some((d) => (d.windKWh || 0) > 0);
+  if (hasWind) {
+    const windPts = data.map((d, h) => `${m.left + h * band + band / 2},${eScale(d.windKWh || 0)}`);
+    haloLine(svg, windPts.join(" "), COLORS.wind, 3, "wind");
+  }
+
   // grid-import line (part of load, emphasised) — can go negative (export)
   const impPts = data.map((d, h) => `${m.left + h * band + band / 2},${eScale(d.importKWh)}`);
   haloLine(svg, impPts.join(" "), COLORS.import, 2.5, "import");
@@ -496,6 +503,7 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
       `${getConsumerLabel("ev")}: ${fmtKWh(d.load.ev)} kWh/h<br>` +
       `${t("chart.hourly.tooltip_sum")}: ${fmtKWh(d.totalLoadKWh)} kWh/h<br>` +
       `${t("chart.hourly.tooltip_pv")}: ${fmtKWh(d.pvKWh)} kWh/h<br>` +
+      (hasWind ? `${t("chart.hourly.tooltip_wind")}: ${fmtKWh(d.windKWh || 0)} kWh/h<br>` : "") +
       `${t("chart.hourly.tooltip_import")}: ${fmtKWh(d.importKWh)} kWh/h<br>` +
       `${t("chart.hourly.tooltip_self")}: ${fmtKWh(d.selfUseKWh)} kWh/h<br>` +
       `${t("chart.hourly.tooltip_export")}: ${fmtKWh(d.exportKWh)} kWh/h` +
@@ -525,6 +533,7 @@ function renderDayChart(host: HTMLElement, data: DayChartDatum[], monthLabel: st
     { label: getConsumerLabel("bwwp"), color: COLORS.bwwp, shape: "rect", key: "bwwp", tip: t("tooltip.dhw_hp") },
     { label: getConsumerLabel("ev"), color: COLORS.ev, shape: "rect", key: "ev", tip: t("tooltip.consumption_calc") },
     { label: t("chart.hourly.legend_pv"), color: COLORS.pv, shape: "line", key: "pv", tip: t("tooltip.pv_yield_calc") },
+    ...(hasWind ? [{ label: t("chart.hourly.legend_wind"), color: COLORS.wind, shape: "line" as const, key: "wind", tip: t("tooltip.wind_yield_calc") }] : []),
     { label: t("chart.hourly.legend_import"), color: COLORS.import, shape: "line", key: "import", tip: t("tooltip.grid_import_calc") },
     { label: t("chart.hourly.legend_soc"), color: COLORS.soc, shape: "line", key: "soc", tip: t("tooltip.coverage_pv") },
   ];
