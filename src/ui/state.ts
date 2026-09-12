@@ -66,6 +66,8 @@ export interface AppState {
   windHubHeightM: number;
   /** ID der Windkraftanlage aus dem Katalog */
   windTurbineId: string;
+  /** Mittlere jährliche Windgeschwindigkeit bei 10m Höhe in m/s */
+  windSpeedMeanMs: number;
 }
 
 export const DEFAULT_STATE: AppState = {
@@ -119,6 +121,7 @@ export const DEFAULT_STATE: AppState = {
   windCount: 1,
   windHubHeightM: 10,
   windTurbineId: "skywind_ng",
+  windSpeedMeanMs: 6.0,
 };
 
 /** Map the UI state onto the pure simulation parameters. */
@@ -182,6 +185,7 @@ export function toSimParams(s: AppState): SimParams {
     windCount: s.windCount,
     windHubHeightM: s.windHubHeightM,
     windTurbineId: s.windTurbineId,
+    windSpeedMeanMs: s.windSpeedMeanMs,
   };
 }
 

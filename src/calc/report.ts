@@ -175,6 +175,7 @@ export interface SimParams {
   windCount: number;
   windHubHeightM: number;
   windTurbineId: string;
+  windSpeedMeanMs: number;
 }
 
 export const DEFAULT_SIM_PARAMS: SimParams = {
@@ -234,6 +235,7 @@ export const DEFAULT_SIM_PARAMS: SimParams = {
   windCount: 1,
   windHubHeightM: 10,
   windTurbineId: "skywind_ng",
+  windSpeedMeanMs: 4.8,
 };
 
 // Parse URL-style query parameters into SimParams. Mirrors the names used by
@@ -310,6 +312,7 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.windCount = num("wc", p.windCount);
   p.windHubHeightM = num("wh", p.windHubHeightM);
   p.windTurbineId = str("wt", p.windTurbineId);
+  p.windSpeedMeanMs = num("wsm", p.windSpeedMeanMs);
   return p;
 }
 
@@ -517,7 +520,8 @@ function toSimConfig(p: SimParams): SimConfig {
   // Compute wind production if enabled.
   let wind: Float64Array | undefined;
   if (p.windEnabled && p.windCount > 0) {
-    const loc = WIND_LOCATIONS[p.location] ?? WIND_LOCATIONS.hamburg;
+    const baseLoc = WIND_LOCATIONS[p.location] ?? WIND_LOCATIONS.hamburg;
+    const loc = { ...baseLoc, annualMeanWindMs: p.windSpeedMeanMs };
     const turbine = WIND_TURBINE_MAP[p.windTurbineId] ?? DEFAULT_WIND_TURBINE;
     wind = windProductionPerStep(turbine, loc, p.windHubHeightM);
     // Scale by number of turbines.

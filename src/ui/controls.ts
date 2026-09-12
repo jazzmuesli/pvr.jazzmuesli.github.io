@@ -3,7 +3,7 @@ import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
 import { TariffScheme } from "../calc/tariff";
-import { WIND_TURBINES, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE } from "../calc/wind";
+import { WIND_TURBINES, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE, WIND_LOCATIONS } from "../calc/wind";
 import { t } from "../i18n";
 
 interface SliderOpts {
@@ -179,7 +179,14 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       t("control.location"),
       Object.entries(LOCATIONS).map(([k, v]) => ({ value: k, label: v.name })),
       (s) => s.location,
-      (s, v) => (s.location = v),
+      (s, v) => {
+        s.location = v;
+        const wl = WIND_LOCATIONS[v];
+        if (wl) {
+          s.windSpeedMeanMs = wl.annualMeanWindMs;
+          buildControls(host, state, onChange);
+        }
+      },
       state,
       onChange,
     ),
@@ -205,6 +212,9 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
       );
       host.appendChild(
         slider({ label: t("wind.hub_height"), min: 3, max: 15, step: 0.5, unit: " m", get: (s) => s.windHubHeightM, set: (s, v) => (s.windHubHeightM = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+      );
+      host.appendChild(
+        slider({ label: t("wind.speed_mean"), min: 1.0, max: 10.0, step: 0.1, unit: " m/s", get: (s) => s.windSpeedMeanMs, set: (s, v) => (s.windSpeedMeanMs = v), fmt: (v) => v.toFixed(1) }, state, onChange),
       );
       const turbine = WIND_TURBINE_MAP[state.windTurbineId] ?? DEFAULT_WIND_TURBINE;
       const info = document.createElement("div");

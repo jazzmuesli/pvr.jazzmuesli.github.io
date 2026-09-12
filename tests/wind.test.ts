@@ -231,6 +231,7 @@ describe("wind integration in runSimulation", () => {
   it("plausibility: ~1 turbine at Boizenburg, 3m hub → 300-500 kWh wind yield", () => {
     const r = runSimulation(params({
       location: "boizenburg",
+      windSpeedMeanMs: 6.0,
       windEnabled: true,
       windCount: 1,
       windHubHeightM: 10,
@@ -244,6 +245,7 @@ describe("wind integration in runSimulation", () => {
   it("plausibility: self-consumption of wind is ~50-80% at default household load", () => {
     const r = runSimulation(params({
       location: "boizenburg",
+      windSpeedMeanMs: 6.0,
       windEnabled: true,
       windCount: 1,
       windHubHeightM: 10,
@@ -258,10 +260,12 @@ describe("wind integration in runSimulation", () => {
   it("wind+PV+battery produces more total energy than PV alone", () => {
     const pvOnly = runSimulation(params({
       location: "boizenburg",
+      windSpeedMeanMs: 6.0,
       windEnabled: false,
     }));
     const pvWind = runSimulation(params({
       location: "boizenburg",
+      windSpeedMeanMs: 6.0,
       windEnabled: true,
       windCount: 1,
       windHubHeightM: 3,

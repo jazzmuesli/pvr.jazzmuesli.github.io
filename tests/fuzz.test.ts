@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { runSimulation, DEFAULT_SIM_PARAMS, SimParams } from "../src/calc/report";
+import { runSimulation, SimParams } from "../src/calc/report";
 import { WIND_TURBINES } from "../src/calc/wind";
+import { DEFAULT_CAR_PARAMS } from "../src/calc/car";
 
 /**
  * Robust property-based (fuzz) test suite for the PV & Wind Simulation SPA.
@@ -74,21 +75,19 @@ describe("Simulation Invariant Fuzzing", () => {
       heatpumpJaz: randomRange(2.0, 5.0),
       heatpumpElectricCt: randomRange(15, 45),
       car: {
+        ...DEFAULT_CAR_PARAMS,
         annualKm: randomRange(5000, 30000),
         evKwhPer100km: randomRange(12, 25),
-        dieselLitersPer100km: randomRange(4.5, 9.0),
-        dieselPriceEURPerLiter: randomRange(1.3, 2.3),
-        electricityPriceCtPerKWh: randomRange(15, 45),
-        evAnnualNebenkostenEUR: randomRange(100, 600),
-        dieselAnnualNebenkostenEUR: randomRange(300, 1200),
-        evMaintenanceEURPerKm: randomRange(0.02, 0.1),
-        dieselMaintenanceEURPerKm: randomRange(0.05, 0.2),
+        dieselLPer100km: randomRange(4.5, 9.0),
+        dieselEurPerL: randomRange(1.3, 2.3),
+        evElectricCtPerKwh: randomRange(15, 45),
       },
       marketMarginCt: randomRange(0.1, 2.0),
       windEnabled: hasWind,
       windCount: hasWind ? Math.floor(randomRange(1, 6)) : 0,
       windHubHeightM: randomRange(3, 15),
       windTurbineId: randomElement(WIND_TURBINES.map((t) => t.id)),
+      windSpeedMeanMs: randomRange(1.0, 10.0),
     };
   }
 
@@ -147,7 +146,6 @@ describe("Simulation Invariant Fuzzing", () => {
       // Check for any NaNs inside entire serialized report output (super robust check!)
       const reportStr = JSON.stringify(r);
       expect(reportStr.includes("NaN"), `run ${run}: report JSON contains NaN: ${reportStr}`).toBe(false);
-      expect(reportStr.includes("null"), `run ${run}: report JSON contains invalid null (except expected gasSavings/tariffCombinations)`).toBe(true); // JSON representation check, gasSavings can be null
     }
   });
 });

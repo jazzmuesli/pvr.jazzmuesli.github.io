@@ -68,6 +68,7 @@ export function serializeState(s: AppState): string {
   p.set("wc", String(s.windCount));
   p.set("wh", String(s.windHubHeightM));
   p.set("wt", s.windTurbineId);
+  p.set("wsm", String(s.windSpeedMeanMs));
   return p.toString();
 }
 
@@ -131,6 +132,7 @@ export function deserializeState(qs: string): AppState {
   num(p, "wc", (v) => (s.windCount = v));
   num(p, "wh", (v) => (s.windHubHeightM = v));
   str(p, "wt", (v) => (s.windTurbineId = v));
+  num(p, "wsm", (v) => (s.windSpeedMeanMs = v));
   return s;
 }
 
