@@ -141,6 +141,40 @@ describe("pv production", () => {
     expect(sum(Float64Array.from(m))).toBeCloseTo(sum(p), 0);
   });
 
+  it("monthly bucketing uses the real calendar: 12 buckets, none empty, calendar-consistent", () => {
+    const p = pvProductionPerStep(cfg);
+    const m = monthlyTotals(p);
+    expect(m).toHaveLength(12);
+    // Every month has some PV (even December in Hamburg is > 0).
+    for (let i = 0; i < 12; i++) expect(m[i]).toBeGreaterThan(0);
+    // Independent recomputation using the same calendar mapping must match
+    // exactly (guards against the previous 30.4375-day average-month drift).
+    const ref = new Array(12).fill(0);
+    for (let i = 0; i < p.length; i++) {
+      const day = Math.floor(i / STEPS_PER_DAY);
+      const month = new Date(Date.UTC(2023, 0, 1 + day)).getUTCMonth();
+      ref[month] += p[i];
+    }
+    for (let i = 0; i < 12; i++) expect(m[i]).toBeCloseTo(ref[i], 6);
+  });
+
+  it("PV is summer-heavy: summer (JJA) months clearly out-produce winter (DJF)", () => {
+    const m = monthlyTotals(pvProductionPerStep(cfg));
+    const summer = m[5] + m[6] + m[7]; // Jun, Jul, Aug
+    const winter = m[0] + m[1] + m[11]; // Jan, Feb, Dec
+    // Complementary to wind: PV peaks in summer. In Hamburg summer PV is many
+    // times the winter figure.
+    expect(summer).toBeGreaterThan(winter * 2);
+    // Peak month is a summer month, minimum is a winter month.
+    let maxM = 0, minM = 0;
+    for (let i = 1; i < 12; i++) {
+      if (m[i] > m[maxM]) maxM = i;
+      if (m[i] < m[minM]) minM = i;
+    }
+    expect([4, 5, 6, 7]).toContain(maxM); // May–Aug
+    expect([10, 11, 0, 1]).toContain(minM); // Nov–Feb
+  });
+
   it("all locations are defined with positive yields", () => {
     for (const k of Object.keys(LOCATIONS)) {
       expect(LOCATIONS[k].annualYieldPerKWp).toBeGreaterThan(0);

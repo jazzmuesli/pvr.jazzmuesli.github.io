@@ -61,9 +61,10 @@ describe("SkyWind NG power curve", () => {
 describe("SWCC certification validation", () => {
   it("produces approximately 615 kWh/year at 6 m/s (certified reference)", () => {
     const result = validateAgainstCertification();
-    // Allow ±10% tolerance due to Rayleigh integration discretization
-    expect(result.calculated).toBeGreaterThan(500);
-    expect(result.calculated).toBeLessThan(800);
+    // After datasheet calibration the model reproduces the certified AEP at
+    // 6 m/s almost exactly; keep a tight band around the 615 kWh reference.
+    expect(result.calculated).toBeGreaterThan(590);
+    expect(result.calculated).toBeLessThan(640);
   });
 });
 
@@ -101,10 +102,13 @@ describe("wind locations", () => {
 // ---- Annual energy production per city -------------------------------------
 
 describe("annual energy production by city", () => {
-  it("produces between 100 and 2000 kWh/year per turbine (SkyWind spec)", () => {
+  it("produces between 40 and 1600 kWh/year per turbine (SkyWind spec)", () => {
+    // Lower bound is 40 kWh: after datasheet calibration the SkyWind NG at a
+    // weak inland site (München, 3.6 m/s) with its high 5.5 m/s cut-in
+    // realistically yields only ~85 kWh/year at 10 m — small but physical.
     for (const [, loc] of Object.entries(WIND_LOCATIONS)) {
       const result = computeWindEnergy(SKYWIND_NG, loc, 10);
-      expect(result.annualKWh).toBeGreaterThan(100);
+      expect(result.annualKWh).toBeGreaterThan(40);
       expect(result.annualKWh).toBeLessThan(1600);
     }
   });
@@ -454,5 +458,123 @@ describe("plausibility: self-consumption ≤ generation", () => {
     }));
     const monthlySC = r.monthly.reduce((s, m) => s + m.selfConsumptionKWh, 0);
     expect(monthlySC).toBeCloseTo(r.summary.selfConsumptionKWh, -1);
+  });
+});
+
+// ---- Physical plausibility: seasonality & datasheet calibration ------------
+
+describe("wind seasonality (winter > summer)", () => {
+  // German wind climatology: energy peaks in winter (Nov–Feb) and is lowest in
+  // summer (Jun–Aug). The convex power curve amplifies the monthly wind
+  // factors, so winter energy must clearly exceed summer energy everywhere.
+  const WINTER = [0, 1, 11]; // Jan, Feb, Dec
+  const SUMMER = [5, 6, 7]; // Jun, Jul, Aug
+
+  function seasonSum(monthly: number[], months: number[]): number {
+    return months.reduce((s, m) => s + monthly[m], 0);
+  }
+
+  it("winter (DJF) energy exceeds summer (JJA) for every location and turbine", () => {
+    for (const [locKey, loc] of Object.entries(WIND_LOCATIONS)) {
+      for (const [id, turbine] of Object.entries(WIND_TURBINE_MAP)) {
+        const r = computeWindEnergy(turbine, loc, 10);
+        const winter = seasonSum(r.monthlyKWh, WINTER);
+        const summer = seasonSum(r.monthlyKWh, SUMMER);
+        expect(
+          winter,
+          `${id} @ ${locKey}: winter ${winter.toFixed(1)} should exceed summer ${summer.toFixed(1)}`,
+        ).toBeGreaterThan(summer);
+      }
+    }
+  });
+
+  it("winter/summer energy ratio is in a physically plausible band (1.5–5x)", () => {
+    for (const [, loc] of Object.entries(WIND_LOCATIONS)) {
+      const r = computeWindEnergy(SKYWIND_NG, loc, 10);
+      const winter = seasonSum(r.monthlyKWh, WINTER);
+      const summer = seasonSum(r.monthlyKWh, SUMMER);
+      const ratio = winter / summer;
+      expect(ratio).toBeGreaterThan(1.5);
+      expect(ratio).toBeLessThan(5);
+    }
+  });
+
+  it("the windiest month is a winter month, the calmest a summer month", () => {
+    const r = computeWindEnergy(SKYWIND_NG, WIND_LOCATIONS.hamburg, 10);
+    let maxM = 0, minM = 0;
+    for (let m = 1; m < 12; m++) {
+      if (r.monthlyKWh[m] > r.monthlyKWh[maxM]) maxM = m;
+      if (r.monthlyKWh[m] < r.monthlyKWh[minM]) minM = m;
+    }
+    // max in {Nov, Dec, Jan, Feb}, min in {May..Aug}
+    expect([10, 11, 0, 1]).toContain(maxM);
+    expect([4, 5, 6, 7]).toContain(minM);
+  });
+});
+
+describe("datasheet AEP calibration", () => {
+  // At the reference regime (6 m/s mean, flat monthly distribution, 10 m hub)
+  // each turbine must reproduce its certified annual yield (referenceAEP6ms)
+  // within ±15%. This anchors the absolute magnitude of the projections to the
+  // manufacturer datasheets instead of the raw (over-optimistic) Rayleigh model.
+  const REF_LOCATION = {
+    name: "Referenz (6 m/s)",
+    annualMeanWindMs: 6.0,
+    latDeg: 0,
+    monthlyFactors: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  };
+
+  it("every turbine's AEP at 6 m/s is within ±15% of its referenceAEP6ms", () => {
+    for (const [id, turbine] of Object.entries(WIND_TURBINE_MAP)) {
+      const r = computeWindEnergy(turbine, REF_LOCATION, 10);
+      const ratio = r.annualKWh / turbine.referenceAEP6ms;
+      expect(
+        ratio,
+        `${id}: calc ${r.annualKWh.toFixed(0)} vs ref ${turbine.referenceAEP6ms}`,
+      ).toBeGreaterThan(0.85);
+      expect(ratio).toBeLessThan(1.15);
+    }
+  });
+});
+
+describe("wind specific yield is physically bounded", () => {
+  // Energy per m² of swept rotor area is Betz-limited and, for these small
+  // machines at 6 m/s, realistically lands in ~200–550 kWh/m². A turbine far
+  // outside this band signals an internally inconsistent power curve vs. rotor
+  // area (the pre-calibration Superwind 350 sat at ~895 kWh/m²).
+  const REF_LOCATION = {
+    name: "Referenz (6 m/s)",
+    annualMeanWindMs: 6.0,
+    latDeg: 0,
+    monthlyFactors: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+  };
+
+  it("all turbines have specific yield in 150–600 kWh/m² at 6 m/s", () => {
+    for (const [id, turbine] of Object.entries(WIND_TURBINE_MAP)) {
+      const r = computeWindEnergy(turbine, REF_LOCATION, 10);
+      expect(r.specificYield, `${id}: ${r.specificYield.toFixed(0)} kWh/m²`).toBeGreaterThan(150);
+      expect(r.specificYield, `${id}: ${r.specificYield.toFixed(0)} kWh/m²`).toBeLessThan(600);
+    }
+  });
+
+  it("full-load hours are in a realistic micro-wind band (800–3000 h) at 6 m/s", () => {
+    for (const [id, turbine] of Object.entries(WIND_TURBINE_MAP)) {
+      const r = computeWindEnergy(turbine, REF_LOCATION, 10);
+      expect(r.fullLoadHours, `${id}: ${r.fullLoadHours.toFixed(0)} h`).toBeGreaterThan(800);
+      expect(r.fullLoadHours, `${id}: ${r.fullLoadHours.toFixed(0)} h`).toBeLessThan(3000);
+    }
+  });
+});
+
+describe("per-step wind series matches calibrated annual (all turbines)", () => {
+  it("Monte-Carlo per-step integrates to computeWindEnergy within 6%", () => {
+    for (const [id, turbine] of Object.entries(WIND_TURBINE_MAP)) {
+      const arr = windProductionPerStep(turbine, WIND_LOCATIONS.boizenburg, 10);
+      const perStepAnnual = annualSum(arr);
+      const analytic = computeWindEnergy(turbine, WIND_LOCATIONS.boizenburg, 10).annualKWh;
+      const ratio = perStepAnnual / analytic;
+      expect(ratio, `${id}: perStep ${perStepAnnual.toFixed(0)} vs analytic ${analytic.toFixed(0)}`).toBeGreaterThan(0.94);
+      expect(ratio).toBeLessThan(1.06);
+    }
   });
 });

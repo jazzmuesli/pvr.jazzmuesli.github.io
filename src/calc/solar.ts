@@ -6,7 +6,7 @@
 // empirical kWh/kWp figures so that, e.g., 10 kWp @ 45° south in Hamburg yields
 // roughly 10,000 kWh/year.
 
-import { STEPS_PER_DAY, STEP_HOURS, TOTAL_STEPS, Orientation } from "./types";
+import { STEPS_PER_DAY, STEP_HOURS, TOTAL_STEPS, Orientation, monthOfStep } from "./types";
 
 export const DEG = Math.PI / 180;
 const ALBEDO = 0.2;
@@ -236,7 +236,11 @@ export function pvProductionPerStep(input: PVInput): Float64Array {
 export function monthlyTotals(perStep: Float64Array): number[] {
   const months = new Array(12).fill(0);
   for (let i = 0; i < perStep.length; i++) {
-    const month = Math.floor(i / (STEPS_PER_DAY * 30.4375)) % 12;
+    // Use the real calendar (SIM_YEAR) so months align with the rest of the
+    // model (report monthly rows, wind monthlyFactors). A fixed 30.4375-day
+    // average month drifts by up to ~2 days by December and mis-assigns
+    // boundary steps.
+    const month = monthOfStep(i) - 1; // 0-based
     months[month] += perStep[i];
   }
   return months;
