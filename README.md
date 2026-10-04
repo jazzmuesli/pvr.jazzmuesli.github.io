@@ -241,10 +241,34 @@ src/chatbot/
   logger.ts               # Client-side conversation logger
 src/export/
   workbook.ts             # Builds the .xlsx workbook with live formulas (ExcelJS)
+src/privacy/
+  consent.ts              # Consent banner, withdrawal, and the gated usage-measurement loader
 src/main.ts               # Wires State -> runSimulation -> Charts
-vite.config.ts            # Vite build + /api + /chat middleware plugin
+privacy.html              # Static Art. 13 DSGVO notice (no-JS fallback, own Vite entry)
+vite.config.ts            # Vite build (index + privacy) + /api + /chat middleware plugin
 tests/                    # ~280 Vitest tests (model, plausibility, report, Excel export)
 ```
+
+## Privacy & Consent
+
+The site loads a third-party measurement script (VeritaMetrics) **only after opt-in
+consent** (§25(1) TDDDG, Art. 6(1)(a) GDPR). See `src/privacy/consent.ts`.
+
+- Nothing is loaded before a decision is recorded in `localStorage`
+  (`pv-calc-consent`: decision, timestamp, notice version — the Art. 7(1) proof).
+- Rejection and acceptance are equally prominent; withdrawal is one click away in
+  the footer and removes the consent record, the tracker script and its
+  `vm_*` storage entries.
+- `globalPrivacyControl` and `doNotTrack` are treated as objections, not consent.
+- Without JavaScript nothing is measured — the `<noscript>` tracking pixel was
+  removed because a server-side `<img>` cannot be consent-gated.
+- **Data minimisation:** the shareable scenario is stored in the URL *fragment*
+  (`#…`), not the query string (`src/ui/url.ts`), because tracker.js transmits
+  `location.pathname + location.search`. Verified against tracker.js 2.1.0: the
+  fragment is not part of the payload, so the user's location, consumption and
+  investment figures never reach the third party. Legacy `?…` links still load.
+- The footer text and the notice must stay in sync with the actual payload —
+  `tests/privacy.test.ts` pins the disclosed field list.
 
 ## Tech Stack
 

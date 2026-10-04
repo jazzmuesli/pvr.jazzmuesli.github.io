@@ -2,7 +2,10 @@ import { defineConfig } from "vitest/config";
 import type { Plugin } from "vite";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runSimulation, simParamsFromQuery } from "./src/calc/report";
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 // Recursively round every number in the report to at most 3 decimal places.
 // More precision is not necessary for the API output.
@@ -133,6 +136,14 @@ export default defineConfig({
   build: {
     outDir: "dist",
     target: "es2020",
+    rollupOptions: {
+      // privacy.html is the no-JavaScript fallback for the Art. 13 DSGVO notice:
+      // without JS no consent can be given, so nothing may be measured.
+      input: {
+        main: path.resolve(rootDir, "index.html"),
+        privacy: path.resolve(rootDir, "privacy.html"),
+      },
+    },
   },
   plugins: [apiPlugin()],
   test: {

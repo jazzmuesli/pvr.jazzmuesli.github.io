@@ -2,7 +2,7 @@ import { runSimulation, SimReport, CO2_EMISSION_FACTORS, CO2_GAS_DIRECT, CO2_DIE
 import { DEFAULT_GAS_BOILER_EFFICIENCY, DEFAULT_GAS_POWERPLANT_EFFICIENCY } from "./calc/heatpumpGasSavings";
 import { buildControls } from "./ui/controls";
 import { DEFAULT_STATE, toSimParams } from "./ui/state";
-import { writeUrl, deserializeState } from "./ui/url";
+import { writeUrl, deserializeState, readStateQuery } from "./ui/url";
 import {
   renderMonthlyChart,
   renderHourlyChart,
@@ -11,12 +11,13 @@ import {
   renderPieChart,
 } from "./ui/charts";
 import { t, monthAbbrevs, fmtEUR as i18nFmtEUR, getLocale, setLocale } from "./i18n";
+import { initPrivacy } from "./privacy/consent";
 
 function monthLabels(): string[] { return monthAbbrevs(); }
 
 // Initialise from a shared URL if present; otherwise use the defaults.
-const params = new URLSearchParams(location.search);
-const state = params.toString() ? deserializeState(params.toString()) : { ...DEFAULT_STATE };
+const params = readStateQuery();
+const state = params ? deserializeState(params) : { ...DEFAULT_STATE };
 
 const controlsHost = document.getElementById("controls") as HTMLElement;
 const summaryHost = document.getElementById("summary") as HTMLElement;
@@ -541,6 +542,11 @@ function relocalize(): void {
 }
 relocalize();
 
+// ---------- Consent banner, footer notice and privacy policy ------------------
+// Loaded before anything else can talk to the network: nothing is measured
+// unless the visitor consented (§25(1) TDDDG, Art. 6(1)(a) GDPR).
+const privacy = initPrivacy();
+
 // ---------- Language toggle ---------------------------------------------------
 const langDe = document.getElementById("lang-de") as HTMLButtonElement | null;
 const langEn = document.getElementById("lang-en") as HTMLButtonElement | null;
@@ -563,6 +569,7 @@ function switchLocale(locale: "de" | "en"): void {
   setLocale(locale);
   updateLangButtons();
   relocalize();
+  privacy.render();
   buildControls(controlsHost, state, onChange);
   recompute();
 }

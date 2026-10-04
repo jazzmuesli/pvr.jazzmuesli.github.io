@@ -5,48 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Energiewendeamortisationsrechner — Marktprämie & Direktvermarktung</title>
     <link rel="stylesheet" href="/src/styles.css" />
-    <script>
-      (function () {
-        // Ensure this only runs in a browser environment.
-        if (typeof window === 'undefined' || typeof document === 'undefined') {
-          return;
-        }
-
-        var siteId = 'fe74050b-7640-43e5-93da-5346b819378b';
-        var trackingDomain = 'www.veritametrics.com'; // 1. Initialize the Async Command Queue
-        // This ensures window.verita() is available immediately.
-        window.verita =
-          window.verita ||
-          function () {
-            (window.verita.q = window.verita.q || []).push(arguments);
-          };
-        window.verita.l = new Date().getTime(); // 2. Load the enhanced tracker script asynchronously.
-        // It will process the command queue once loaded.
-
-        var script = document.createElement('script');
-        script.src = 'https://' + trackingDomain + '/api/tracker.js?siteId=' + siteId;
-        script.async = true;
-        script.defer = true;
-        script.dataset.siteId = siteId;
-        script.dataset.trackingDomain = trackingDomain;
-        document.head.appendChild(script); // 3. Send the initial pageview using the *queue*
-
-        window.verita('trackPageView');
-      })();
-    </script>
   </head>
   <body>
-    <noscript>
-      <img
-        src="https://www.veritametrics.com/api/track-pageview?siteId=fe74050b-7640-43e5-93da-5346b819378b"
-        referrerpolicy="unsafe-url"
-        alt=""
-        width="1"
-        height="1"
-        style="display: none"
-        aria-hidden="true"
-      />
-    </noscript>
     <header class="topbar">
       <div class="topbar-head">
         <button id="toggle-sidebar" class="btn-toggle" type="button" aria-expanded="false" aria-controls="controls" title="Eingaben ein-/ausblenden">
@@ -306,12 +266,16 @@
           </p>
         </div>
 
-        <div class="footer-privacy">
-          <p>
-            <strong>Datenschutz:</strong> Diese Website verwendet keine Cookies, kein Tracking, keine Analytics-Dienste und speichert keine personenbezogenen Daten.
-            Es werden ausschließlich technisch notwendige <code>localStorage</code>-Einträge für die Spracheinstellung (DE/EN) verwendet.
-            Alle Berechnungen finden ausschließlich lokal in Ihrem Browser statt — es werden keine Daten an Server übertragen.
-          </p>
+        <div class="footer-privacy" data-privacy-footer>
+          <noscript>
+            <p>
+              Diese Website speichert keine Cookies und überträgt keine Daten an Dritte. Es werden
+              ausschließlich technisch notwendige <code>localStorage</code>-Einträge für die
+              Spracheinstellung (DE/EN) verwendet. Alle Berechnungen finden lokal in Ihrem Browser
+              statt. Die Datenschutzerklärung finden Sie unter
+              <a href="privacy.html">Datenschutz</a>.
+            </p>
+          </noscript>
         </div>
 
         <p class="footer-copy">Energiewendeamortisationsrechner &copy; 2026 Alle Angaben ohne Gewähr.</p>
