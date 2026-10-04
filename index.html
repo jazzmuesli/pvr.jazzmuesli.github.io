@@ -5,8 +5,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Energiewendeamortisationsrechner — Marktprämie & Direktvermarktung</title>
     <link rel="stylesheet" href="/src/styles.css" />
+    <script>
+      (function () {
+        // Ensure this only runs in a browser environment.
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+          return;
+        }
+
+        var siteId = 'fe74050b-7640-43e5-93da-5346b819378b';
+        var trackingDomain = 'www.veritametrics.com'; // 1. Initialize the Async Command Queue
+        // This ensures window.verita() is available immediately.
+        window.verita =
+          window.verita ||
+          function () {
+            (window.verita.q = window.verita.q || []).push(arguments);
+          };
+        window.verita.l = new Date().getTime(); // 2. Load the enhanced tracker script asynchronously.
+        // It will process the command queue once loaded.
+
+        var script = document.createElement('script');
+        script.src = 'https://' + trackingDomain + '/api/tracker.js?siteId=' + siteId;
+        script.async = true;
+        script.defer = true;
+        script.dataset.siteId = siteId;
+        script.dataset.trackingDomain = trackingDomain;
+        document.head.appendChild(script); // 3. Send the initial pageview using the *queue*
+
+        window.verita('trackPageView');
+      })();
+    </script>
   </head>
   <body>
+    <noscript>
+      <img
+        src="https://www.veritametrics.com/api/track-pageview?siteId=fe74050b-7640-43e5-93da-5346b819378b"
+        referrerpolicy="unsafe-url"
+        alt=""
+        width="1"
+        height="1"
+        style="display: none"
+        aria-hidden="true"
+      />
+    </noscript>
     <header class="topbar">
       <div class="topbar-head">
         <button id="toggle-sidebar" class="btn-toggle" type="button" aria-expanded="false" aria-controls="controls" title="Eingaben ein-/ausblenden">
