@@ -5,54 +5,46 @@ import { feedInTariffCt } from "../calc/revenue";
 import { TariffScheme } from "../calc/tariff";
 import { WIND_TURBINES, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE, WIND_LOCATIONS } from "../calc/wind";
 import { t } from "../i18n";
+import { numberField } from "./numberField";
 
-interface SliderOpts {
+interface NumberOpts {
   label: string;
   title?: string;
+  /** min/max/step and the value are in *display* units. */
   min: number;
   max: number;
   step: number;
   unit?: string;
+  /** display value = state × scale — e.g. 100 for fractions shown as percent. */
+  scale?: number;
   get: (s: AppState) => number;
   set: (s: AppState, v: number) => void;
-  fmt?: (v: number) => string;
 }
 
-function slider(opts: SliderOpts, state: AppState, onChange: () => void): HTMLElement {
+function numberControl(opts: NumberOpts, state: AppState, onChange: () => void): HTMLElement {
+  const scale = opts.scale ?? 1;
   const wrap = document.createElement("div");
   wrap.className = "control";
   const id = `ctl-${Math.random().toString(36).slice(2, 9)}`;
   const lab = document.createElement("label");
   lab.htmlFor = id;
-  const fmt = opts.fmt ?? ((v: number) => String(v));
-  const valSpan = document.createElement("span");
-  valSpan.className = "val";
-  const render = () => {
-    const v = opts.get(state);
-    input.value = String(v);
-    valSpan.textContent = `${fmt(v)}${opts.unit ?? ""}`;
-  };
-  const txt = document.createElement("span");
-  txt.textContent = opts.label;
+  lab.textContent = opts.label;
   if (opts.title) lab.title = opts.title;
-  lab.appendChild(txt);
-  lab.appendChild(valSpan);
-  const input = document.createElement("input");
-  input.type = "range";
-  input.id = id;
-  input.min = String(opts.min);
-  input.max = String(opts.max);
-  input.step = String(opts.step);
-  input.value = String(opts.get(state));
-  input.addEventListener("input", () => {
-    opts.set(state, parseFloat(input.value));
-    render();
-    onChange();
+  const field = numberField({
+    id,
+    min: opts.min,
+    max: opts.max,
+    step: opts.step,
+    unit: opts.unit,
+    value: opts.get(state) * scale,
+    onInput: (v) => {
+      opts.set(state, v / scale);
+      onChange();
+    },
   });
   wrap.appendChild(lab);
-  wrap.appendChild(input);
-  render();
-  (wrap as unknown as { sync: () => void }).sync = render;
+  wrap.appendChild(field.wrap);
+  (wrap as unknown as { sync: () => void }).sync = () => field.setValue(opts.get(state) * scale);
   return wrap;
 }
 
@@ -148,15 +140,15 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section(t("control.investment"));
   host.appendChild(
-    slider({ label: t("control.total_investment"), title: t("tooltip.total_investment"), min: 0, max: 80000, step: 100, unit: " €", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v), fmt: (v) => `${Math.round(v).toLocaleString("de-DE")} €` }, state, onChange),
+    numberControl({ label: t("control.total_investment"), title: t("tooltip.total_investment"), min: 0, max: 80000, step: 100, unit: "€", get: (s) => s.investmentEUR, set: (s, v) => (s.investmentEUR = v) }, state, onChange),
   );
 
   section(t("control.pv_system"));
   host.appendChild(
-    slider({ label: t("control.peak_power"), min: 0, max: 50, step: 0.1, unit: " kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); }, fmt: (v) => v.toFixed(1) }, state, onChange),
+    numberControl({ label: t("control.peak_power"), min: 0, max: 50, step: 0.1, unit: "kWp", get: (s) => s.peakKWp, set: (s, v) => { s.peakKWp = v; s.feedInCt = feedInTariffCt(s.commissioningYear, s.peakKWp); feedInSync?.(); } }, state, onChange),
   );
   host.appendChild(
-    slider({ label: t("control.tilt"), min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
+    numberControl({ label: t("control.tilt"), min: 0, max: 60, step: 1, unit: "°", get: (s) => s.tiltDeg, set: (s, v) => (s.tiltDeg = v) }, state, onChange),
   );
   host.appendChild(
     selectControl(
@@ -208,13 +200,13 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
         ),
       );
       host.appendChild(
-        slider({ label: t("wind.count"), min: 1, max: 10, step: 1, unit: "", get: (s) => s.windCount, set: (s, v) => (s.windCount = v) }, state, onChange),
+        numberControl({ label: t("wind.count"), min: 1, max: 10, step: 1, unit: "", get: (s) => s.windCount, set: (s, v) => (s.windCount = v) }, state, onChange),
       );
       host.appendChild(
-        slider({ label: t("wind.hub_height"), min: 3, max: 15, step: 0.5, unit: " m", get: (s) => s.windHubHeightM, set: (s, v) => (s.windHubHeightM = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+        numberControl({ label: t("wind.hub_height"), min: 3, max: 15, step: 0.5, unit: "m", get: (s) => s.windHubHeightM, set: (s, v) => (s.windHubHeightM = v) }, state, onChange),
       );
       host.appendChild(
-        slider({ label: t("wind.speed_mean"), min: 1.0, max: 10.0, step: 0.1, unit: " m/s", get: (s) => s.windSpeedMeanMs, set: (s, v) => (s.windSpeedMeanMs = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+        numberControl({ label: t("wind.speed_mean"), min: 1.0, max: 10.0, step: 0.1, unit: "m/s", get: (s) => s.windSpeedMeanMs, set: (s, v) => (s.windSpeedMeanMs = v) }, state, onChange),
       );
       const turbine = WIND_TURBINE_MAP[state.windTurbineId] ?? DEFAULT_WIND_TURBINE;
       const info = document.createElement("div");
@@ -226,17 +218,17 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
 
   section(t("control.battery"));
   host.appendChild(
-    slider({ label: t("control.capacity"), min: 0, max: 40, step: 0.5, unit: " kWh", get: (s) => s.capacityKWh, set: (s, v) => (s.capacityKWh = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    numberControl({ label: t("control.capacity"), min: 0, max: 40, step: 0.5, unit: "kWh", get: (s) => s.capacityKWh, set: (s, v) => (s.capacityKWh = v) }, state, onChange),
   );
   if (expert) {
     host.appendChild(
-      slider({ label: t("control.max_power"), min: 1, max: 20, step: 0.5, unit: " kW", get: (s) => s.maxPowerKW, set: (s, v) => (s.maxPowerKW = v) }, state, onChange),
+      numberControl({ label: t("control.max_power"), min: 1, max: 20, step: 0.5, unit: "kW", get: (s) => s.maxPowerKW, set: (s, v) => (s.maxPowerKW = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: t("control.min_soc"), min: 0, max: 0.5, step: 0.05, unit: "", get: (s) => s.minSOC, set: (s, v) => (s.minSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      numberControl({ label: t("control.min_soc"), min: 0, max: 50, step: 5, unit: "%", scale: 100, get: (s) => s.minSOC, set: (s, v) => (s.minSOC = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: t("control.max_soc"), min: 0.5, max: 1, step: 0.05, unit: "", get: (s) => s.maxSOC, set: (s, v) => (s.maxSOC = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      numberControl({ label: t("control.max_soc"), min: 50, max: 100, step: 5, unit: "%", scale: 100, get: (s) => s.maxSOC, set: (s, v) => (s.maxSOC = v) }, state, onChange),
     );
     host.appendChild(
       selectControl(
@@ -254,56 +246,56 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     );
     host.appendChild(checkbox(t("control.discharge_evening"), (s) => s.dischargeEvening, (s, v) => (s.dischargeEvening = v), state, onChange));
     host.appendChild(
-      slider({ label: t("control.evening_from"), min: 12, max: 22, step: 1, unit: " Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
+      numberControl({ label: t("control.evening_from"), min: 12, max: 22, step: 1, unit: "Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: t("control.evening_to"), min: 18, max: 24, step: 1, unit: " Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
+      numberControl({ label: t("control.evening_to"), min: 18, max: 24, step: 1, unit: "Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
     );
     host.appendChild(checkbox(t("control.discharge_morning"), (s) => s.dischargeMorning, (s, v) => (s.dischargeMorning = v), state, onChange));
     host.appendChild(
-      slider({ label: t("control.morning_from"), min: 0, max: 10, step: 1, unit: " Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
+      numberControl({ label: t("control.morning_from"), min: 0, max: 10, step: 1, unit: "Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: t("control.morning_to"), min: 8, max: 14, step: 1, unit: " Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
+      numberControl({ label: t("control.morning_to"), min: 8, max: 14, step: 1, unit: "Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
     );
   }
 
   section(t("control.consumers"));
   host.appendChild(checkbox(t("control.household"), (s) => s.consumers.household.enabled, (s, v) => (s.consumers.household.enabled = v), state, onChange));
   host.appendChild(
-    slider({ label: t("control.consumption"), min: 1000, max: 6000, step: 100, unit: " kWh", get: (s) => s.consumers.household.annualKWh, set: (s, v) => (s.consumers.household.annualKWh = v) }, state, onChange),
+    numberControl({ label: t("control.consumption"), min: 1000, max: 6000, step: 100, unit: "kWh", get: (s) => s.consumers.household.annualKWh, set: (s, v) => (s.consumers.household.annualKWh = v) }, state, onChange),
   );
   host.appendChild(checkbox(t("control.heatpump"), (s) => s.consumers.heatpump.enabled, (s, v) => { s.consumers.heatpump.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.heatpump.enabled) {
     host.appendChild(
-      slider({ label: t("control.consumption"), min: 1000, max: 10000, step: 100, unit: " kWh", get: (s) => s.consumers.heatpump.annualKWh, set: (s, v) => (s.consumers.heatpump.annualKWh = v) }, state, onChange),
+      numberControl({ label: t("control.consumption"), min: 1000, max: 10000, step: 100, unit: "kWh", get: (s) => s.consumers.heatpump.annualKWh, set: (s, v) => (s.consumers.heatpump.annualKWh = v) }, state, onChange),
     );
     if (expert) {
       host.appendChild(
-        slider({ label: t("control.jaz"), min: 1.5, max: 5, step: 0.1, unit: "", get: (s) => s.heatpumpJaz, set: (s, v) => (s.heatpumpJaz = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+        numberControl({ label: t("control.jaz"), min: 1.5, max: 5, step: 0.1, unit: "", get: (s) => s.heatpumpJaz, set: (s, v) => (s.heatpumpJaz = v) }, state, onChange),
       );
     }
   }
   host.appendChild(checkbox(t("control.bwwp"), (s) => s.consumers.bwwp.enabled, (s, v) => { s.consumers.bwwp.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.bwwp.enabled) {
     host.appendChild(
-      slider({ label: t("control.consumption"), min: 100, max: 1500, step: 20, unit: " kWh", get: (s) => s.consumers.bwwp.annualKWh ?? 480, set: (s, v) => (s.consumers.bwwp.annualKWh = v) }, state, onChange),
+      numberControl({ label: t("control.consumption"), min: 100, max: 1500, step: 20, unit: "kWh", get: (s) => s.consumers.bwwp.annualKWh ?? 480, set: (s, v) => (s.consumers.bwwp.annualKWh = v) }, state, onChange),
     );
   }
   host.appendChild(checkbox(t("control.ev"), (s) => s.consumers.ev.enabled, (s, v) => { s.consumers.ev.enabled = v; buildControls(host, state, onChange); }, state, onChange));
   if (state.consumers.ev.enabled) {
     host.appendChild(
-      slider({ label: t("control.consumption"), min: 0, max: 5000, step: 100, unit: " kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
+      numberControl({ label: t("control.consumption"), min: 0, max: 5000, step: 100, unit: "kWh", get: (s) => s.consumers.ev.annualKWh, set: (s, v) => (s.consumers.ev.annualKWh = v) }, state, onChange),
     );
     host.appendChild(
-      slider({ label: t("control.pv_share"), min: 0, max: 1, step: 0.05, unit: "", get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v), fmt: (v) => `${Math.round(v * 100)}%` }, state, onChange),
+      numberControl({ label: t("control.pv_share"), min: 0, max: 100, step: 5, unit: "%", scale: 100, get: (s) => s.consumers.ev.pvShare, set: (s, v) => (s.consumers.ev.pvShare = v) }, state, onChange),
     );
   }
 
   section(t("control.feed_in"));
-  const feedInSlider = slider({ label: t("control.feed_in_rate"), min: 0, max: 15, step: 0.1, unit: " ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v), fmt: (v) => v.toFixed(1) }, state, onChange);
-  host.appendChild(feedInSlider);
-  feedInSync = (feedInSlider as unknown as { sync: () => void }).sync;
+  const feedInControl = numberControl({ label: t("control.feed_in_rate"), min: 0, max: 15, step: 0.1, unit: "ct/kWh", get: (s) => s.feedInCt, set: (s, v) => (s.feedInCt = v) }, state, onChange);
+  host.appendChild(feedInControl);
+  feedInSync = (feedInControl as unknown as { sync: () => void }).sync;
   host.appendChild(
     selectControl(
       t("control.commissioning_year"),
@@ -336,7 +328,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
   );
   if (state.exportScheme === "market") {
     host.appendChild(
-      slider({ label: t("control.market_margin"), min: 0, max: 1.5, step: 0.1, unit: " ct/kWh", get: (s) => s.marketMarginCt, set: (s, v) => (s.marketMarginCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+      numberControl({ label: t("control.market_margin"), min: 0, max: 1.5, step: 0.1, unit: "ct/kWh", get: (s) => s.marketMarginCt, set: (s, v) => (s.marketMarginCt = v) }, state, onChange),
     );
   }
 
@@ -356,7 +348,7 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
     ),
   );
   host.appendChild(
-    slider({ label: t("control.import_rate"), min: 15, max: 45, step: 0.5, unit: " ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v), fmt: (v) => v.toFixed(1) }, state, onChange),
+    numberControl({ label: t("control.import_rate"), min: 15, max: 45, step: 0.5, unit: "ct/kWh", get: (s) => s.importFixedCt, set: (s, v) => (s.importFixedCt = v) }, state, onChange),
   );
   if (expert) {
     host.appendChild(

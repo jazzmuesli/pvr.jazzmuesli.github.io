@@ -145,8 +145,22 @@ body {
   margin-bottom: 4px;
   color: var(--ink);
 }
-.control .val { color: var(--muted); font-variant-numeric: tabular-nums; }
-.control input[type="range"] { width: 100%; accent-color: var(--accent); }
+.control .num-wrap { display: flex; align-items: center; gap: 6px; }
+.control .num-wrap input[type="number"] { flex: 1 1 auto; min-width: 0; }
+.control .num-wrap .unit { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.control input[type="number"] {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.control input[type="number"]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.control .num-wrap.invalid input[type="number"] { border-color: #dc2626; }
 .control select { width: 100%; padding: 6px; border-radius: 8px; border: 1px solid var(--border); }
 
 /* Highlight a control whose value the advisor (or the user) just changed. */

@@ -1,5 +1,5 @@
 // Minimal observable store shared between the wizard UI and the chatbot so that
-// a change made by either side (a slider move, or the advisor accepting an
+// a change made by either side (a value typed into the form, or the advisor accepting an
 // offer) keeps the other side in sync.
 
 export interface Store<T> {

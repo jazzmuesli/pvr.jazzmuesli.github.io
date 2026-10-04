@@ -93,7 +93,7 @@ Four load profiles, summed to total load:
 
 Each consumer can be individually enabled/disabled and calibrated by annual consumption. Load is tracked separately per consumer so that charts and effective prices can be reported per consumer.
 
-**Hot-water switch:** the `bwwp` slider is the annual hot-water electricity demand (default 480 kWh). When the BWWP is *enabled*, this energy is served by the dedicated BWWP in the midday PV block (so it is mostly self-consumed). When it is *disabled*, the identical energy is instead added to the space-heating heat pump as a year-round, night-heavy load — so the heat pump "consumes more" and draws far more of it from the grid. The total household demand is the same either way; only *who* serves the hot water (and how PV-friendly its timing is) changes.
+**Hot-water switch:** the `bwwp` input is the annual hot-water electricity demand (default 480 kWh). When the BWWP is *enabled*, this energy is served by the dedicated BWWP in the midday PV block (so it is mostly self-consumed). When it is *disabled*, the identical energy is instead added to the space-heating heat pump as a year-round, night-heavy load — so the heat pump "consumes more" and draws far more of it from the grid. The total household demand is the same either way; only *who* serves the hot water (and how PV-friendly its timing is) changes.
 
 ### Battery Dispatch (`src/calc/simulation.ts`)
 
@@ -159,11 +159,11 @@ Compares the heat pump with fossil alternatives (heating oil, natural gas) for t
 
 Compares electric vehicle operating costs with a diesel car for the same annual distance, including energy, maintenance, and vehicle tax.
 
-## Investment Slider
+## Investment Input
 
-The investment is a single total amount (`investmentEUR`, slider at the top of the sidebar), independent of kWp/kWh. The slider range starts at 100 EUR, allowing configurations from small balcony systems to full rooftop installations.
+The investment is a single total amount (`investmentEUR`, number input at the top of the sidebar), independent of kWp/kWh. The input accepts anything from 0 to 80 000 EUR, allowing configurations from small balcony systems to full rooftop installations; the arrow buttons step by 100 EUR.
 
-The PV peak power slider starts at 0.4 kWp (400 W), covering balcony power stations through large commercial arrays.
+The PV peak power input covers 0–50 kWp in 0.1 kWp steps, from balcony power stations through large commercial arrays.
 
 ## HTTP API
 
@@ -229,7 +229,8 @@ src/calc/                 # Pure, DOM-free simulation engine
 src/ui/
   state.ts                # AppState + toSimParams()
   url.ts                  # Shareable URL (serialize/deserialize)
-  controls.ts             # Sidebar controls (sliders, selects, checkboxes)
+  controls.ts             # Sidebar controls (number inputs, selects, checkboxes)
+  numberField.ts          # Shared <input type="number"> with unit suffix + clamping
   charts.ts               # Hand-rolled SVG charts (no charting library)
 src/wizard/
   wizard.ts               # Interactive step-by-step wizard UI

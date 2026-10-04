@@ -14,6 +14,7 @@ import {
   computeMetrics,
 } from "../scenario";
 import { SimReport } from "../calc/report";
+import { numberField } from "../ui/numberField";
 import {
   renderMonthlyChart,
   renderHourlyChart,
@@ -65,13 +66,8 @@ export function initWizard(opts: WizardOptions): void {
     personsWrap.append(b);
   }
 
-  const hk = el("input", { type: "range", id: "hk", min: "500", max: "9000", step: "100" }) as HTMLInputElement;
-  hk.addEventListener("input", () => store.setState({ consumptionKWh: Number(hk.value) }));
-  const hkVal = el("span", { class: "val" }, ["2500"]);
-
-  const ict = el("input", { type: "range", id: "ict", min: "1", max: "50", step: "0.1" }) as HTMLInputElement;
-  ict.addEventListener("input", () => store.setState({ priceCt: Number(ict.value) }));
-  const ictVal = el("span", { class: "val" }, ["30"]);
+  const hkField = numberField({ id: "hk", min: 500, max: 9000, step: 100, unit: "kWh", value: 2500, onInput: (v) => store.setState({ consumptionKWh: v }) });
+  const ictField = numberField({ id: "ict", min: 1, max: 50, step: 0.1, unit: "ct/kWh", value: 30, onInput: (v) => store.setState({ priceCt: v }) });
 
   const loc = el("select", { id: "loc" }) as HTMLSelectElement;
   for (const c of ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"]) {
@@ -153,11 +149,13 @@ export function initWizard(opts: WizardOptions): void {
   const reco = el("div", { class: "reco", id: "pv-reco" });
 
   // assemble sidebar
+  const hkRow = field(t("wizard.step_consumption"), hkField.wrap);
+  const ictRow = field(t("wizard.step_price"), ictField.wrap);
   opts.sidebar.append(
     step(1, t("wizard.step_household"), t("wizard.step_household_desc"), [
       field(t("wizard.step_persons"), personsWrap),
-      sliderField(t("wizard.step_consumption"), hk, hkVal, "kWh"),
-      sliderField(t("wizard.step_price"), ict, ictVal, "ct/kWh"),
+      hkRow,
+      ictRow,
       field(t("wizard.step_location"), loc),
     ]),
     step(2, t("wizard.step_consumers"), t("wizard.step_consumers_desc"), [wpToggle.wrap, evToggle.wrap, bwToggle.wrap]),
@@ -173,13 +171,9 @@ export function initWizard(opts: WizardOptions): void {
     ]);
   }
   function field(label: string, control: HTMLElement): HTMLElement {
-    return el("div", { class: "control" }, [el("label", {}, [label]), control]);
-  }
-  function sliderField(labelText: string, input: HTMLElement, valSpan: HTMLElement, unit: string): HTMLElement {
-    return el("div", { class: "control" }, [
-      el("label", {}, [`${labelText} `, valSpan, ` ${unit}`]),
-      input,
-    ]);
+    const lab = el("label", {}, [label]);
+    if (control.id) lab.htmlFor = control.id;
+    return el("div", { class: "control" }, [lab, control]);
   }
 
   // ---- sync + recompute -----------------------------------------------------
@@ -189,10 +183,8 @@ export function initWizard(opts: WizardOptions): void {
       const expected = STANDARD_KWH(n);
       b.classList.toggle("active", s.consumptionKWh === expected && n === personsFor(s.consumptionKWh));
     });
-    hk.value = String(s.consumptionKWh);
-    ict.value = String(s.priceCt);
-    hkVal.textContent = String(s.consumptionKWh);
-    ictVal.textContent = String(s.priceCt);
+    hkField.setValue(s.consumptionKWh);
+    ictField.setValue(s.priceCt);
     loc.value = s.location;
     wpToggle.input.checked = s.heatpump;
     evToggle.input.checked = s.ev;
@@ -343,8 +335,8 @@ export function initWizard(opts: WizardOptions): void {
 
   // ---- highlight controls that just changed -------------------------------
   const FIELD_ELS: Record<string, HTMLElement[]> = {
-    consumptionKWh: [hk],
-    priceCt: [ict],
+    consumptionKWh: [hkRow],
+    priceCt: [ictRow],
     location: [loc],
     pv: [pvSeg],
     battery: [batSeg],

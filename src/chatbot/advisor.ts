@@ -6,7 +6,7 @@
 //
 // Design principle: the user's words are applied *directly* to the shared
 // scenario (no "Soll ich das übernehmen?" confirmation step). Every recognised
-// change is reflected on the sliders at once and the advisor reports back the
+// change is reflected in the inputs at once and the advisor reports back the
 // resulting economics.
 
 import {

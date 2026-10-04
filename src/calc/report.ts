@@ -1163,7 +1163,7 @@ export function runSimulation(p: SimParams): SimReport {
     jaz: p.heatpumpJaz,
     // The heat pump is a grid consumer, so it pays the PV-aware *effective*
     // price of its own imports (the simulation's `byConsumer.heatpump`). This
-    // makes the comparison react to every PV/battery slider: a bigger battery
+    // makes the comparison react to every PV/battery input: a bigger battery
     // raises PV self-consumption and lowers the heat pump's effective price.
     heatpumpElectricCt: p.consumers.heatpump.enabled ? effectivePrice.byConsumer.heatpump : p.heatpumpElectricCt,
   };

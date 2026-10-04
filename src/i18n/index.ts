@@ -680,7 +680,7 @@ const de: Messages = {
 
   // Wizard
   "wizard.title": "Energiewende-Szenario-Baukasten & Berater",
-  "wizard.subtitle": "Was-wäre-wenn? — Schieberegler links, intelligenter Energiewende-Berater rechts. Beides steuert dasselbe Szenario.",
+  "wizard.subtitle": "Was-wäre-wenn? — Eingabefelder links, intelligenter Energiewende-Berater rechts. Beides steuert dasselbe Szenario.",
   "wizard.monthly_title": "Energiefluss pro Monat",
   "wizard.monthly_hint": "Klicke auf einen Monat, um die Stundendetail-Ansicht (inkl. Batterie-SoC) zu sehen.",
   "wizard.hourly_title": "Stundendetail",
@@ -1477,7 +1477,7 @@ const en: Messages = {
 
   // Wizard
   "wizard.title": "Energy transition scenario builder & advisor",
-  "wizard.subtitle": "What-if? — Sliders on the left, smart energy advisor on the right. Both control the same scenario.",
+  "wizard.subtitle": "What-if? — Input fields on the left, smart energy advisor on the right. Both control the same scenario.",
   "wizard.monthly_title": "Energy flow per month",
   "wizard.monthly_hint": "Click a month to see the hourly detail view (incl. battery SoC).",
   "wizard.hourly_title": "Hourly detail",
