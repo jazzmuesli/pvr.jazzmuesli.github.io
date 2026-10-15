@@ -107,6 +107,27 @@ Per 15-minute step:
 
 When `capacityKWh = 0`, the battery is disabled (all load from grid, all surplus exported).
 
+#### Charge plans (`charge` parameter)
+
+Storing a surplus kWh is not free: the energy could have been exported instead, so the
+profit of a cycle is `price(discharge) − price(charge) / efficiency`. The charge plan
+therefore decides *which* hours may store surplus:
+
+| Mode | Plan |
+| --- | --- |
+| `morning` | Store every kWh of own surplus the moment it appears. Maximum self-sufficiency, but locks in only the *earliest* available spread. |
+| `cheapest` | Per day, rank the hours that actually have surplus by spot price and fill the battery in the cheapest ones, adding hours only until it is full. Negative-price hours rank cheapest, so free troughs are absorbed first instead of being curtailed. |
+| `gridNegative` | `morning`, plus buy free energy from the grid whenever the spot price is non-positive. |
+
+Both PV-charging modes never buy grid energy at a positive price: the dispatch uses the
+raw spot price while the money is settled on the tariff-adjusted import price, so
+grid charging is only modelled where it is unambiguously free. The `cheapest` plan also
+never stores in an hour reserved for a discharge block, so charging and discharging stay
+mutually exclusive.
+
+The legacy value `charge=midday` (a fixed 10:00–15:00 window) is accepted and mapped to
+`cheapest`, so older links keep working. See `tests/charge_plan.test.ts`.
+
 ### Electricity Prices & Tariffs (`src/calc/tariff.ts`, `priceData.ts`, `priceModel.ts`)
 
 - **Import:**
@@ -186,7 +207,7 @@ Key parameters (all optional, defaults in `DEFAULT_SIM_PARAMS` in `src/calc/repo
 | `minsoc`/`maxsoc` | SOC limits | 0.1 / 0.9 |
 | `eff` | Round-trip efficiency | 0.95 |
 | `soc0` | Start SOC | 0.5 |
-| `charge` | Charge strategy `morning/midday/gridNegative` | morning |
+| `charge` | Charge strategy `morning/cheapest/gridNegative` (`midday` = legacy alias for `cheapest`) | morning |
 | `de`/`dm` | Discharge evening/morning (0/1) | 1 / 0 |
 | `evs`/`eve` | Evening window (hours) | 17 / 21 |
 | `mns`/`mne` | Morning window (hours) | 6 / 9 |

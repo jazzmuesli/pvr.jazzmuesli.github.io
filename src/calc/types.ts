@@ -27,6 +27,20 @@ export function hourOfStep(i: number): number {
 
 export type Orientation = "south" | "east" | "west" | "east_west" | "north";
 
+export type ChargeMode = "morning" | "cheapest" | "gridNegative";
+
+/**
+ * Normalise a charge-mode value that came from a URL. `midday` was the old
+ * name for a fixed 10:00–15:00 window; it is mapped onto `cheapest` so that
+ * links shared before the price-ranked charge plan existed keep working — and
+ * keep getting a sensible plan rather than the old fixed window.
+ */
+export function parseChargeMode(value: string | null | undefined, fallback: ChargeMode): ChargeMode {
+  if (value === "midday") return "cheapest";
+  if (value === "morning" || value === "cheapest" || value === "gridNegative") return value;
+  return fallback;
+}
+
 export interface PVConfig {
   /** Peak power rating in kWp. */
   peakKWp: number;
@@ -52,11 +66,16 @@ export interface BatteryConfig {
   /** Start of day SOC as a fraction. */
   startSOC: number;
   /** Where / when the battery gets its energy.
-   *  - "morning": charge from PV surplus as soon as it is available (morning).
-   *  - "midday": charge from PV surplus only around solar noon.
+   *  - "morning": store every kWh of own surplus the moment it appears.
+   *  - "cheapest": store own surplus during the *cheapest* hours of each day.
+   *    Storing surplus costs the spot price of the charging hour (that energy
+   *    could have been exported instead), so filling the battery as early as
+   *    possible leaves money on the table. This mode instead ranks the day's
+   *    surplus hours by price and only fills the battery in the cheapest ones,
+   *    so the later, more expensive discharge window earns the full spread.
    *  - "gridNegative": charge from PV surplus AND from the grid whenever the
    *    spot price is non-positive (free / negative electricity). */
-  chargeMode: "morning" | "midday" | "gridNegative";
+  chargeMode: "morning" | "cheapest" | "gridNegative";
   /** Discharge into the expensive evening window. */
   dischargeEvening: boolean;
   /** Discharge into the expensive morning window. */

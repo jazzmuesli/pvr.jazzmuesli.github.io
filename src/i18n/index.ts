@@ -210,7 +210,7 @@ const de: Messages = {
 
   // Charge strategies
   "strategy.morning": "Morgens (PV-Überschuss)",
-  "strategy.midday": "Mittags (nur PV)",
+  "strategy.cheapest": "Günstigste Preise (nur PV)",
   "strategy.cheap": "Billiger Strom (PV + Netz bei Negativpreis)",
 
   // Export models
@@ -1007,7 +1007,7 @@ const en: Messages = {
 
   // Charge strategies
   "strategy.morning": "Morning (PV surplus)",
-  "strategy.midday": "Midday (PV only)",
+  "strategy.cheapest": "Cheapest prices (PV only)",
   "strategy.cheap": "Cheap power (PV + grid at negative price)",
 
   // Export models

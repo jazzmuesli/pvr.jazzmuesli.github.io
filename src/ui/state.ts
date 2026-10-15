@@ -19,7 +19,7 @@ export interface AppState {
   maxSOC: number;
   efficiency: number;
   startSOC: number;
-  chargeMode: "morning" | "midday" | "gridNegative";
+  chargeMode: "morning" | "cheapest" | "gridNegative";
   dischargeEvening: boolean;
   dischargeMorning: boolean;
   eveningStart: number;

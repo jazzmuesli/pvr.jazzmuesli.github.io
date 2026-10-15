@@ -2,8 +2,9 @@
 //
 // Per 15-minute step the energy balance is settled as:
 //   1. PV first covers the local load (direct self-consumption).
-//   2. Surplus PV charges the battery (or, at non-positive prices, the grid
-//      charges the battery for free).
+//   2. Surplus PV charges the battery — but only in the hours the charge plan
+//      selected (see `computeDispatchFlags`). At non-positive prices the grid
+//      may additionally charge the battery for free.
 //   3. Remaining PV is exported (curtailed at negative prices).
 //   4. Any load not covered by PV is served by the battery, then the grid.
 //   5. In the most expensive non-negative windows the battery additionally
@@ -26,10 +27,6 @@ import { generatePrices } from "./priceModel";
 
 const STEP_HOURS = 1 / STEPS_PER_HOUR;
 
-/** PV-only charging window for the "midday" strategy (solar noon). */
-const MIDDAY_START = 10;
-const MIDDAY_END = 15;
-
 function batteryActive(b: BatteryConfig): boolean {
   return b.capacityKWh > 0 && b.maxSOC > 0 && b.maxSOC > b.minSOC;
 }
@@ -40,6 +37,8 @@ interface BlockFlags {
    *  only where the discharge window carries no local load at all. Stored
    *  energy is never sold ahead of self-supply. */
   merchant: Uint8Array;
+  /** Steps in which surplus generation may be stored in the battery. */
+  charge: Uint8Array;
 }
 
 /**
@@ -62,10 +61,12 @@ export function computeDispatchFlags(
   battery: BatteryConfig,
   prices: Float64Array,
   load?: Float64Array,
+  generation?: Float64Array,
 ): BlockFlags {
   const discharge = new Uint8Array(TOTAL_STEPS);
   const merchant = new Uint8Array(TOTAL_STEPS);
-  if (!batteryActive(battery)) return { discharge, merchant };
+  const charge = new Uint8Array(TOTAL_STEPS);
+  if (!batteryActive(battery)) return { discharge, merchant, charge };
 
   const markBestHourBlock = (
     dayStart: number,
@@ -113,7 +114,89 @@ export function computeDispatchFlags(
       markBestHourBlock(dayStart, battery.morningStart, battery.morningEnd, 1);
     }
   }
-  return { discharge, merchant };
+
+  planChargeHours(battery, prices, load, generation, discharge, charge);
+  return { discharge, merchant, charge };
+}
+
+/**
+ * Decide in which hours surplus generation may be stored.
+ *
+ * Storing a surplus kWh costs the spot price of that hour — the energy could
+ * have been exported instead — so the profit of a charge/discharge cycle is
+ * `price(discharge) − price(charge) / efficiency`. Storing everything as early
+ * as it appears therefore locks in only the *earliest* available spread; the
+ * battery would have earned more by waiting for the cheapest surplus hours and
+ * then discharging into the expensive window. That is exactly what the
+ * `cheapest` mode does: per day it ranks the hours that actually have surplus
+ * by price and opens the charge window on the cheapest ones, adding further
+ * hours only until the battery is full (or the day's surplus is used up).
+ *
+ * Hours reserved for a discharge block are never charge candidates, which
+ * keeps charging and discharging mutually exclusive on the day plan. Negative
+ * prices rank cheapest, so a negative-price trough is always absorbed first —
+ * that surplus would otherwise be curtailed.
+ */
+function planChargeHours(
+  battery: BatteryConfig,
+  prices: Float64Array,
+  load: Float64Array | undefined,
+  generation: Float64Array | undefined,
+  discharge: Uint8Array,
+  charge: Uint8Array,
+): void {
+  if (battery.chargeMode === "morning" || battery.chargeMode === "gridNegative") {
+    // Store every kWh of own surplus the moment it appears.
+    charge.fill(1);
+    return;
+  }
+
+  const stepEnergy = battery.maxPowerKW * STEP_HOURS;
+  const perHourCap = stepEnergy * STEPS_PER_HOUR;
+  const roomKWh =
+    ((battery.maxSOC - battery.minSOC) * battery.capacityKWh) / Math.max(0.01, battery.efficiency);
+
+  // Without a generation series (unit tests calling the flag helper directly)
+  // treat every hour as a candidate so the plan stays a pure price ranking.
+  const hourPrice = new Float64Array(24);
+  const hourSurplus = new Float64Array(24);
+  const blocked = new Uint8Array(24);
+
+  for (let d = 0; d < TOTAL_STEPS / STEPS_PER_DAY; d++) {
+    const dayStart = d * STEPS_PER_DAY;
+    let daySurplus = 0;
+    for (let h = 0; h < 24; h++) {
+      const from = dayStart + h * STEPS_PER_HOUR;
+      let sumP = 0;
+      let surplus = 0;
+      let isBlocked = 0;
+      for (let k = 0; k < STEPS_PER_HOUR; k++) {
+        const idx = from + k;
+        sumP += prices[idx];
+        if (generation) surplus += Math.max(0, generation[idx] - (load ? load[idx] : 0));
+        if (discharge[idx]) isBlocked = 1;
+      }
+      hourPrice[h] = sumP / STEPS_PER_HOUR;
+      hourSurplus[h] = generation ? surplus : Infinity;
+      blocked[h] = isBlocked;
+      daySurplus += hourSurplus[h];
+    }
+
+    const wantKWh = Math.min(roomKWh, daySurplus);
+    if (!(wantKWh > 1e-9)) continue;
+
+    const candidates: number[] = [];
+    for (let h = 0; h < 24; h++) if (hourSurplus[h] > 1e-9 && !blocked[h]) candidates.push(h);
+    candidates.sort((a, b) => hourPrice[a] - hourPrice[b] || a - b);
+
+    let taken = 0;
+    for (const h of candidates) {
+      if (taken >= wantKWh - 1e-9) break;
+      const from = dayStart + h * STEPS_PER_HOUR;
+      for (let k = 0; k < STEPS_PER_HOUR; k++) charge[from + k] = 1;
+      taken += Math.min(hourSurplus[h], perHourCap);
+    }
+  }
 }
 
 export function simulate(config: SimConfig): SimResult {
@@ -131,7 +214,7 @@ export function simulate(config: SimConfig): SimResult {
   const price = config.prices ?? generatePrices();
   const load = config.load ?? new Float64Array(TOTAL_STEPS);
   const b = config.battery;
-  const flags = computeDispatchFlags(b, price, load);
+  const flags = computeDispatchFlags(b, price, load, generation);
 
   const active = batteryActive(b);
   const eff = b.efficiency;
@@ -206,15 +289,7 @@ export function simulate(config: SimConfig): SimResult {
       let gridImpVal = L > 0 ? L : 0;
 
       // 2) Charge battery from generation surplus first if allowed.
-      const chargeAllowed =
-        b.chargeMode === "morning" || b.chargeMode === "gridNegative"
-          ? true
-          : b.chargeMode === "midday"
-            ? Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) >= MIDDAY_START &&
-              Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) < MIDDAY_END
-            : false;
-
-      if (chargeAllowed && gen > 0 && soc < maxSOCkWh) {
+      if (flags.charge[i] === 1 && gen > 0 && soc < maxSOCkWh) {
         const room = (maxSOCkWh - soc) / eff;
         const e = Math.min(maxStepEnergy, room, gen);
         if (e > 0) {
@@ -266,36 +341,27 @@ export function simulate(config: SimConfig): SimResult {
     wRemain = Math.max(0, wRemain - directUseWind[i]);
     L -= du;
 
-    // 2) Charge battery from generation surplus.
+    // 2) Charge battery from generation surplus (in the planned charge hours).
     const discharging = flags.discharge[i] === 1;
     let charged = false;
-    if (gen > 0 && soc < maxSOCkWh) {
-      const chargeAllowed =
-        b.chargeMode === "morning" || b.chargeMode === "gridNegative"
-          ? true
-          : b.chargeMode === "midday"
-            ? Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) >= MIDDAY_START &&
-              Math.floor((i % STEPS_PER_DAY) / STEPS_PER_HOUR) < MIDDAY_END
-            : false;
-      if (chargeAllowed) {
-        const room = (maxSOCkWh - soc) / eff;
-        const e = Math.min(maxStepEnergy, room, gen);
-        if (e > 0) {
-          // Split charge between PV and wind proportionally
-          const pvFrac = gen > 0 ? pRemain / gen : 0;
-          const windFrac = gen > 0 ? wRemain / gen : 0;
-          const pvCharge = e * pvFrac;
-          const windCharge = e * windFrac;
-          chargeSolar[i] = pvCharge;
-          chargeWind[i] = windCharge;
-          pRemain = Math.max(0, pRemain - pvCharge);
-          wRemain = Math.max(0, wRemain - windCharge);
-          gen -= e;
-          soc += e * eff;
-          pvSOC += pvCharge * eff;
-          windSOC += windCharge * eff;
-          charged = true;
-        }
+    if (flags.charge[i] === 1 && gen > 0 && soc < maxSOCkWh) {
+      const room = (maxSOCkWh - soc) / eff;
+      const e = Math.min(maxStepEnergy, room, gen);
+      if (e > 0) {
+        // Split charge between PV and wind proportionally
+        const pvFrac = gen > 0 ? pRemain / gen : 0;
+        const windFrac = gen > 0 ? wRemain / gen : 0;
+        const pvCharge = e * pvFrac;
+        const windCharge = e * windFrac;
+        chargeSolar[i] = pvCharge;
+        chargeWind[i] = windCharge;
+        pRemain = Math.max(0, pRemain - pvCharge);
+        wRemain = Math.max(0, wRemain - windCharge);
+        gen -= e;
+        soc += e * eff;
+        pvSOC += pvCharge * eff;
+        windSOC += windCharge * eff;
+        charged = true;
       }
     }
 

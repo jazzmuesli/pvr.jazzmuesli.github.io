@@ -84,15 +84,6 @@ describe("battery simulation", () => {
     expect(sum(withBat.exportBattery)).toBeGreaterThan(0);
   });
 
-  it("midday strategy only stores PV around solar noon", () => {
-    const r = simulate({ ...baseConfig({ chargeMode: "midday" }), prices });
-    // outside 10..15 no PV charging should occur
-    for (let i = 0; i < TOTAL_STEPS; i++) {
-      const h = Math.floor((i % STEPS_PER_DAY) / (STEPS_PER_DAY / 24));
-      if (h < 10 || h >= 15) expect(r.chargeSolar[i]).toBe(0);
-    }
-  });
-
   it("gridNegative charges from the grid only at non-positive prices", () => {
     // No PV so the battery has room to absorb grid energy at negative prices
     // (with PV the battery is already full at the midday negative-price steps).
@@ -205,7 +196,7 @@ describe("revenue + Marktprämie", () => {
 
 describe("domain consistency", () => {
   it("never charges and discharges the battery in the same quarter-hour", () => {
-    for (const mode of ["morning", "midday", "gridNegative"] as const) {
+    for (const mode of ["morning", "cheapest", "gridNegative"] as const) {
       const r = simulate({
         ...baseConfig({ chargeMode: mode, dischargeEvening: true, dischargeMorning: true }),
         prices,

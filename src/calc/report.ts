@@ -9,7 +9,7 @@
 import { simulate } from "./simulation";
 import { computeEconomics, monthForStep, EconOptions } from "./revenue";
 import { getYearPrices, PRICE_YEARS } from "./priceData";
-import { monthOfStep, hourOfStep, STEPS_PER_DAY, TOTAL_STEPS, SimConfig, SimResult, Orientation } from "./types";
+import { monthOfStep, hourOfStep, STEPS_PER_DAY, TOTAL_STEPS, SimConfig, SimResult, Orientation, parseChargeMode } from "./types";
 import { cityForLocation, importPriceArray, TariffScheme } from "./tariff";
 import {
   loadByConsumer,
@@ -130,7 +130,7 @@ export interface SimParams {
   maxSOC: number;
   efficiency: number;
   startSOC: number;
-  chargeMode: "morning" | "midday" | "gridNegative";
+  chargeMode: "morning" | "cheapest" | "gridNegative";
   dischargeEvening: boolean;
   dischargeMorning: boolean;
   eveningStart: number;
@@ -263,7 +263,7 @@ export function simParamsFromQuery(q: URLSearchParams): SimParams {
   p.maxSOC = num("maxsoc", p.maxSOC);
   p.efficiency = num("eff", p.efficiency);
   p.startSOC = num("soc0", p.startSOC);
-  p.chargeMode = (str("charge", p.chargeMode) as SimParams["chargeMode"]) ?? p.chargeMode;
+  p.chargeMode = parseChargeMode(str("charge", ""), p.chargeMode);
   p.dischargeEvening = str("de", p.dischargeEvening ? "1" : "0") === "1";
   p.dischargeMorning = str("dm", p.dischargeMorning ? "1" : "0") === "1";
   p.eveningStart = num("evs", p.eveningStart);

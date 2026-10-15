@@ -12,6 +12,7 @@
 //   - Legacy links with `?…` are still accepted when reading.
 
 import { AppState, DEFAULT_STATE } from "./state";
+import { parseChargeMode } from "../calc/types";
 
 function num(p: URLSearchParams, k: string, set: (v: number) => void): void {
   const v = p.get(k);
@@ -103,7 +104,7 @@ export function deserializeState(qs: string): AppState {
   num(p, "maxsoc", (v) => (s.maxSOC = v));
   num(p, "eff", (v) => (s.efficiency = v));
   num(p, "soc0", (v) => (s.startSOC = v));
-  str(p, "charge", (v) => (s.chargeMode = v as AppState["chargeMode"]));
+  str(p, "charge", (v) => (s.chargeMode = parseChargeMode(v, s.chargeMode)));
   bool(p, "de", (v) => (s.dischargeEvening = v));
   bool(p, "dm", (v) => (s.dischargeMorning = v));
   num(p, "evs", (v) => (s.eveningStart = v));

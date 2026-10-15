@@ -4,7 +4,7 @@ import { totalLoad, ConsumerConfig } from "../src/calc/consumers";
 import { generatePrices } from "../src/calc/priceModel";
 import { SimConfig, TOTAL_STEPS } from "../src/calc/types";
 
-function cfg(consumers: ConsumerConfig, chargeMode: "morning" | "midday" | "gridNegative" = "morning"): SimConfig {
+function cfg(consumers: ConsumerConfig, chargeMode: "morning" | "cheapest" | "gridNegative" = "morning"): SimConfig {
   return {
     pv: { peakKWp: 22, tiltDeg: 35, orientation: "south", location: "hamburg" },
     battery: {

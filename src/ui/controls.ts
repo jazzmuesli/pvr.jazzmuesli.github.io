@@ -235,11 +235,11 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
         t("control.charge_strategy"),
         [
           { value: "morning", label: t("strategy.morning") },
-          { value: "midday", label: t("strategy.midday") },
+          { value: "cheapest", label: t("strategy.cheapest") },
           { value: "gridNegative", label: t("strategy.cheap") },
         ],
         (s) => s.chargeMode,
-        (s, v) => (s.chargeMode = v as "morning" | "midday" | "gridNegative"),
+        (s, v) => (s.chargeMode = v as "morning" | "cheapest" | "gridNegative"),
         state,
         onChange,
       ),

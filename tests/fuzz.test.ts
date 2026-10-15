@@ -41,7 +41,7 @@ describe("Simulation Invariant Fuzzing", () => {
       maxSOC: randomRange(0.6, 1.0),
       efficiency: randomRange(0.7, 0.99),
       startSOC: randomRange(0, 1.0),
-      chargeMode: randomElement(["morning", "midday", "gridNegative"]),
+      chargeMode: randomElement(["morning", "cheapest", "gridNegative"]),
       dischargeEvening: random() > 0.2,
       dischargeMorning: random() > 0.2,
       eveningStart: Math.floor(randomRange(15, 20)),
