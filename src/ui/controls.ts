@@ -1,7 +1,8 @@
-import { AppState, Orientation } from "./state";
+import { AppState, Orientation, toSimConfig } from "./state";
 import { LOCATIONS } from "../calc/solar";
 import { PRICE_YEARS } from "../calc/priceData";
 import { feedInTariffCt } from "../calc/revenue";
+import { peakDischargeHours } from "../calc/simulation";
 import { TariffScheme } from "../calc/tariff";
 import { WIND_TURBINES, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE, WIND_LOCATIONS } from "../calc/wind";
 import { t } from "../i18n";
@@ -244,20 +245,47 @@ export function buildControls(host: HTMLElement, state: AppState, onChange: () =
         onChange,
       ),
     );
-    host.appendChild(checkbox(t("control.discharge_evening"), (s) => s.dischargeEvening, (s, v) => (s.dischargeEvening = v), state, onChange));
     host.appendChild(
-      numberControl({ label: t("control.evening_from"), min: 12, max: 22, step: 1, unit: "Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
+      selectControl(
+        t("control.discharge_strategy"),
+        [
+          { value: "windows", label: t("dstrategy.windows") },
+          { value: "peak", label: t("dstrategy.peak") },
+        ],
+        (s) => s.dischargeMode,
+        (s, v) => {
+          s.dischargeMode = v as AppState["dischargeMode"];
+          // The window sliders below are meaningless in "peak" mode, so the
+          // control list has to be rebuilt to show/hide them.
+          buildControls(host, state, onChange);
+        },
+        state,
+        onChange,
+      ),
     );
-    host.appendChild(
-      numberControl({ label: t("control.evening_to"), min: 18, max: 24, step: 1, unit: "Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
-    );
-    host.appendChild(checkbox(t("control.discharge_morning"), (s) => s.dischargeMorning, (s, v) => (s.dischargeMorning = v), state, onChange));
-    host.appendChild(
-      numberControl({ label: t("control.morning_from"), min: 0, max: 10, step: 1, unit: "Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
-    );
-    host.appendChild(
-      numberControl({ label: t("control.morning_to"), min: 8, max: 14, step: 1, unit: "Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
-    );
+    if (state.dischargeMode === "windows") {
+      host.appendChild(checkbox(t("control.discharge_evening"), (s) => s.dischargeEvening, (s, v) => (s.dischargeEvening = v), state, onChange));
+      host.appendChild(
+        numberControl({ label: t("control.evening_from"), min: 12, max: 22, step: 1, unit: "Uhr", get: (s) => s.eveningStart, set: (s, v) => (s.eveningStart = v) }, state, onChange),
+      );
+      host.appendChild(
+        numberControl({ label: t("control.evening_to"), min: 18, max: 24, step: 1, unit: "Uhr", get: (s) => s.eveningEnd, set: (s, v) => (s.eveningEnd = v) }, state, onChange),
+      );
+      host.appendChild(checkbox(t("control.discharge_morning"), (s) => s.dischargeMorning, (s, v) => (s.dischargeMorning = v), state, onChange));
+      host.appendChild(
+        numberControl({ label: t("control.morning_from"), min: 0, max: 10, step: 1, unit: "Uhr", get: (s) => s.morningStart, set: (s, v) => (s.morningStart = v) }, state, onChange),
+      );
+      host.appendChild(
+        numberControl({ label: t("control.morning_to"), min: 8, max: 14, step: 1, unit: "Uhr", get: (s) => s.morningEnd, set: (s, v) => (s.morningEnd = v) }, state, onChange),
+      );
+    } else {
+      const info = document.createElement("div");
+      info.className = "wind-info";
+      info.innerHTML = `<small>${t("dstrategy.peak_hint", {
+        hours: peakDischargeHours(toSimConfig(state).battery).toLocaleString("de-DE", { maximumFractionDigits: 2 }),
+      })}</small>`;
+      host.appendChild(info);
+    }
   }
 
   section(t("control.consumers"));

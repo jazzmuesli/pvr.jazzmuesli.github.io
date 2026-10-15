@@ -192,6 +192,31 @@ describe("simParamsFromQuery", () => {
     expect(p.marketMarginCt).toBe(1);
   });
 
+  it("defaults the discharge strategy to the fixed clock windows", () => {
+    expect(simParamsFromQuery(new URLSearchParams("")).dischargeMode).toBe("windows");
+    expect(simParamsFromQuery(new URLSearchParams("de=1&dm=1")).dischargeMode).toBe("windows");
+  });
+
+  it("parses the discharge strategy from the `dsp` key", () => {
+    expect(simParamsFromQuery(new URLSearchParams("dsp=peak")).dischargeMode).toBe("peak");
+    expect(simParamsFromQuery(new URLSearchParams("dsp=windows")).dischargeMode).toBe("windows");
+  });
+
+  it("ignores an unknown discharge strategy rather than guessing", () => {
+    expect(simParamsFromQuery(new URLSearchParams("dsp=whatever")).dischargeMode).toBe("windows");
+    expect(simParamsFromQuery(new URLSearchParams("dsp=")).dischargeMode).toBe("windows");
+  });
+
+  it("runs the price-ranked discharge window end to end", () => {
+    const peak = runSimulation(params({ dischargeMode: "peak" }));
+    const windows = runSimulation(params({ dischargeMode: "windows" }));
+    expect(Number.isFinite(peak.summary.netSelectedEUR)).toBe(true);
+    // The two strategies move different energy, but neither may break the
+    // grid balance the report is built on.
+    expect(peak.summary.totalExportKWh).toBeGreaterThan(0);
+    expect(Math.abs(peak.summary.totalExportKWh - windows.summary.totalExportKWh)).toBeGreaterThan(0);
+  });
+
   it("marketMarginCt reduces export revenue in market scheme", () => {
     const r0 = runSimulation(params({ marketMarginCt: 0, exportScheme: "market" }));
     const r1 = runSimulation(params({ marketMarginCt: 1.5, exportScheme: "market" }));

@@ -121,6 +121,7 @@ export function scenarioToSimParams(s: Scenario): SimParams {
     efficiency: 0.95,
     startSOC: 0.5,
     chargeMode: "morning",
+    dischargeMode: "windows",
     dischargeEvening: true,
     dischargeMorning: true,
     eveningStart: 17,

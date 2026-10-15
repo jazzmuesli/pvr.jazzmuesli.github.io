@@ -41,6 +41,28 @@ export function parseChargeMode(value: string | null | undefined, fallback: Char
   return fallback;
 }
 
+/**
+ * How the daily discharge window is picked:
+ *  - "windows": the most expensive whole-hour block inside the configured
+ *    morning / evening clock ranges (the classic behaviour).
+ *  - "peak": the single most expensive `capacityKWh / maxPowerKW` hours of the
+ *    day, wherever they happen to fall — no clock window at all.
+ */
+export type DischargeMode = "windows" | "peak";
+
+/**
+ * Normalise a discharge-mode value that came from a URL. Anything unknown
+ * (including a missing key) falls back to the fixed clock windows, so every
+ * link shared before the peak strategy existed keeps its meaning.
+ */
+export function parseDischargeMode(
+  value: string | null | undefined,
+  fallback: DischargeMode,
+): DischargeMode {
+  if (value === "windows" || value === "peak") return value;
+  return fallback;
+}
+
 export interface PVConfig {
   /** Peak power rating in kWp. */
   peakKWp: number;
@@ -76,6 +98,12 @@ export interface BatteryConfig {
    *  - "gridNegative": charge from PV surplus AND from the grid whenever the
    *    spot price is non-positive (free / negative electricity). */
   chargeMode: "morning" | "cheapest" | "gridNegative";
+  /** How the discharge window is chosen. Optional so that existing callers
+   *  (and older test fixtures) keep working — `undefined` behaves exactly like
+   *  "windows", the pre-existing morning/evening clock behaviour.
+   *  In "peak" mode the morning/evening hours below are ignored: the window is
+   *  the `capacityKWh / maxPowerKW` most expensive hours of each day instead. */
+  dischargeMode?: DischargeMode;
   /** Discharge into the expensive evening window. */
   dischargeEvening: boolean;
   /** Discharge into the expensive morning window. */

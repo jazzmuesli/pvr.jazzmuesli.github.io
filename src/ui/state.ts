@@ -1,4 +1,4 @@
-import { SimConfig } from "../calc/types";
+import { DischargeMode, SimConfig } from "../calc/types";
 import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
 import { ConsumerConfig, totalLoad } from "../calc/consumers";
 import { TariffScheme } from "../calc/tariff";
@@ -20,6 +20,9 @@ export interface AppState {
   efficiency: number;
   startSOC: number;
   chargeMode: "morning" | "cheapest" | "gridNegative";
+  /** "windows" = fixed morning/evening clock ranges, "peak" = the
+   *  capacity/maxPower most expensive hours of each day. */
+  dischargeMode: DischargeMode;
   dischargeEvening: boolean;
   dischargeMorning: boolean;
   eveningStart: number;
@@ -83,6 +86,7 @@ export const DEFAULT_STATE: AppState = {
   efficiency: 0.95,
   startSOC: 0.5,
   chargeMode: "morning",
+  dischargeMode: "windows",
   dischargeEvening: true,
   dischargeMorning: true,
   eveningStart: 17,
@@ -134,6 +138,7 @@ export function toSimParams(s: AppState): SimParams {
   const efficiency = s.expertMode ? s.efficiency : 0.95;
   const startSOC = s.expertMode ? s.startSOC : 0.5;
   const chargeMode = s.expertMode ? s.chargeMode : "morning";
+  const dischargeMode = s.expertMode ? s.dischargeMode : "windows";
   const dischargeEvening = s.expertMode ? s.dischargeEvening : true;
   const dischargeMorning = s.expertMode ? s.dischargeMorning : true;
   const eveningStart = s.expertMode ? s.eveningStart : 17;
@@ -152,6 +157,7 @@ export function toSimParams(s: AppState): SimParams {
     efficiency,
     startSOC,
     chargeMode,
+    dischargeMode,
     dischargeEvening,
     dischargeMorning,
     eveningStart,
@@ -206,6 +212,7 @@ export function toSimConfig(s: AppState): SimConfig {
       efficiency: s.efficiency,
       startSOC: s.startSOC,
       chargeMode: s.chargeMode,
+      dischargeMode: s.dischargeMode,
       dischargeEvening: hasBattery && s.dischargeEvening,
       dischargeMorning: hasBattery && s.dischargeMorning,
       eveningStart: s.eveningStart,

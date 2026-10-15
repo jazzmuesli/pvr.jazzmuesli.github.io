@@ -127,7 +127,8 @@
             <li>Laden und Entladen schließen sich im selben 15-Min-Schritt gegenseitig aus.</li>
             <li>Ladeprofil: Entweder sofort bei jedem Überschuss (<em>Morgens</em>) oder — da ein gespeicherter kWh den Spotpreis seiner Stunde kostet — in den <em>günstigsten</em> Überschussstunden des Tages (<em>Günstigste Preise</em>).</li>
             <li>Negative Spot-Preise: Batterie lädt aus dem Netz (kostenlos) — kein PV-Anteil im SoC.</li>
-            <li>Strategische Entladung: Tägliches Fenster mit dem teuersten, nicht-negativen Spot-Preis (ganzstündig ausgerichtet).</li>
+            <li>Strategische Entladung — <em>Feste Zeitfenster</em>: tägliches Fenster mit dem teuersten, nicht-negativen Spot-Preis innerhalb der eingestellten Morgen-/Abendzeiten (ganzstündig ausgerichtet).</li>
+            <li>Strategische Entladung — <em>Teuerste Stunden des Tages</em>: täglich die <code>N = Kapazität / Leistung</code> teuersten Stunden des Tages (40 kWh bei 14,5 kW → 2,76 h), unabhängig von der Tageszeit; negative Preise und Stunden vor dem ersten eigenen Überschuss werden übersprungen.</li>
             <li>Rundwirkungsgrad: 95 % (halbe Zyklen), jährliche Degradation 1 %.</li>
             <li>SoC-Band: 10–90 % (Expert) bzw. 10–95 % (Wizard).</li>
             <li>C-Rate (Simple-Modus): <code>min(Kapazität × 0,33; 20 kW)</code>.</li>

@@ -227,6 +227,29 @@ describe("charge mode comparisons", () => {
       if (flags.discharge[i]) expect(flags.charge[i]).toBe(0);
     }
   });
+
+  it("'cheapest' never stores in an hour reserved for the peak discharge window", () => {
+    // The peak window may well land on a surplus hour (a windy summer day can
+    // peak at noon). Even then the two plans must stay disjoint.
+    const flags = computeDispatchFlags({ ...BATTERY, dischargeMode: "peak" }, prices, undefined, surplus);
+    for (let i = 0; i < TOTAL_STEPS; i++) {
+      if (flags.discharge[i]) expect(flags.charge[i]).toBe(0);
+    }
+  });
+
+  it("'morning' charging is unaffected by which discharge strategy is used", () => {
+    const peak = computeDispatchFlags({ ...BATTERY, chargeMode: "morning", dischargeMode: "peak" }, prices, undefined, surplus);
+    const windows = computeDispatchFlags({ ...BATTERY, chargeMode: "morning" }, prices, undefined, surplus);
+    // 'morning' opens every hour, so only the discharge plan can differ — and
+    // it must never let the battery fill and empty inside the same step.
+    const r = simulate(cfg({ wind: surplus, prices }, { dischargeMode: "peak", chargeMode: "morning" }));
+    for (let i = 0; i < TOTAL_STEPS; i++) {
+      const charging = r.chargeSolar[i] + r.chargeWind[i];
+      const discharging = r.dischargeToLoad[i] + r.exportBattery[i];
+      expect(charging === 0 || discharging === 0).toBe(true);
+    }
+    expect(Array.from(peak.charge)).toEqual(Array.from(windows.charge));
+  });
 });
 
 describe("charge plan is economically sound", () => {
@@ -305,9 +328,12 @@ describe("charge plan on the real price model", () => {
     eveningStart: 17,
     eveningEnd: 23,
   };
-  const realCfg = (chargeMode: BatteryConfig["chargeMode"]): SimConfig => ({
+  const realCfg = (
+    chargeMode: BatteryConfig["chargeMode"],
+    dischargeMode: BatteryConfig["dischargeMode"] = "windows",
+  ): SimConfig => ({
     pv: { peakKWp: 50, tiltDeg: 25, orientation: "south", location: "boizenburg" },
-    battery: { ...cycling, chargeMode },
+    battery: { ...cycling, chargeMode, dischargeMode },
     tariff: { feedInEUR: 0.06, commissioningYear: 2025 },
     prices,
     load: new Float64Array(TOTAL_STEPS), // merchant plant: no local load
@@ -389,5 +415,25 @@ describe("charge plan on the real price model", () => {
     for (let i = 0; i < TOTAL_STEPS; i++) {
       if (r.exportBattery[i] > 0) expect(r.chargeSolar[i] + r.chargeWind[i]).toBe(0);
     }
+  });
+
+  it("releases into the priciest hours when the peak strategy is selected", () => {
+    const avgReleasePrice = (r: ReturnType<typeof simulate>): number => {
+      let kWh = 0;
+      let eur = 0;
+      for (let i = 0; i < TOTAL_STEPS; i++) {
+        kWh += r.exportBattery[i];
+        eur += r.exportBattery[i] * prices[i];
+      }
+      return eur / kWh;
+    };
+    const peak = avgReleasePrice(simulate(realCfg("cheapest", "peak")));
+    const evening = avgReleasePrice(simulate(realCfg("cheapest", "windows")));
+    // Trading throughput for price is the whole point of the peak strategy:
+    // it must never realise a *lower* average sale price than a fixed
+    // 17:00–23:00 window.
+    expect(peak).toBeGreaterThan(evening);
+    // Sanity: the spread has to be real, not float noise.
+    expect(peak / evening).toBeGreaterThan(1.001);
   });
 });

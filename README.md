@@ -20,7 +20,7 @@ The UI is a single page (`index.html`). Every setting is adjustable via the side
 ## Features
 
 - **PV production** using a clear-sky analytical solar model calibrated to empirical kWh/kWp values for German cities (Hamburg, Berlin, Munich, Cologne, Boizenburg)
-- **Battery dispatch** at 15-minute resolution (self-consumption, strategic grid charging at negative prices, export during expensive windows)
+- **Battery dispatch** at 15-minute resolution (self-consumption, strategic grid charging at negative prices, export into the day's most expensive hours)
 - **Consumer load profiles** for household (H0 standard), heat pump, domestic hot water heat pump (BWWP), and electric vehicle
 - **Revenue/cost analysis** under four tariff combinations: fixed feed-in vs. Direktvermarktung (market premium), and fixed import vs. dynamic (spot) vs. dynamic + section 14a/3 grid fees
 - **Multi-year discounted cashflow** with NPV, IRR, LCOE, battery degradation, PV degradation, O&M costs, replacement investments (inverter + battery), and price escalation
@@ -128,6 +128,40 @@ mutually exclusive.
 The legacy value `charge=midday` (a fixed 10:00–15:00 window) is accepted and mapped to
 `cheapest`, so older links keep working. See `tests/charge_plan.test.ts`.
 
+#### Discharge windows (`dsp` parameter)
+
+The discharge plan decides *which* hours the battery is allowed to release into:
+
+| Mode | Plan |
+| --- | --- |
+| `windows` | The most expensive whole-hour block inside the configured morning/evening clock ranges (`mns`/`mne`, `evs`/`eve`) — a household habit. |
+| `peak` | The `N = capacityKWh / maxPowerKW` most expensive hours of the day, wherever they fall. 40 kWh at 14.5 kW is 2.76 h, i.e. the time the battery needs to hand back its whole capacity at full power. |
+
+`peak` drops the clock entirely: a day whose price peak lands at 06:30 or 21:45 is still
+served. Details:
+
+- Hours are ranked by mean spot price, descending; ties break towards the earlier hour
+  so the plan is deterministic.
+- Negative-price hours are never selected — releasing stored energy while the market
+  pays you to *consume* is a guaranteed loss, and that is also where the charge plan
+  wants the battery.
+- A fractional `N` is honoured at the 15-minute resolution: whole hours are taken while
+  the budget lasts, the last one is truncated to the quarter hours that still fit.
+- Hours before the battery can hold anything that day (the first hour of own surplus, or
+  — with `charge=gridNegative` — the first negative-price hour) are skipped **without**
+  spending the window budget. Without that guard a cheap 03:00 hour would swallow the
+  window the real evening peak needs.
+
+The window is sized on the *nominal* capacity, not the usable `(maxSOC − minSOC) × capacity`:
+the SOC band is enforced by the step loop, and sizing on the usable energy would make a
+battery that is never fully charged open a window it cannot fill.
+
+Like the clock windows, the peak window only governs the *strategic* discharge into the
+grid; a charged battery keeps preferring self-supply over a grid import in every hour, so
+self-sufficiency is unaffected by the choice. The trade-off is throughput for price:
+`peak` realises a strictly higher average sale price than a fixed 17:00–23:00 window, at
+the cost of a slightly smaller daily cycle. See `tests/peak_discharge.test.ts`.
+
 ### Electricity Prices & Tariffs (`src/calc/tariff.ts`, `priceData.ts`, `priceModel.ts`)
 
 - **Import:**
@@ -208,7 +242,8 @@ Key parameters (all optional, defaults in `DEFAULT_SIM_PARAMS` in `src/calc/repo
 | `eff` | Round-trip efficiency | 0.95 |
 | `soc0` | Start SOC | 0.5 |
 | `charge` | Charge strategy `morning/cheapest/gridNegative` (`midday` = legacy alias for `cheapest`) | morning |
-| `de`/`dm` | Discharge evening/morning (0/1) | 1 / 0 |
+| `dsp` | Discharge strategy `windows/peak` | windows |
+| `de`/`dm` | Discharge evening/morning (0/1); ignored when `dsp=peak` | 1 / 0 |
 | `evs`/`eve` | Evening window (hours) | 17 / 21 |
 | `mns`/`mne` | Morning window (hours) | 6 / 9 |
 | `fi` | Feed-in tariff (ct/kWh) | 7.2 |
