@@ -36,6 +36,10 @@ function batteryActive(b: BatteryConfig): boolean {
 
 interface BlockFlags {
   discharge: Uint8Array;
+  /** Discharge steps in which selling stored energy to the grid is legitimate:
+   *  only where the discharge window carries no local load at all. Stored
+   *  energy is never sold ahead of self-supply. */
+  merchant: Uint8Array;
 }
 
 /**
@@ -43,10 +47,25 @@ interface BlockFlags {
  * expensive, fully non-negative, hour-aligned window (sized to empty the
  * battery). Discharge blocks are aligned to whole hours so a battery never
  * both charges and discharges within the same hour.
+ *
+ * `merchant` marks the steps of a window that carries no local load. Only
+ * there may stored energy be sold to the grid. This replaces the previous
+ * condition that required concurrent generation (`gen > 0`) for a grid sale:
+ * that made a post-sunset sale impossible, which is exactly the window a
+ * Direktvermarktung plant needs, and it silently pinned the battery at maxSOC
+ * from dusk until sunrise. Requiring zero local load instead keeps a prosumer
+ * battery reserved for self-supply (matching the measured Home Assistant
+ * calibration in tests/calibration.test.ts) while letting a load-free merchant
+ * plant sell through its peak-price window.
  */
-export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Array): BlockFlags {
+export function computeDispatchFlags(
+  battery: BatteryConfig,
+  prices: Float64Array,
+  load?: Float64Array,
+): BlockFlags {
   const discharge = new Uint8Array(TOTAL_STEPS);
-  if (!batteryActive(battery)) return { discharge };
+  const merchant = new Uint8Array(TOTAL_STEPS);
+  if (!batteryActive(battery)) return { discharge, merchant };
 
   const markBestHourBlock = (
     dayStart: number,
@@ -72,6 +91,9 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
     if (bestHour < 0) return;
     const from = dayStart + bestHour * STEPS_PER_HOUR;
     for (let k = 0; k < len; k++) discharge[from + k] = 1;
+    let loadKWh = 0;
+    if (load) for (let k = 0; k < len; k++) loadKWh += load[from + k];
+    if (loadKWh < 1e-9) for (let k = 0; k < len; k++) merchant[from + k] = 1;
   };
 
   const usableKWh = (battery.maxSOC - battery.minSOC) * battery.capacityKWh;
@@ -91,7 +113,7 @@ export function computeDispatchFlags(battery: BatteryConfig, prices: Float64Arra
       markBestHourBlock(dayStart, battery.morningStart, battery.morningEnd, 1);
     }
   }
-  return { discharge };
+  return { discharge, merchant };
 }
 
 export function simulate(config: SimConfig): SimResult {
@@ -109,7 +131,7 @@ export function simulate(config: SimConfig): SimResult {
   const price = config.prices ?? generatePrices();
   const load = config.load ?? new Float64Array(TOTAL_STEPS);
   const b = config.battery;
-  const flags = computeDispatchFlags(b, price);
+  const flags = computeDispatchFlags(b, price, load);
 
   const active = batteryActive(b);
   const eff = b.efficiency;
@@ -304,8 +326,16 @@ export function simulate(config: SimConfig): SimResult {
     }
     if (L > 0) gridImport[i] = L;
 
-    // 5) Strategic export: sell surplus battery energy.
-    if (discharging && !charged && soc > minSOCkWh && gen > 0) {
+    // 5) Strategic export: sell stored battery energy into the grid. Allowed
+    //    only in a load-free (merchant) discharge window -- never in a window
+    //    that still has local demand to cover.
+    // Either there is concurrent generation (a prosumer with coincident PV
+    // surplus — the historical, calibration-verified path) or the discharge
+    // window carries no local load at all, so the stored energy is genuinely
+    // surplus and may be sold even after sunset. The second case is a
+    // Direktvermarktung plant with no own consumption.
+    const sellable = gen > 0 || flags.merchant[i] === 1;
+    if (discharging && !charged && sellable && soc > minSOCkWh) {
       const maxAdd = maxStepEnergy - dischargeToLoad[i];
       if (maxAdd > 0) {
         const avail = soc - minSOCkWh;
