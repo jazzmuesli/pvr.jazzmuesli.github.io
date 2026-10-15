@@ -14,6 +14,7 @@ import {
   computeMetrics,
 } from "../scenario";
 import { SimReport } from "../calc/report";
+import { LOCATIONS, LOCATION_KEYS } from "../calc/solar";
 import { numberField } from "../ui/numberField";
 import {
   renderMonthlyChart,
@@ -69,9 +70,9 @@ export function initWizard(opts: WizardOptions): void {
   const hkField = numberField({ id: "hk", min: 500, max: 9000, step: 100, unit: "kWh", value: 2500, onInput: (v) => store.setState({ consumptionKWh: v }) });
   const ictField = numberField({ id: "ict", min: 1, max: 50, step: 0.1, unit: "ct/kWh", value: 30, onInput: (v) => store.setState({ priceCt: v }) });
 
-  const loc = el("select", { id: "loc" }) as HTMLSelectElement;
-  for (const c of ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"]) {
-    loc.append(el("option", { value: c }, [c[0].toUpperCase() + c.slice(1)]));
+const loc = el("select", { id: "loc" }) as HTMLSelectElement;
+for (const c of LOCATION_KEYS) {
+    loc.append(el("option", { value: c }, [LOCATIONS[c].name]));
   }
   loc.addEventListener("change", () => store.setState({ location: loc.value }));
 

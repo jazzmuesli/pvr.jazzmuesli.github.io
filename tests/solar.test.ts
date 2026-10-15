@@ -9,6 +9,8 @@ import {
   DEG,
 } from "../src/calc/solar";
 import { TOTAL_STEPS, STEPS_PER_DAY } from "../src/calc/index";
+import { WIND_LOCATIONS } from "../src/calc/wind";
+import { CITIES, NET_ENTGELT_CT, cityForLocation } from "../src/calc/tariff";
 
 function sum(a: Float64Array): number {
   let s = 0;
@@ -178,6 +180,175 @@ describe("pv production", () => {
   it("all locations are defined with positive yields", () => {
     for (const k of Object.keys(LOCATIONS)) {
       expect(LOCATIONS[k].annualYieldPerKWp).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("location plausibility", () => {
+  /** Annual yield (kWh per kWp) of a south array at the model's own optimum tilt. */
+  const atOptimalTilt = (key: string) => {
+    const opt = Math.max(0, Math.min(90, 0.76 * LOCATIONS[key].latDeg - 3.1));
+    return sum(pvProductionPerStep({ peakKWp: 1, tiltDeg: opt, orientation: "south", location: key }));
+  };
+
+  it("reproduces each location's stored empirical yield exactly at the optimum tilt", () => {
+    for (const [key, loc] of Object.entries(LOCATIONS)) {
+      expect(atOptimalTilt(key), key).toBeCloseTo(loc.annualYieldPerKWp, 1);
+    }
+  });
+
+  // PVGIS 5.3 grid-connected PV, SARAH3, 1 kWp c-Si, 14 % system loss, optimally
+  // tilted south array, at the coordinates stored in LOCATIONS. Reproduce with:
+  //   curl "https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?lat=<lat>&lon=<lon>\
+  // &peakpower=1&loss=14&optimalangles=1&outputformat=json" → outputs.totals.fixed.E_y
+  const PVGIS_E_Y: Record<string, number> = {
+    hamburg: 989.5,
+    berlin: 1061.1,
+    munich: 1140.7,
+    cologne: 1040.6,
+    boizenburg: 1028.5,
+    barcelona: 1570.9,
+    lisbon: 1579.8,
+    paris: 1148.7,
+    london: 1022.9,
+  };
+
+  it("tracks PVGIS specific yield within 5 % for every location", () => {
+    for (const [key, ref] of Object.entries(PVGIS_E_Y)) {
+      const dev = (Math.abs(atOptimalTilt(key) - ref) / ref) * 100;
+      expect(dev, `${key}: ${atOptimalTilt(key).toFixed(0)} vs PVGIS ${ref}`).toBeLessThan(5);
+    }
+  });
+
+  it("orders yields as latitude-and-insolation would predict", () => {
+    const y = (k: string) => atOptimalTilt(k);
+    // Sunny Iberian sites far out-yield central/northern Europe.
+    expect(y("barcelona")).toBeGreaterThan(y("paris") * 1.3);
+    expect(y("lisbon")).toBeGreaterThan(y("london") * 1.4);
+    // Paris sits between Hamburg and the Iberian sites, near Munich.
+    expect(y("paris")).toBeGreaterThan(y("hamburg"));
+    expect(y("paris")).toBeGreaterThan(y("london"));
+    expect(y("paris")).toBeLessThan(y("barcelona"));
+    // London is marginally below Berlin at a comparable latitude.
+    expect(y("london")).toBeLessThan(y("berlin"));
+  });
+
+  it("produces a realistic capacity factor for every location", () => {
+    // Annual yield / (kWp * 8760 h). European rooftop PV sits around 11–19 %.
+    for (const key of Object.keys(LOCATIONS)) {
+      const cf = atOptimalTilt(key) / 8760;
+      expect(cf, key).toBeGreaterThan(0.1);
+      expect(cf, key).toBeLessThan(0.2);
+    }
+  });
+
+  it("never exceeds 1 kWp of instantaneous output per kWp, nor produces at night", () => {
+    for (const key of Object.keys(LOCATIONS)) {
+      const opt = Math.max(0, Math.min(90, 0.76 * LOCATIONS[key].latDeg - 3.1));
+      const c = pvProductionPerStep({ peakKWp: 1, tiltDeg: opt, orientation: "south", location: key });
+      let peak = 0;
+      for (let i = 0; i < c.length; i++) {
+        expect(Number.isFinite(c[i]), key).toBe(true);
+        expect(c[i], key).toBeGreaterThanOrEqual(0);
+        if (c[i] > peak) peak = c[i];
+      }
+      // 15-min step → kW.
+      expect(peak * 4, key).toBeLessThan(1);
+      expect(peak * 4, key).toBeGreaterThan(0.3);
+      // Local midnight (steps 0..3) must be exactly zero.
+      for (let d = 0; d < 365; d++)
+        for (let s = 0; s < 4; s++) expect(c[d * STEPS_PER_DAY + s], `${key} day ${d}`).toBe(0);
+    }
+  });
+
+  it("seasonality matches hemisphere and climate: summer peak, and a flatter year in Iberia", () => {
+    const ratio = (key: string) => {
+      const m = monthlyTotals(
+        pvProductionPerStep({
+          peakKWp: 1,
+          tiltDeg: Math.max(0, Math.min(90, 0.76 * LOCATIONS[key].latDeg - 3.1)),
+          orientation: "south",
+          location: key,
+        }),
+      );
+      return { summer: m[5] + m[6] + m[7], winter: m[0] + m[1] + m[11], m };
+    };
+    for (const key of Object.keys(LOCATIONS)) {
+      const { summer, winter, m } = ratio(key);
+      // Northern hemisphere only: summer always beats winter, peak in May–Aug.
+      expect(summer, key).toBeGreaterThan(winter);
+      const maxM = m.indexOf(Math.max(...m));
+      expect([4, 5, 6, 7], key).toContain(maxM);
+      // Barcelona's winter is genuinely sunny, so its profile is much flatter
+      // than Hamburg's rather than merely "also summer-heavy".
+      expect(summer / winter, key).toBeLessThan(3);
+    }
+    expect(ratio("barcelona").summer / ratio("barcelona").winter).toBeLessThan(
+      ratio("hamburg").summer / ratio("hamburg").winter,
+    );
+  });
+
+  it("computes the right day length at each latitude", () => {
+    const dayLength = (latDeg: number, day: number) => {
+      let n = 0;
+      for (let i = 0; i < STEPS_PER_DAY; i++) {
+        const hr = ((i % STEPS_PER_DAY) / STEPS_PER_DAY) * 24;
+        if (solarVector(latDeg, day + 0.5, hr).elevationRad > 0) n++;
+      }
+      return (n / STEPS_PER_DAY) * 24;
+    };
+    // June solstice / December solstice / equinox.
+    expect(dayLength(LOCATIONS.hamburg.latDeg, 172)).toBeCloseTo(16.75, 1); // 53.55°N
+    expect(dayLength(LOCATIONS.barcelona.latDeg, 172)).toBeCloseTo(14.75, 1); // 41.39°N
+    expect(dayLength(LOCATIONS.lisbon.latDeg, 355)).toBeCloseTo(9.25, 1); // 38.72°N
+    expect(dayLength(LOCATIONS.london.latDeg, 355)).toBeCloseTo(7.75, 1); // 51.51°N
+    // Every latitude sees ~12 h at the equinox, and longer days in June.
+    for (const key of Object.keys(LOCATIONS)) {
+      const lat = LOCATIONS[key].latDeg;
+      expect(dayLength(lat, 80), key).toBeCloseTo(12, 0);
+      expect(dayLength(lat, 172), key).toBeGreaterThan(dayLength(lat, 355));
+    }
+  });
+
+  it("has a sane optimal tilt for every latitude, including the sub-40° sites", () => {
+    for (const [key, loc] of Object.entries(LOCATIONS)) {
+      let bestTilt = 0;
+      let best = -1;
+      for (let tilt = 0; tilt <= 60; tilt += 5) {
+        const y = sum(pvProductionPerStep({ peakKWp: 1, tiltDeg: tilt, orientation: "south", location: key }));
+        if (y > best) { best = y; bestTilt = tilt; }
+      }
+      // The optimum tracks latitude: lower for Lisbon/Barcelona than for Hamburg,
+      // and never more than ~8° from PVGIS's own optimum.
+      expect(bestTilt, key).toBeGreaterThanOrEqual(20);
+      expect(bestTilt, key).toBeLessThanOrEqual(50);
+      expect(Math.abs(bestTilt - loc.pvgisOptimalTiltDeg), key).toBeLessThanOrEqual(8);
+      // A flat roof still captures a large share of the optimum.
+      const flat = sum(pvProductionPerStep({ peakKWp: 1, tiltDeg: 0, orientation: "south", location: key }));
+      expect(flat / best, key).toBeGreaterThan(0.7);
+    }
+    const peakAt = (key: string) => {
+      let bt = 0, b = -1;
+      for (let tilt = 0; tilt <= 60; tilt += 5) {
+        const y = sum(pvProductionPerStep({ peakKWp: 1, tiltDeg: tilt, orientation: "south", location: key }));
+        if (y > b) { b = y; bt = tilt; }
+      }
+      return bt;
+    };
+    expect(peakAt("lisbon")).toBeLessThan(peakAt("hamburg"));
+    expect(peakAt("barcelona")).toBeLessThan(peakAt("munich"));
+  });
+
+  it("every location key has wind and tariff data too", () => {
+    // Guards the silent Hamburg fallback in report.ts / tariff.ts when a key is
+    // added to LOCATIONS without a matching entry elsewhere.
+    for (const key of Object.keys(LOCATIONS)) {
+      expect(WIND_LOCATIONS[key], `WIND_LOCATIONS missing "${key}"`).toBeDefined();
+      expect(cityForLocation(key)).toBeDefined();
+      expect(CITIES).toContain(cityForLocation(key));
+      expect(NET_ENTGELT_CT[cityForLocation(key)]).toBeGreaterThan(0);
+      // Wind and PV must agree on the latitude.
+      expect(WIND_LOCATIONS[key].latDeg, key).toBe(LOCATIONS[key].latDeg);
     }
   });
 });

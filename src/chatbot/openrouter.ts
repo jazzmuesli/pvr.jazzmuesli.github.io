@@ -9,6 +9,7 @@
 // layer applies the patch to the shared store.
 
 import { Scenario } from "../scenario";
+import { LOCATIONS, LOCATION_KEYS } from "../calc/solar";
 
 export const SCENARIO_TOOL = {
   type: "function",
@@ -32,8 +33,13 @@ export const SCENARIO_TOOL = {
         },
         location: {
           type: "string",
-          enum: ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"],
-          description: "Standort des Systems.",
+          enum: LOCATION_KEYS,
+          description:
+            "Standort des Systems. Erlaubt sind ausschließlich diese Schlüsselnamen " +
+            "(z. B. 'hamburg' oder 'munich' — NICHT 'muenchen', 'koeln' oder 'barcelona'). " +
+            "Zuordnung: " +
+            LOCATION_KEYS.map((k) => `${k}=${LOCATIONS[k].name}`).join(", ") +
+            ".",
         },
         pv: {
           type: "string",

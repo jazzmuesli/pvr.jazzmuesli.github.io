@@ -6,6 +6,7 @@
 import { Store } from "../store";
 import { Scenario, computeMetrics, appUrl } from "../scenario";
 import { AdvisorOutput, AdvisorContext, advisorTurn, scenariosEqual, Stage } from "./advisor";
+import { LOCATION_KEYS } from "../calc/solar";
 import { Logger } from "./logger";
 
 export type GenerateFn = (system: string, out: AdvisorOutput) => Promise<string>;
@@ -32,7 +33,7 @@ export interface ChatBotOptions {
 
 const VALID_PV = ["none", "balcony", "10", "20"] as const;
 const VALID_BAT = ["off", "on"] as const;
-const VALID_LOC = ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"] as const;
+const VALID_LOC: readonly string[] = LOCATION_KEYS;
 const VALID_ORIENT = ["south", "east", "west", "east_west"] as const;
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));

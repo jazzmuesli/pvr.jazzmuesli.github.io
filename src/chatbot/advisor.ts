@@ -17,6 +17,7 @@ import {
   pvPreset,
 } from "../scenario";
 import { t } from "../i18n";
+import { LOCATIONS, LOCATION_KEYS } from "../calc/solar";
 
 export type Stage = "welcome" | "ready";
 
@@ -39,8 +40,6 @@ export interface AdvisorOutput {
   /** Optional deeplink into the full calculator. */
   link?: string;
 }
-
-const LOCATIONS = ["boizenburg", "hamburg", "berlin", "koeln", "muenchen"];
 
 function fmtEUR(v: number): string {
   return `${Math.round(v).toLocaleString("de-DE")} €`;
@@ -135,12 +134,15 @@ export function advisorTurn(message: string, ctx: AdvisorContext): AdvisorOutput
     }
   }
 
-  // 3) Location.
+  // 3) Location. Match both the canonical key ("munich") and the normalised
+  //    display name ("muenchen" from "München", "koeln" from "Köln"), but always
+  //    store the canonical key so downstream lookups cannot miss.
   const nmsg = norm(msg);
-  for (const c of LOCATIONS) {
-    if (nmsg.includes(c) && scenario.location !== c) {
+  for (const c of LOCATION_KEYS) {
+    const aliases = [c, norm(LOCATIONS[c].name.toLowerCase())];
+    if (aliases.some((a) => nmsg.includes(a)) && scenario.location !== c) {
       scenario.location = c;
-      changes.push(`${t("advisor.location_change")} ${c[0].toUpperCase() + c.slice(1)}`);
+      changes.push(`${t("advisor.location_change")} ${LOCATIONS[c].name}`);
       break;
     }
   }

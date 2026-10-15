@@ -16,17 +16,41 @@ const ALBEDO = 0.2;
 export interface Location {
   name: string;
   latDeg: number;
+  /** Longitude of the reference point. Not used by the clear-sky model (the hour
+   *  angle is evaluated in local *solar* time), but recorded so the empirical
+   *  yield below can be reproduced against PVGIS for the exact coordinates. */
+  lonDeg: number;
   /** Empirical annual yield (kWh per kWp) for an optimally tilted south array. */
   annualYieldPerKWp: number;
+  /** PVGIS "optimal angles" optimum for the same coordinates, i.e. the tilt the
+   *  `annualYieldPerKWp` above refers to. Reference only — see `optimalTiltDeg`. */
+  pvgisOptimalTiltDeg: number;
 }
 
+// Empirical annual yields are PVGIS 5.3 grid-connected PV, SARAH3 irradiance,
+// 1 kWp c-Si, 14 % system loss, optimally tilted south array. Reproduce with:
+//   curl "https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?lat=<lat>&lon=<lon>\
+//&peakpower=1&loss=14&optimalangles=1&outputformat=json"
+//   → outputs.totals.fixed.E_y  (kWh per year per kWp)
+//
+// Note that `optimalTiltDeg` below derives its own (≈4° lower) optimum from
+// latitude alone; that is a pre-existing, uniform offset versus PVGIS and is
+// not specific to any one city. Because the yield is calibrated *at* whichever
+// tilt the model calls optimal, the absolute annual figure is unaffected.
 export const LOCATIONS: Record<string, Location> = {
-  hamburg: { name: "Hamburg", latDeg: 53.55, annualYieldPerKWp: 1000 },
-  berlin: { name: "Berlin", latDeg: 52.52, annualYieldPerKWp: 1050 },
-  munich: { name: "München", latDeg: 48.14, annualYieldPerKWp: 1100 },
-  cologne: { name: "Köln", latDeg: 50.94, annualYieldPerKWp: 1050 },
-  boizenburg: { name: "Boizenburg", latDeg: 53.33, annualYieldPerKWp: 1000 },
+  hamburg: { name: "Hamburg", latDeg: 53.55, lonDeg: 9.99, annualYieldPerKWp: 1000, pvgisOptimalTiltDeg: 40 },
+  berlin: { name: "Berlin", latDeg: 52.52, lonDeg: 13.4, annualYieldPerKWp: 1050, pvgisOptimalTiltDeg: 40 },
+  munich: { name: "München", latDeg: 48.14, lonDeg: 11.58, annualYieldPerKWp: 1100, pvgisOptimalTiltDeg: 39 },
+  cologne: { name: "Köln", latDeg: 50.94, lonDeg: 6.96, annualYieldPerKWp: 1050, pvgisOptimalTiltDeg: 39 },
+  boizenburg: { name: "Boizenburg", latDeg: 53.33, lonDeg: 10.77, annualYieldPerKWp: 1000, pvgisOptimalTiltDeg: 39 },
+  barcelona: { name: "Barcelona", latDeg: 41.39, lonDeg: 2.17, annualYieldPerKWp: 1570, pvgisOptimalTiltDeg: 38 },
+  lisbon: { name: "Lisboa", latDeg: 38.72, lonDeg: -9.14, annualYieldPerKWp: 1580, pvgisOptimalTiltDeg: 33 },
+  paris: { name: "Paris", latDeg: 48.86, lonDeg: 2.35, annualYieldPerKWp: 1150, pvgisOptimalTiltDeg: 39 },
+  london: { name: "London", latDeg: 51.51, lonDeg: -0.13, annualYieldPerKWp: 1020, pvgisOptimalTiltDeg: 40 },
 };
+
+/** Location keys in stable display order, derived from `LOCATIONS`. */
+export const LOCATION_KEYS: string[] = Object.keys(LOCATIONS);
 
 export const DEFAULT_LOCATION = "hamburg";
 

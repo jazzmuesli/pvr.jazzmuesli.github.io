@@ -10,6 +10,7 @@ import {
 } from "../src/calc/wind";
 import { runSimulation, DEFAULT_SIM_PARAMS, SimParams } from "../src/calc/report";
 import { annualSum } from "../src/calc/consumers";
+import { LOCATIONS } from "../src/calc/solar";
 
 const SKYWIND_NG = DEFAULT_WIND_TURBINE;
 
@@ -71,13 +72,13 @@ describe("SWCC certification validation", () => {
 // ---- Wind location data ----------------------------------------------------
 
 describe("wind locations", () => {
-  it("has data for all 5 cities", () => {
-    expect(Object.keys(WIND_LOCATIONS)).toHaveLength(5);
-    expect(WIND_LOCATIONS.hamburg).toBeDefined();
-    expect(WIND_LOCATIONS.berlin).toBeDefined();
-    expect(WIND_LOCATIONS.munich).toBeDefined();
-    expect(WIND_LOCATIONS.cologne).toBeDefined();
-    expect(WIND_LOCATIONS.boizenburg).toBeDefined();
+  it("has data for every PV location", () => {
+    // Wind data must exist for exactly the PV locations, otherwise
+    // `toSimConfig` silently falls back to Hamburg's wind climatology.
+    expect(Object.keys(WIND_LOCATIONS).sort()).toEqual(Object.keys(LOCATIONS).sort());
+    for (const key of Object.keys(LOCATIONS)) {
+      expect(WIND_LOCATIONS[key], `wind data missing for "${key}"`).toBeDefined();
+    }
   });
 
   it("has 12 monthly factors that sum to approximately 12", () => {

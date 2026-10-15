@@ -19,7 +19,7 @@ The UI is a single page (`index.html`). Every setting is adjustable via the side
 
 ## Features
 
-- **PV production** using a clear-sky analytical solar model calibrated to empirical kWh/kWp values for German cities (Hamburg, Berlin, Munich, Cologne, Boizenburg)
+- **PV production** using a clear-sky analytical solar model calibrated to empirical kWh/kWp values for German cities (Hamburg, Berlin, Munich, Cologne, Boizenburg) and European reference sites (Barcelona, Lisbon, Paris, London)
 - **Battery dispatch** at 15-minute resolution (self-consumption, strategic grid charging at negative prices, export into the day's most expensive hours)
 - **Consumer load profiles** for household (H0 standard), heat pump, domestic hot water heat pump (BWWP), and electric vehicle
 - **Revenue/cost analysis** under four tariff combinations: fixed feed-in vs. Direktvermarktung (market premium), and fixed import vs. dynamic (spot) vs. dynamic + section 14a/3 grid fees
@@ -78,7 +78,42 @@ All profiles are **deterministic** (no randomness), making the simulation fully 
 
 ### PV Generation (`src/calc/solar.ts`)
 
-Plane-of-array irradiation computed from tilt, orientation, and location (`LOCATIONS`). The absolute annual yield is anchored to empirical kWh/kWp figures at each orientation's *optimal* tilt, and the tilt deviation from that optimum then scales the yield physically from the clear-sky geometry — so a flat or vertical array correctly produces less than an optimally tilted one, and an east-west split out-yields a single east/west array. Calibrated to real-world yield data for German cities.
+Plane-of-array irradiation computed from tilt, orientation, and location (`LOCATIONS`). The absolute annual yield is anchored to empirical kWh/kWp figures at each orientation's *optimal* tilt, and the tilt deviation from that optimum then scales the yield physically from the clear-sky geometry — so a flat or vertical array correctly produces less than an optimally tilted one, and an east-west split out-yields a single east/west array.
+
+Each `LOCATIONS` entry stores its coordinates (`latDeg`, `lonDeg`) and a `annualYieldPerKWp` taken from PVGIS 5.3 grid-connected PV (SARAH3, 1 kWp c-Si, 14 % system loss, optimally tilted south array). Reproduce any entry with:
+
+```bash
+curl "https://re.jrc.ec.europa.eu/api/v5_3/PVcalc?lat=<latDeg>&lon=<lonDeg>\
+&peakpower=1&loss=14&optimalangles=1&outputformat=json"
+# → outputs.totals.fixed.E_y  (kWh per year per kWp)
+```
+
+| Key | Name | Lat | Lon | kWh/kWp/a | PVGIS optimum tilt |
+|-----|------|-----|-----|-----------|--------------------|
+| `hamburg` | Hamburg | 53.55 | 9.99 | 1000 | 40° |
+| `berlin` | Berlin | 52.52 | 13.40 | 1050 | 40° |
+| `munich` | München | 48.14 | 11.58 | 1100 | 39° |
+| `cologne` | Köln | 50.94 | 6.96 | 1050 | 39° |
+| `boizenburg` | Boizenburg | 53.33 | 10.77 | 1000 | 39° |
+| `barcelona` | Barcelona | 41.39 | 2.17 | 1570 | 38° |
+| `lisbon` | Lisboa | 38.72 | −9.14 | 1580 | 33° |
+| `paris` | Paris | 48.86 | 2.35 | 1150 | 39° |
+| `london` | London | 51.51 | −0.13 | 1020 | 40° |
+
+`tests/solar.test.ts` asserts that the generated curves stay within 5 % of these PVGIS figures, keep a realistic capacity factor (10–20 %), peak in a summer month, and peak within 8° of the PVGIS optimum tilt.
+
+> **Caveat:** the intraday *shape* is pure clear-sky geometry, so it has no cloud attenuation. Seasonal swing is therefore approximate — fine for the German sites, but the Mediterranean cities (Barcelona, Lisbon) genuinely have sunnier winters than the model implies, so their monthly profile is somewhat more winter-weighted in reality than the model shows.
+
+### Adding a location
+
+`LOCATIONS` (`src/calc/solar.ts`) is the single source of truth. The sidebar dropdown, wizard, chatbot and LLM tool schema all derive from it. A new location also needs:
+
+1. `annualYieldPerKWp` + coordinates in `LOCATIONS` (`src/calc/solar.ts`), from PVGIS as above.
+2. A matching entry in `WIND_LOCATIONS` (`src/calc/wind.ts`) — `report.ts` otherwise silently falls back to Hamburg's wind climatology.
+3. A `City` in `tariff.ts` (`City`, `CITIES`, `NET_ENTGELT_CT`, `LOCATION_TO_CITY`) — `cityForLocation()` otherwise falls back to Hamburg's Netzentgelt. Non-German cities are estimates; mark them and document the assumption (see `isEstimatedGridFee`).
+4. Optionally a line in `index.html`'s assumptions section, which is the user-facing methodology disclosure.
+
+`tests/solar.test.ts` and `tests/wind.test.ts` enforce 1–3, so a partial addition fails CI rather than degrading silently.
 
 ### Consumers (`src/calc/consumers.ts`)
 
@@ -235,7 +270,7 @@ Key parameters (all optional, defaults in `DEFAULT_SIM_PARAMS` in `src/calc/repo
 | `kwp` | Peak power (kWp) | 10 |
 | `tilt` | Tilt (degrees) | 35 |
 | `o` | Orientation `south/east/west/east_west` | south |
-| `loc` | Location `hamburg/berlin/munich/cologne/boizenburg` | hamburg |
+| `loc` | Location `hamburg/berlin/munich/cologne/boizenburg/barcelona/lisbon/paris/london` | hamburg |
 | `cap` | Battery capacity (kWh, 0 = no battery) | 10 |
 | `pwr` | Battery max power (kW) | 5 |
 | `minsoc`/`maxsoc` | SOC limits | 0.1 / 0.9 |

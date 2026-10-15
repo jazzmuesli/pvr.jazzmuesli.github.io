@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { runSimulation, SimParams } from "../src/calc/report";
 import { WIND_TURBINES } from "../src/calc/wind";
 import { DEFAULT_CAR_PARAMS } from "../src/calc/car";
+import { LOCATION_KEYS } from "../src/calc/solar";
 
 /**
  * Robust property-based (fuzz) test suite for the PV & Wind Simulation SPA.
@@ -34,7 +35,7 @@ describe("Simulation Invariant Fuzzing", () => {
       peakKWp: hasPV ? randomRange(0, 50) : 0,
       tiltDeg: randomRange(0, 60),
       orientation: randomElement(["south", "east", "west", "east_west", "north"]),
-      location: randomElement(["hamburg", "berlin", "munich", "cologne", "boizenburg"]),
+      location: randomElement(LOCATION_KEYS),
       capacityKWh: hasBattery ? randomRange(1, 40) : 0,
       maxPowerKW: hasBattery ? randomRange(1, 20) : 0,
       minSOC: randomRange(0, 0.4),

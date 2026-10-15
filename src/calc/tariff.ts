@@ -15,30 +15,80 @@
 import { monthOfStep, hourOfStep, TOTAL_STEPS } from "./types";
 
 export type TariffScheme = "fixed" | "dynamic" | "dynamic14a";
-export type City = "Hamburg" | "Muenchen" | "Berlin" | "Koeln" | "Boizenburg";
+export type City =
+  | "Hamburg"
+  | "Muenchen"
+  | "Berlin"
+  | "Koeln"
+  | "Boizenburg"
+  | "Barcelona"
+  | "Lisboa"
+  | "Paris"
+  | "London";
 
-export const CITIES: City[] = ["Hamburg", "Muenchen", "Berlin", "Koeln", "Boizenburg"];
+export const CITIES: City[] = [
+  "Hamburg",
+  "Muenchen",
+  "Berlin",
+  "Koeln",
+  "Boizenburg",
+  "Barcelona",
+  "Lisboa",
+  "Paris",
+  "London",
+];
+
+/** True for the non-German sites, whose grid fee is an estimate rather than a
+ *  published Netzentgelt sheet. The surrounding tariff components (electricity
+ *  tax, concession fee, §14a Modul 3) remain German and are *not* adjusted per
+ *  country — results for these cities are indicative only. */
+export function isEstimatedGridFee(city: City): boolean {
+  return !GERMAN_CITIES.has(city);
+}
+
+const GERMAN_CITIES: ReadonlySet<City> = new Set<City>([
+  "Hamburg",
+  "Muenchen",
+  "Berlin",
+  "Koeln",
+  "Boizenburg",
+]);
 
 // Standard (flat, Modul 1) Netzentgelt per city, ct/kWh.
 // Real 2026 figures (ns Arbeitspreis, netto) from Verivox Verbraucheratlas /
 // Stromvermittlung: Hamburg 11,80; Bayern (München) 8,63; Berlin 8,55;
 // NRW (Köln) 9,73; Mecklenburg-Vorpommern (Boizenburg) 7,23.
 // Boizenburg uses the user's VBE price sheet (Modul 1 = 7,50 ct/kWh).
+//
+// The five non-German entries are ROUNDED ESTIMATES of the all-in network
+// charge (regulated network + system charges / taxes levied on the grid), not
+// Netzentgelt in the German sense — the term does not exist in ES/PT/FR/UK.
+// They are order-of-magnitude inputs, comparable across the four cities, and
+// were chosen from typical 2024/25 household grid-fee levels:
+//   ES ~7 ct/kWh, PT ~7 ct/kWh, FR ~6 ct/kWh, UK ~9 ct/kWh.
 export const NET_ENTGELT_CT: Record<City, number> = {
   Hamburg: 11.8,
   Muenchen: 8.63,
   Berlin: 8.55,
   Koeln: 9.73,
   Boizenburg: 7.5,
+  Barcelona: 7.0,
+  Lisboa: 7.0,
+  Paris: 6.0,
+  London: 9.0,
 };
 
-// Map a PV location key (see solar.LOCATIONS) to its Netzentgelt city.
+// Map a PV location key (see solar.LOCATIONS) to its grid-fee city.
 const LOCATION_TO_CITY: Record<string, City> = {
   hamburg: "Hamburg",
   berlin: "Berlin",
   munich: "Muenchen",
   cologne: "Koeln",
   boizenburg: "Boizenburg",
+  barcelona: "Barcelona",
+  lisbon: "Lisboa",
+  paris: "Paris",
+  london: "London",
 };
 export function cityForLocation(loc: string): City {
   return LOCATION_TO_CITY[loc] ?? "Hamburg";

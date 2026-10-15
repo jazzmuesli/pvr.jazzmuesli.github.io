@@ -226,6 +226,33 @@ export const WIND_LOCATIONS: Record<string, WindLocation> = {
     latDeg: 53.33,
     monthlyFactors: [1.20, 1.16, 1.10, 0.96, 0.86, 0.80, 0.78, 0.80, 0.88, 1.00, 1.14, 1.22],
   },
+  // Non-German reference sites. Means from the Global Wind Atlas / ERA5 10 m
+  // climatology; the Iberian sites are coastal but have a markedly flatter
+  // seasonal profile than the German ones (no autumn-winter storm season).
+  barcelona: {
+    name: "Barcelona",
+    annualMeanWindMs: 4.5,
+    latDeg: 41.39,
+    monthlyFactors: [1.10, 1.12, 1.05, 1.02, 0.96, 0.90, 0.88, 0.90, 0.95, 1.01, 1.06, 1.05],
+  },
+  lisbon: {
+    name: "Lisboa",
+    annualMeanWindMs: 5.0,
+    latDeg: 38.72,
+    monthlyFactors: [1.15, 1.16, 1.10, 1.02, 0.92, 0.85, 0.82, 0.85, 0.92, 1.02, 1.08, 1.11],
+  },
+  paris: {
+    name: "Paris",
+    annualMeanWindMs: 3.4,
+    latDeg: 48.86,
+    monthlyFactors: [1.10, 1.10, 1.08, 0.98, 0.92, 0.88, 0.86, 0.88, 0.92, 1.02, 1.12, 1.14],
+  },
+  london: {
+    name: "London",
+    annualMeanWindMs: 4.6,
+    latDeg: 51.51,
+    monthlyFactors: [1.14, 1.12, 1.04, 0.96, 0.90, 0.86, 0.84, 0.88, 0.94, 1.02, 1.12, 1.18],
+  },
 };
 
 // ---- Power curve interpolation ---------------------------------------------

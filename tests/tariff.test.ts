@@ -4,8 +4,13 @@ import {
   importPriceArray,
   modul3NetzentgeltCt,
   NET_ENTGELT_CT,
+  CITIES,
+  City,
+  cityForLocation,
+  isEstimatedGridFee,
 } from "../src/calc/tariff";
 import { STEPS_PER_DAY, TOTAL_STEPS } from "../src/calc/types";
+import { LOCATIONS } from "../src/calc/solar";
 
 describe("modul3NetzentgeltCt (§14a Modul 3, Boizenburg VBE 2026)", () => {
   it("uses the cheap Niedriglasttarif at night (00:00–05:00)", () => {
@@ -75,5 +80,32 @@ describe("importPriceArray", () => {
     expect(arr.length).toBe(TOTAL_STEPS);
     const adders = 2.05 + 1.1 + 0.5 + 1.5;
     expect(arr[0]).toBeCloseTo(9 + NET_ENTGELT_CT.Berlin + adders, 5);
+  });
+});
+
+describe("non-German cities", () => {
+  it("marks exactly the non-German sites as estimated grid fees", () => {
+    // Regression: `city in GERMAN_CITIES` (the `in` operator) never matches a
+    // Set entry, so every city reported as estimated.
+    for (const c of ["Hamburg", "Muenchen", "Berlin", "Koeln", "Boizenburg"] as City[]) {
+      expect(isEstimatedGridFee(c), c).toBe(false);
+    }
+    for (const c of ["Barcelona", "Lisboa", "Paris", "London"] as City[]) {
+      expect(isEstimatedGridFee(c), c).toBe(true);
+    }
+  });
+
+  it("maps every location to a city with a positive grid fee", () => {
+    for (const key of Object.keys(LOCATIONS)) {
+      const city = cityForLocation(key);
+      expect(CITIES, key).toContain(city);
+      expect(NET_ENTGELT_CT[city], key).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps Iberian/French fees below the German reference level", () => {
+    expect(NET_ENTGELT_CT.Barcelona).toBeLessThan(NET_ENTGELT_CT.Hamburg);
+    expect(NET_ENTGELT_CT.Lisboa).toBeLessThan(NET_ENTGELT_CT.Hamburg);
+    expect(NET_ENTGELT_CT.Paris).toBeLessThan(NET_ENTGELT_CT.Koeln);
   });
 });

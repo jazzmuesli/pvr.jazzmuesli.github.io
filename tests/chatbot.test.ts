@@ -32,6 +32,33 @@ describe("advisor — applies user input directly (no confirmation)", () => {
     expect(o.scenario.location).toBe("hamburg");
   });
 
+  it("resolves German city names to valid LOCATIONS keys", () => {
+    // Regression: the advisor used to match "muenchen"/"koeln" and then stored
+    // those, which are NOT LOCATIONS keys — every consumer silently fell back to
+    // the Hamburg default. It must now match the display name but store the key.
+    for (const [phrase, key] of [
+      ["anderer ort münchen", "munich"],
+      ["anderer ort koeln", "cologne"],
+      ["anderer ort köln", "cologne"],
+      ["anderer ort boizenburg", "boizenburg"],
+    ] as const) {
+      const o = turn(phrase);
+      expect(o.scenario.location, phrase).toBe(key);
+    }
+  });
+
+  it("recognises the new non-German cities", () => {
+    for (const [phrase, key] of [
+      ["anderer ort barcelona", "barcelona"],
+      ["anderer ort lisboa", "lisbon"],
+      ["anderer ort london", "london"],
+      ["anderer ort paris", "paris"],
+    ] as const) {
+      const o = turn(phrase);
+      expect(o.scenario.location, phrase).toBe(key);
+    }
+  });
+
   it("adds a heat pump with the requested kWh", () => {
     const o = turn("wärmepumpe 3000");
     expect(o.scenario.heatpump).toBe(true);
