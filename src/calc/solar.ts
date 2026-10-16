@@ -201,8 +201,32 @@ function annualGeometry(latDeg: number, tiltDeg: number, azimuthDeg: number, eas
   return g;
 }
 
+/**
+ * Cache of computed PV series.
+ *
+ * `runSimulation` evaluates the same array up to five times per report: once
+ * for the headline result and once per historical price year in the tariff
+ * comparison. Only the *prices* differ between those runs — the sun does not.
+ * The geometry is a pure function of four scalars, so it is memoised.
+ *
+ * The cache stores the computed array and hands out a **copy**. A `Float64Array`
+ * is mutable, and a shared one would let a caller corrupt every later run —
+ * the failure mode `priceData.getYearPrices` already has (see below).
+ */
+const pvCache = new Map<string, Float64Array>();
+
 /** Hourly-equivalent production per 15-min step for the full simulated year. */
 export function pvProductionPerStep(input: PVInput): Float64Array {
+  const cacheKey = `${input.peakKWp}|${input.tiltDeg}|${input.orientation}|${input.location}`;
+  const hit = pvCache.get(cacheKey);
+  if (hit) return hit.slice();
+  const series = computePvProductionPerStep(input);
+  if (pvCache.size > 64) pvCache.clear();
+  pvCache.set(cacheKey, series);
+  return series.slice();
+}
+
+function computePvProductionPerStep(input: PVInput): Float64Array {
   const loc = LOCATIONS[input.location] ?? LOCATIONS[DEFAULT_LOCATION];
   const eastWest = input.orientation === "east_west";
   const az = orientationAzimuth(input.orientation);

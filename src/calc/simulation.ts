@@ -342,8 +342,17 @@ export function simulate(config: SimConfig): SimResult {
   const maxSOCkWh = b.maxSOC * cap;
   const minSOCkWh = b.minSOC * cap;
   let soc = active ? b.startSOC * cap : 0;
-  let pvSOC = active ? b.startSOC * cap : 0;
-  let windSOC = active ? b.startSOC * cap * 0 : 0; // wind-originated kWh in battery
+  // The battery's stored energy is tracked by *origin*, in three buckets.
+  // Only the first two count as self-consumption when they come back out: they
+  // were generated on this roof / on this turbine. The third holds both the
+  // energy deliberately bought from the grid and whatever was already in the
+  // battery at 00:00. The old code attributed the entire initial state of
+  // charge to PV and left grid purchases untagged, so a grid-charged kWh came
+  // back out and was reported as PV self-consumption — which then forced the
+  // report to cap self-consumption and to derive grid import as a residual.
+  let pvSOC = 0;   // kWh in battery originating from PV
+  let windSOC = 0; // kWh in battery originating from wind
+  let gridSOC = active ? b.startSOC * cap : 0; // bought from the grid + inherited
 
   const loadArr = new Float64Array(TOTAL_STEPS);
   const socArr = new Float64Array(TOTAL_STEPS);
@@ -355,6 +364,7 @@ export function simulate(config: SimConfig): SimResult {
   const dischargeToLoad = new Float64Array(TOTAL_STEPS);
   const dischargeToLoadPV = new Float64Array(TOTAL_STEPS);
   const dischargeToLoadWind = new Float64Array(TOTAL_STEPS);
+  const dischargeToLoadGrid = new Float64Array(TOTAL_STEPS);
   const exportSolar = new Float64Array(TOTAL_STEPS);
   const exportWind = new Float64Array(TOTAL_STEPS);
   const exportBattery = new Float64Array(TOTAL_STEPS);
@@ -435,6 +445,7 @@ export function simulate(config: SimConfig): SimResult {
         if (e > 0) {
           chargeGrid[i] = e;
           soc += e * eff;
+          gridSOC += e * eff;
           gridImpVal += e;
         }
       }
@@ -503,16 +514,17 @@ export function simulate(config: SimConfig): SimResult {
       const e = Math.min(maxStepEnergy, avail, L);
       if (e > 0) {
         dischargeToLoad[i] = e;
-        const totalSOC = pvSOC + windSOC;
-        const pvFrac = totalSOC > 0 ? pvSOC / totalSOC : 0;
-        const windFrac = totalSOC > 0 ? windSOC / totalSOC : 0;
-        const pvPart = e * pvFrac;
-        const windPart = e * windFrac;
+        const totalSOC = pvSOC + windSOC + gridSOC;
+        const pvPart = totalSOC > 0 ? (e * pvSOC) / totalSOC : 0;
+        const windPart = totalSOC > 0 ? (e * windSOC) / totalSOC : 0;
+        const gridPart = totalSOC > 0 ? (e * gridSOC) / totalSOC : 0;
         dischargeToLoadPV[i] = pvPart;
         dischargeToLoadWind[i] = windPart;
+        dischargeToLoadGrid[i] = gridPart;
         soc -= e;
         pvSOC = Math.max(0, pvSOC - pvPart);
         windSOC = Math.max(0, windSOC - windPart);
+        gridSOC = Math.max(0, gridSOC - gridPart);
         L -= e;
       }
     }
@@ -534,12 +546,13 @@ export function simulate(config: SimConfig): SimResult {
         const e = Math.min(maxAdd, avail);
         if (e > 0) {
           exportBattery[i] = e;
-          const totalSOC = pvSOC + windSOC;
-          const pvFrac = totalSOC > 0 ? pvSOC / totalSOC : 0;
-          const windFrac = totalSOC > 0 ? windSOC / totalSOC : 0;
+          const totalSOC = pvSOC + windSOC + gridSOC;
+          const pvPart = totalSOC > 0 ? (e * pvSOC) / totalSOC : 0;
+          const windPart = totalSOC > 0 ? (e * windSOC) / totalSOC : 0;
           soc -= e;
-          pvSOC = Math.max(0, pvSOC - e * pvFrac);
-          windSOC = Math.max(0, windSOC - e * windFrac);
+          pvSOC = Math.max(0, pvSOC - pvPart);
+          windSOC = Math.max(0, windSOC - windPart);
+          gridSOC = Math.max(0, gridSOC - (totalSOC > 0 ? (e * gridSOC) / totalSOC : 0));
         }
       }
     }
@@ -564,6 +577,7 @@ export function simulate(config: SimConfig): SimResult {
     dischargeToLoad,
     dischargeToLoadPV,
     dischargeToLoadWind,
+    dischargeToLoadGrid,
     exportSolar,
     exportWind,
     exportBattery,

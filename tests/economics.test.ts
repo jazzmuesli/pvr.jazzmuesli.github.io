@@ -65,8 +65,16 @@ describe("computeEconomics", () => {
     expect(sumExp).toBeCloseTo(e.totalExportKWh, 1);
   });
 
-  it("typical-day has 12 months x 24 hours", () => {
-    expect(e.typicalDay.length).toBe(12 * 24);
+  it("the monthly breakdown has one row per month", () => {
+    // (This used to assert on `typicalDay`, a second 12x24 profile that
+    // computeEconomics built on every call and that only this assertion ever
+    // read. report.ts already builds the real one; the duplicate is gone.)
+    expect(e.monthly.map((m) => m.month)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  });
+
+  it("monthly self-consumption sums to the annual figure", () => {
+    const sumSc = e.monthly.reduce((a, m) => a + m.selfConsumptionKWh, 0);
+    expect(sumSc).toBeCloseTo(e.selfConsumptionKWh, 6);
   });
 
   it("comparison: dynamic14a import cost differs from dynamic", () => {

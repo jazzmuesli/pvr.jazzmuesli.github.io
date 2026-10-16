@@ -21,14 +21,21 @@ function hourlyToQuarterHourly(hourly: number[]): Float64Array {
 
 const cache = new Map<string, Float64Array>();
 
-/** Return the 15-minute price series (EUR/MWh) for a given year. */
+/**
+ * Return the 15-minute price series (EUR/MWh) for a given year.
+ *
+ * A **copy** is returned: `Float64Array` is mutable, and this array was handed
+ * out directly, so any caller that wrote to it silently changed every later
+ * report in the process. The series are 35 040 doubles; copying costs about
+ * 0.03 ms, which is not worth the class of bug.
+ */
 export function getYearPrices(year: string | number): Float64Array {
   const key = String(year);
   const cached = cache.get(key);
-  if (cached) return cached;
+  if (cached) return cached.slice();
   const hourly = (pricesJson as Record<string, number[]>)[key];
   if (!hourly) throw new Error(`No price data for year ${key}`);
   const expanded = hourlyToQuarterHourly(hourly);
   cache.set(key, expanded);
-  return expanded;
+  return expanded.slice();
 }

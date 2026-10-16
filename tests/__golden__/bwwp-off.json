@@ -1,0 +1,6716 @@
+{
+  "amortisation": {
+    "annualBenefitEUR": 2337.4484,
+    "paybackYears": 13.690142,
+    "totalInvestmentEUR": 32000
+  },
+  "cashflow": {
+    "discountedPaybackYears": "Infinity",
+    "irrPercent": 1.363935,
+    "lcoeCtPerKWh": 16.185921,
+    "npvEUR": -4654.046059,
+    "simplePaybackYears": 17.987413,
+    "yearly": [
+      {
+        "batteryCapacityFactor": 1,
+        "cumulativeCashflowEUR": -32000,
+        "discountedCashflowEUR": -32000,
+        "discountedCumulativeCashflowEUR": -32000,
+        "grossBenefitEUR": 0,
+        "netCashflowEUR": -32000,
+        "omCostEUR": 0,
+        "priceFactor": 1,
+        "pvYieldFactor": 1,
+        "replacementCostEUR": 32000,
+        "standbyCostEUR": 0,
+        "year": 0
+      },
+      {
+        "batteryCapacityFactor": 0.99,
+        "cumulativeCashflowEUR": -30128.045858,
+        "discountedCashflowEUR": 1817.431205,
+        "discountedCumulativeCashflowEUR": -30182.568795,
+        "grossBenefitEUR": 2372.276382,
+        "netCashflowEUR": 1871.954142,
+        "omCostEUR": 489.6,
+        "priceFactor": 1.02,
+        "pvYieldFactor": 0.995,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 10.72224,
+        "year": 1
+      },
+      {
+        "batteryCapacityFactor": 0.9801,
+        "cumulativeCashflowEUR": -28230.751244,
+        "discountedCashflowEUR": 1788.382142,
+        "discountedCumulativeCashflowEUR": -28394.186652,
+        "grossBenefitEUR": 2407.6233,
+        "netCashflowEUR": 1897.294615,
+        "omCostEUR": 499.392,
+        "priceFactor": 1.0404,
+        "pvYieldFactor": 0.990025,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 10.936685,
+        "year": 2
+      },
+      {
+        "batteryCapacityFactor": 0.970299,
+        "cumulativeCashflowEUR": -26307.789615,
+        "discountedCashflowEUR": 1759.782295,
+        "discountedCumulativeCashflowEUR": -26634.404357,
+        "grossBenefitEUR": 2443.496887,
+        "netCashflowEUR": 1922.961628,
+        "omCostEUR": 509.37984,
+        "priceFactor": 1.061208,
+        "pvYieldFactor": 0.985075,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 11.155418,
+        "year": 3
+      },
+      {
+        "batteryCapacityFactor": 0.960596,
+        "cumulativeCashflowEUR": -24358.830588,
+        "discountedCashflowEUR": 1731.624852,
+        "discountedCumulativeCashflowEUR": -24902.779504,
+        "grossBenefitEUR": 2479.90499,
+        "netCashflowEUR": 1948.959027,
+        "omCostEUR": 519.567437,
+        "priceFactor": 1.082432,
+        "pvYieldFactor": 0.98015,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 11.378527,
+        "year": 4
+      },
+      {
+        "batteryCapacityFactor": 0.95099,
+        "cumulativeCashflowEUR": -22383.539897,
+        "discountedCashflowEUR": 1703.903103,
+        "discountedCumulativeCashflowEUR": -23198.876402,
+        "grossBenefitEUR": 2516.855575,
+        "netCashflowEUR": 1975.290692,
+        "omCostEUR": 529.958786,
+        "priceFactor": 1.104081,
+        "pvYieldFactor": 0.975249,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 11.606097,
+        "year": 5
+      },
+      {
+        "batteryCapacityFactor": 0.94148,
+        "cumulativeCashflowEUR": -20381.579354,
+        "discountedCashflowEUR": 1676.610437,
+        "discountedCumulativeCashflowEUR": -21522.265965,
+        "grossBenefitEUR": 2554.356723,
+        "netCashflowEUR": 2001.960542,
+        "omCostEUR": 540.557961,
+        "priceFactor": 1.126162,
+        "pvYieldFactor": 0.970373,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 11.838219,
+        "year": 6
+      },
+      {
+        "batteryCapacityFactor": 0.932065,
+        "cumulativeCashflowEUR": -18352.60682,
+        "discountedCashflowEUR": 1649.740344,
+        "discountedCumulativeCashflowEUR": -19872.525621,
+        "grossBenefitEUR": 2592.416638,
+        "netCashflowEUR": 2028.972534,
+        "omCostEUR": 551.36912,
+        "priceFactor": 1.148686,
+        "pvYieldFactor": 0.965521,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 12.074984,
+        "year": 7
+      },
+      {
+        "batteryCapacityFactor": 0.922745,
+        "cumulativeCashflowEUR": -16296.276161,
+        "discountedCashflowEUR": 1623.286412,
+        "discountedCumulativeCashflowEUR": -18249.23921,
+        "grossBenefitEUR": 2631.043646,
+        "netCashflowEUR": 2056.33066,
+        "omCostEUR": 562.396503,
+        "priceFactor": 1.171659,
+        "pvYieldFactor": 0.960693,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 12.316483,
+        "year": 8
+      },
+      {
+        "batteryCapacityFactor": 0.913517,
+        "cumulativeCashflowEUR": -14212.23721,
+        "discountedCashflowEUR": 1597.242322,
+        "discountedCumulativeCashflowEUR": -16651.996887,
+        "grossBenefitEUR": 2670.246196,
+        "netCashflowEUR": 2084.03895,
+        "omCostEUR": 573.644433,
+        "priceFactor": 1.195093,
+        "pvYieldFactor": 0.95589,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 12.562813,
+        "year": 9
+      },
+      {
+        "batteryCapacityFactor": 0.904382,
+        "cumulativeCashflowEUR": -12100.135737,
+        "discountedCashflowEUR": 1571.601854,
+        "discountedCumulativeCashflowEUR": -15080.395033,
+        "grossBenefitEUR": 2710.032865,
+        "netCashflowEUR": 2112.101474,
+        "omCostEUR": 585.117322,
+        "priceFactor": 1.218994,
+        "pvYieldFactor": 0.95111,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 12.814069,
+        "year": 10
+      },
+      {
+        "batteryCapacityFactor": 0.895338,
+        "cumulativeCashflowEUR": -9959.613401,
+        "discountedCashflowEUR": 1546.358878,
+        "discountedCumulativeCashflowEUR": -13534.036155,
+        "grossBenefitEUR": 2750.412354,
+        "netCashflowEUR": 2140.522336,
+        "omCostEUR": 596.819668,
+        "priceFactor": 1.243374,
+        "pvYieldFactor": 0.946355,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 13.070351,
+        "year": 11
+      },
+      {
+        "batteryCapacityFactor": 0.886385,
+        "cumulativeCashflowEUR": -7790.307722,
+        "discountedCashflowEUR": 1521.507357,
+        "discountedCumulativeCashflowEUR": -12012.528798,
+        "grossBenefitEUR": 2791.393498,
+        "netCashflowEUR": 2169.305679,
+        "omCostEUR": 608.756061,
+        "priceFactor": 1.268242,
+        "pvYieldFactor": 0.941623,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 13.331758,
+        "year": 12
+      },
+      {
+        "batteryCapacityFactor": 0.877521,
+        "cumulativeCashflowEUR": -11413.081873,
+        "discountedCashflowEUR": -2466.932913,
+        "discountedCumulativeCashflowEUR": -14479.46171,
+        "grossBenefitEUR": 2832.985261,
+        "netCashflowEUR": -3622.774151,
+        "omCostEUR": 620.931183,
+        "priceFactor": 1.293607,
+        "pvYieldFactor": 0.936915,
+        "replacementCostEUR": 5821.229837,
+        "standbyCostEUR": 13.598393,
+        "year": 13
+      },
+      {
+        "batteryCapacityFactor": 0.868746,
+        "cumulativeCashflowEUR": -9185.105298,
+        "discountedCashflowEUR": 1472.954985,
+        "discountedCumulativeCashflowEUR": -13006.506726,
+        "grossBenefitEUR": 2875.196742,
+        "netCashflowEUR": 2227.976575,
+        "omCostEUR": 633.349806,
+        "priceFactor": 1.319479,
+        "pvYieldFactor": 0.93223,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 13.870361,
+        "year": 14
+      },
+      {
+        "batteryCapacityFactor": 0.860058,
+        "cumulativeCashflowEUR": -6927.232695,
+        "discountedCashflowEUR": 1449.242506,
+        "discountedCumulativeCashflowEUR": -11557.26422,
+        "grossBenefitEUR": 2918.037173,
+        "netCashflowEUR": 2257.872603,
+        "omCostEUR": 646.016802,
+        "priceFactor": 1.345868,
+        "pvYieldFactor": 0.927569,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 14.147768,
+        "year": 15
+      },
+      {
+        "batteryCapacityFactor": 0.851458,
+        "cumulativeCashflowEUR": -4639.08463,
+        "discountedCashflowEUR": 1425.898226,
+        "discountedCumulativeCashflowEUR": -10131.365993,
+        "grossBenefitEUR": 2961.515927,
+        "netCashflowEUR": 2288.148065,
+        "omCostEUR": 658.937138,
+        "priceFactor": 1.372786,
+        "pvYieldFactor": 0.922931,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 14.430723,
+        "year": 16
+      },
+      {
+        "batteryCapacityFactor": 0.842943,
+        "cumulativeCashflowEUR": -2320.277334,
+        "discountedCashflowEUR": 1402.916549,
+        "discountedCumulativeCashflowEUR": -8728.449445,
+        "grossBenefitEUR": 3005.642515,
+        "netCashflowEUR": 2318.807296,
+        "omCostEUR": 672.115881,
+        "priceFactor": 1.400241,
+        "pvYieldFactor": 0.918316,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 14.719338,
+        "year": 17
+      },
+      {
+        "batteryCapacityFactor": 0.834514,
+        "cumulativeCashflowEUR": 29.57733,
+        "discountedCashflowEUR": 1380.291959,
+        "discountedCumulativeCashflowEUR": -7348.157486,
+        "grossBenefitEUR": 3050.426588,
+        "netCashflowEUR": 2349.854665,
+        "omCostEUR": 685.558199,
+        "priceFactor": 1.428246,
+        "pvYieldFactor": 0.913725,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 15.013725,
+        "year": 18
+      },
+      {
+        "batteryCapacityFactor": 0.826169,
+        "cumulativeCashflowEUR": 2410.871913,
+        "discountedCashflowEUR": 1358.019026,
+        "discountedCumulativeCashflowEUR": -5990.13846,
+        "grossBenefitEUR": 3095.877944,
+        "netCashflowEUR": 2381.294582,
+        "omCostEUR": 699.269363,
+        "priceFactor": 1.456811,
+        "pvYieldFactor": 0.909156,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 15.313999,
+        "year": 19
+      },
+      {
+        "batteryCapacityFactor": 0.817907,
+        "cumulativeCashflowEUR": 4824.003409,
+        "discountedCashflowEUR": 1336.092401,
+        "discountedCumulativeCashflowEUR": -4654.046059,
+        "grossBenefitEUR": 3142.006526,
+        "netCashflowEUR": 2413.131496,
+        "omCostEUR": 713.25475,
+        "priceFactor": 1.485947,
+        "pvYieldFactor": 0.90461,
+        "replacementCostEUR": 0,
+        "standbyCostEUR": 15.620279,
+        "year": 20
+      }
+    ]
+  },
+  "co2Analysis": {
+    "baseline": {
+      "carCo2Kg": 1937,
+      "co2Kg": 7106,
+      "co2SavedKg": 0,
+      "co2Tonnes": 7.11,
+      "electricityCo2Kg": 880,
+      "gasSavedKWh": 0,
+      "heatingCo2Kg": 4289,
+      "label": "Basis: Diesel + Gas + Netz",
+      "savedEUR": 0
+    },
+    "evWpNoPv": {
+      "carCo2Kg": 0,
+      "co2Kg": 3624,
+      "co2SavedKg": 3482,
+      "co2Tonnes": 3.62,
+      "electricityCo2Kg": 3624,
+      "gasSavedKWh": 17870,
+      "heatingCo2Kg": 0,
+      "label": "+ E-Auto + WP ohne PV: alles Netz",
+      "savedEUR": 2703
+    },
+    "plusEv": {
+      "carCo2Kg": 0,
+      "co2Kg": 5903,
+      "co2SavedKg": 1203,
+      "co2Tonnes": 5.9,
+      "electricityCo2Kg": 1614,
+      "gasSavedKWh": 0,
+      "heatingCo2Kg": 4289,
+      "label": "+ E-Auto: EV + Gas + Netz",
+      "savedEUR": 1926
+    },
+    "plusEvPv": {
+      "carCo2Kg": 0,
+      "co2Kg": 5022,
+      "co2SavedKg": 2084,
+      "co2Tonnes": 5.02,
+      "electricityCo2Kg": 734,
+      "gasSavedKWh": 0,
+      "heatingCo2Kg": 4289,
+      "label": "+ E-Auto + PV: EV + Gas + PV",
+      "savedEUR": 2502
+    },
+    "plusEvWp": {
+      "carCo2Kg": 0,
+      "co2Kg": 1112,
+      "co2SavedKg": 5994,
+      "co2Tonnes": 1.11,
+      "electricityCo2Kg": 1112,
+      "gasSavedKWh": 17870,
+      "heatingCo2Kg": 0,
+      "label": "+ E-Auto + WP: EV + WP + PV",
+      "savedEUR": 3866
+    },
+    "plusPv": {
+      "carCo2Kg": 1937,
+      "co2Kg": 6226,
+      "co2SavedKg": 880,
+      "co2Tonnes": 6.23,
+      "electricityCo2Kg": 0,
+      "gasSavedKWh": 0,
+      "heatingCo2Kg": 4289,
+      "label": "+ PV: Diesel + Gas + PV",
+      "savedEUR": 576
+    },
+    "wpDieselGrid": {
+      "carCo2Kg": 1937,
+      "co2Kg": 4828,
+      "co2SavedKg": 2278,
+      "co2Tonnes": 4.83,
+      "electricityCo2Kg": 2891,
+      "gasSavedKWh": 17870,
+      "heatingCo2Kg": 0,
+      "label": "+ WP, Diesel + Netz (ohne PV)",
+      "savedEUR": 1124
+    }
+  },
+  "daily": [
+    [
+      {
+        "avgPrice": 98.173226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 2.75315,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.920548,
+          "heatpump": 1.637879,
+          "household": 0.194723
+        },
+        "meteredImportKWh": 2.664338,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 2.129509,
+        "totalLoadKWh": 2.75315,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.971935,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 2.791827,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.920548,
+          "heatpump": 1.698541,
+          "household": 0.172738
+        },
+        "meteredImportKWh": 2.701768,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 2.039918,
+        "totalLoadKWh": 2.791827,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.961613,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 2.836786,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.920548,
+          "heatpump": 1.759203,
+          "household": 0.157034
+        },
+        "meteredImportKWh": 2.76594,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.954118,
+        "totalLoadKWh": 2.836786,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 94.806452,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 2.891167,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.920548,
+          "heatpump": 1.819866,
+          "household": 0.150753
+        },
+        "meteredImportKWh": 2.891167,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.891167,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 102.03129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 2.897448,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.920548,
+          "heatpump": 1.819866,
+          "household": 0.157034
+        },
+        "meteredImportKWh": 2.897448,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.897448,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.967097,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 1.953926,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.759203,
+          "household": 0.194723
+        },
+        "meteredImportKWh": 1.953926,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.953926,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 118.268387,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 1.951948,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.637879,
+          "household": 0.314069
+        },
+        "meteredImportKWh": 1.951948,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.951948,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 133.523548,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 1.953777,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.455892,
+          "household": 0.50251
+        },
+        "meteredImportKWh": 1.953777,
+        "pvKWh": 0.004626,
+        "selfUseKWh": 0.004626,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.958403,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 132.740645,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 1.193292,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.213244,
+          "household": 0.445978
+        },
+        "meteredImportKWh": 1.193292,
+        "pvKWh": 0.465929,
+        "selfUseKWh": 0.465929,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.659221,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 126.193548,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0.059638,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.031257,
+          "household": 0.32035
+        },
+        "meteredImportKWh": 0.059638,
+        "pvKWh": 1.664576,
+        "selfUseKWh": 1.291969,
+        "socKWh": 2.105959,
+        "totalLoadKWh": 1.351607,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.323226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.175342,
+          "heatpump": 0.94633,
+          "household": 0.282662
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.201115,
+        "selfUseKWh": 1.404335,
+        "socKWh": 2.742961,
+        "totalLoadKWh": 1.404335,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 83.773548,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.175342,
+          "heatpump": 0.873535,
+          "household": 0.270099
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.545249,
+        "selfUseKWh": 1.318977,
+        "socKWh": 3.753837,
+        "totalLoadKWh": 1.318977,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 63.617742,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.175342,
+          "heatpump": 0.849271,
+          "household": 0.282662
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.601548,
+        "selfUseKWh": 1.307275,
+        "socKWh": 4.991811,
+        "totalLoadKWh": 1.307275,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 60.425484,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.175342,
+          "heatpump": 0.849271,
+          "household": 0.266959
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.286037,
+        "selfUseKWh": 1.291572,
+        "socKWh": 6.056024,
+        "totalLoadKWh": 1.291572,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 59.77871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0.000975,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.175342,
+          "heatpump": 0.873535,
+          "household": 0.266959
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.87603,
+        "selfUseKWh": 1.314861,
+        "socKWh": 6.769114,
+        "totalLoadKWh": 1.315836,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.414839,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0.018544,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.94633,
+          "household": 0.282662
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.771428,
+        "selfUseKWh": 1.210448,
+        "socKWh": 6.732228,
+        "totalLoadKWh": 1.228992,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 92.755484,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0.029662,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.067654,
+          "household": 0.314069
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.033322,
+        "selfUseKWh": 1.352061,
+        "socKWh": 5.625192,
+        "totalLoadKWh": 1.381723,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 126.019355,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0.184763,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.213244,
+          "household": 0.383164
+        },
+        "meteredImportKWh": 0.171516,
+        "pvKWh": 0,
+        "selfUseKWh": 1.411645,
+        "socKWh": 4.17601,
+        "totalLoadKWh": 1.596408,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 148.354516,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0.80725,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.334568,
+          "household": 0.471103
+        },
+        "meteredImportKWh": 0.80725,
+        "pvKWh": 0,
+        "selfUseKWh": 0.998421,
+        "socKWh": 3.016738,
+        "totalLoadKWh": 1.805671,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 160.923226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 1.382486,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.431628,
+          "household": 0.533917
+        },
+        "meteredImportKWh": 1.382486,
+        "pvKWh": 0,
+        "selfUseKWh": 0.583059,
+        "socKWh": 2.284831,
+        "totalLoadKWh": 1.965545,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 149.352258,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 1.816134,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.480157,
+          "household": 0.50251
+        },
+        "meteredImportKWh": 1.816134,
+        "pvKWh": 0,
+        "selfUseKWh": 0.166533,
+        "socKWh": 1.968656,
+        "totalLoadKWh": 1.982667,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 128.737742,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 1.992648,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.552952,
+          "household": 0.439696
+        },
+        "meteredImportKWh": 1.992648,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.992648,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 112.48871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 1.946957,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.601482,
+          "household": 0.345476
+        },
+        "meteredImportKWh": 1.946957,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.946957,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 100.317097,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 1.895415,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.637879,
+          "household": 0.257536
+        },
+        "meteredImportKWh": 1.895415,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.895415,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 93.972143,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 1.420386,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.832877,
+          "heatpump": 1.526935,
+          "household": 0.189643
+        },
+        "meteredImportKWh": 1.420386,
+        "pvKWh": 0,
+        "selfUseKWh": 1.129069,
+        "socKWh": 2.714595,
+        "totalLoadKWh": 2.549455,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 89.941071,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 2.192196,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.832877,
+          "heatpump": 1.583488,
+          "household": 0.168232
+        },
+        "meteredImportKWh": 2.192196,
+        "pvKWh": 0,
+        "selfUseKWh": 0.392401,
+        "socKWh": 1.982261,
+        "totalLoadKWh": 2.584597,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 94.595,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 2.625856,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.832877,
+          "heatpump": 1.640041,
+          "household": 0.152938
+        },
+        "meteredImportKWh": 2.625856,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.625856,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 98.696429,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 2.676292,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.832877,
+          "heatpump": 1.696595,
+          "household": 0.14682
+        },
+        "meteredImportKWh": 2.676292,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.676292,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.165714,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 2.682409,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.832877,
+          "heatpump": 1.696595,
+          "household": 0.152938
+        },
+        "meteredImportKWh": 2.682409,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.682409,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.381429,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 1.829684,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.640041,
+          "household": 0.189643
+        },
+        "meteredImportKWh": 1.829684,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.829684,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 117.958571,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 1.832811,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.526935,
+          "household": 0.305876
+        },
+        "meteredImportKWh": 1.832811,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.832811,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 126.128929,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 1.429926,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.357276,
+          "household": 0.489401
+        },
+        "meteredImportKWh": 1.429926,
+        "pvKWh": 0.418416,
+        "selfUseKWh": 0.416751,
+        "socKWh": 1.935695,
+        "totalLoadKWh": 1.846677,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 133.036429,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0.139948,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.131063,
+          "household": 0.434344
+        },
+        "meteredImportKWh": 0.139948,
+        "pvKWh": 1.98091,
+        "selfUseKWh": 1.425458,
+        "socKWh": 2.190248,
+        "totalLoadKWh": 1.565407,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 121.088214,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.961404,
+          "household": 0.311993
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.997673,
+        "selfUseKWh": 1.273397,
+        "socKWh": 3.447392,
+        "totalLoadKWh": 1.273397,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 103.550357,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.263014,
+          "heatpump": 0.882229,
+          "household": 0.275288
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.473433,
+        "selfUseKWh": 1.420531,
+        "socKWh": 5.276564,
+        "totalLoadKWh": 1.420531,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 80.821071,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.263014,
+          "heatpump": 0.814365,
+          "household": 0.263053
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.956437,
+        "selfUseKWh": 1.340432,
+        "socKWh": 7.584708,
+        "totalLoadKWh": 1.340432,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 65.765714,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.263014,
+          "heatpump": 0.791744,
+          "household": 0.275288
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.016196,
+        "selfUseKWh": 1.330046,
+        "socKWh": 10.14558,
+        "totalLoadKWh": 1.330046,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 56.449643,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.263014,
+          "heatpump": 0.791744,
+          "household": 0.259994
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.624333,
+        "selfUseKWh": 1.314752,
+        "socKWh": 12.505928,
+        "totalLoadKWh": 1.314752,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 59.845714,
+        "exportKWh": 0.196083,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.263014,
+          "heatpump": 0.814365,
+          "household": 0.259994
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.130146,
+        "selfUseKWh": 1.337374,
+        "socKWh": 14.294328,
+        "totalLoadKWh": 1.337374,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 71.631429,
+        "exportKWh": 0.455372,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.882229,
+          "household": 0.275288
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.350654,
+        "selfUseKWh": 1.157517,
+        "socKWh": 15.327313,
+        "totalLoadKWh": 1.157517,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 92.84,
+        "exportKWh": 0.099579,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.995336,
+          "household": 0.305876
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.76158,
+        "selfUseKWh": 1.301211,
+        "socKWh": 15.194812,
+        "totalLoadKWh": 1.301211,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 117.523214,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.131063,
+          "household": 0.373168
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.017679,
+        "selfUseKWh": 1.504232,
+        "socKWh": 13.939071,
+        "totalLoadKWh": 1.504232,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 146.764286,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.244169,
+          "household": 0.458814
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.702983,
+        "socKWh": 12.310619,
+        "totalLoadKWh": 1.702983,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 158.565,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.334654,
+          "household": 0.519989
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.854643,
+        "socKWh": 10.512849,
+        "totalLoadKWh": 1.854643,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 147.476071,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.379897,
+          "household": 0.489401
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.869298,
+        "socKWh": 8.649046,
+        "totalLoadKWh": 1.869298,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 123.829286,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0.097157,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.447761,
+          "household": 0.428226
+        },
+        "meteredImportKWh": 0.097157,
+        "pvKWh": 0,
+        "selfUseKWh": 1.77883,
+        "socKWh": 6.813025,
+        "totalLoadKWh": 1.875987,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 105.848214,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0.394851,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.493003,
+          "household": 0.336463
+        },
+        "meteredImportKWh": 0.394851,
+        "pvKWh": 0,
+        "selfUseKWh": 1.434616,
+        "socKWh": 5.251139,
+        "totalLoadKWh": 1.829467,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.143571,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0.642917,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.526935,
+          "household": 0.250818
+        },
+        "meteredImportKWh": 0.642917,
+        "pvKWh": 0,
+        "selfUseKWh": 1.134837,
+        "socKWh": 4.005632,
+        "totalLoadKWh": 1.777753,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 84.571613,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.657534,
+          "heatpump": 1.197415,
+          "household": 0.17779
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 2.03274,
+        "socKWh": 7.565571,
+        "totalLoadKWh": 2.03274,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 87.888065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0.00276,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.657534,
+          "heatpump": 1.241764,
+          "household": 0.157717
+        },
+        "meteredImportKWh": 0.00276,
+        "pvKWh": 0,
+        "selfUseKWh": 2.054255,
+        "socKWh": 5.518349,
+        "totalLoadKWh": 2.057015,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.310645,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0.067323,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.657534,
+          "heatpump": 1.286113,
+          "household": 0.143379
+        },
+        "meteredImportKWh": 0.067323,
+        "pvKWh": 0,
+        "selfUseKWh": 2.019703,
+        "socKWh": 3.486724,
+        "totalLoadKWh": 2.087026,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 90.493871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 1.331604,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.657534,
+          "heatpump": 1.330461,
+          "household": 0.137644
+        },
+        "meteredImportKWh": 1.331604,
+        "pvKWh": 0,
+        "selfUseKWh": 0.794035,
+        "socKWh": 2.035128,
+        "totalLoadKWh": 2.12564,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.083226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 2.131375,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.657534,
+          "heatpump": 1.330461,
+          "household": 0.143379
+        },
+        "meteredImportKWh": 2.131375,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.131375,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 95.133548,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 1.458624,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.286113,
+          "household": 0.17779
+        },
+        "meteredImportKWh": 1.458624,
+        "pvKWh": 0.005279,
+        "selfUseKWh": 0.005279,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.463903,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 109.467419,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0.985905,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.197415,
+          "household": 0.286759
+        },
+        "meteredImportKWh": 0.985905,
+        "pvKWh": 0.557771,
+        "selfUseKWh": 0.498268,
+        "socKWh": 1.951535,
+        "totalLoadKWh": 1.484174,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 120.294194,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0.090655,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.064369,
+          "household": 0.458814
+        },
+        "meteredImportKWh": 0.090655,
+        "pvKWh": 2.470874,
+        "selfUseKWh": 1.432528,
+        "socKWh": 2.490266,
+        "totalLoadKWh": 1.523183,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 123.21129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.886974,
+          "household": 0.407197
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.884071,
+        "selfUseKWh": 1.294171,
+        "socKWh": 4.447271,
+        "totalLoadKWh": 1.294171,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 115.716129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.753928,
+          "household": 0.292494
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.565115,
+        "selfUseKWh": 1.046422,
+        "socKWh": 7.480326,
+        "totalLoadKWh": 1.046422,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 97.378065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.438356,
+          "heatpump": 0.69184,
+          "household": 0.258083
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.35852,
+        "selfUseKWh": 1.388279,
+        "socKWh": 11.083324,
+        "totalLoadKWh": 1.388279,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 77.784194,
+        "exportKWh": 0.595728,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.438356,
+          "heatpump": 0.638621,
+          "household": 0.246612
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.882325,
+        "selfUseKWh": 1.32359,
+        "socKWh": 15.037108,
+        "totalLoadKWh": 1.32359,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 58.041613,
+        "exportKWh": 2.807877,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.438356,
+          "heatpump": 0.620882,
+          "household": 0.258083
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.943797,
+        "selfUseKWh": 1.317321,
+        "socKWh": 17.541375,
+        "totalLoadKWh": 1.317321,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 58.47871,
+        "exportKWh": 3.878494,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.438356,
+          "heatpump": 0.620882,
+          "household": 0.243745
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.539029,
+        "selfUseKWh": 1.302983,
+        "socKWh": 18.331272,
+        "totalLoadKWh": 1.302983,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 57.51129,
+        "exportKWh": 3.435662,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.438356,
+          "heatpump": 0.638621,
+          "household": 0.243745
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.756384,
+        "selfUseKWh": 1.320722,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.320722,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 68.99129,
+        "exportKWh": 3.158013,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.69184,
+          "household": 0.258083
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.107936,
+        "selfUseKWh": 0.949923,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.949923,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 87.026774,
+        "exportKWh": 1.885953,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.780537,
+          "household": 0.286759
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.951713,
+        "selfUseKWh": 1.067296,
+        "socKWh": 18.384966,
+        "totalLoadKWh": 1.067296,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 108.886774,
+        "exportKWh": 0.269083,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.886974,
+          "household": 0.349845
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.981466,
+        "selfUseKWh": 1.23682,
+        "socKWh": 18.135138,
+        "totalLoadKWh": 1.23682,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 136.292581,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.975672,
+          "household": 0.430138
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.032964,
+        "selfUseKWh": 1.405809,
+        "socKWh": 17.012387,
+        "totalLoadKWh": 1.405809,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 146.740645,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.04663,
+          "household": 0.48749
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.534119,
+        "socKWh": 15.527709,
+        "totalLoadKWh": 1.534119,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 138.079032,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.082108,
+          "household": 0.458814
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.540922,
+        "socKWh": 13.989338,
+        "totalLoadKWh": 1.540922,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 119.14,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.135327,
+          "household": 0.401462
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.536789,
+        "socKWh": 12.450999,
+        "totalLoadKWh": 1.536789,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 97.856452,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.170806,
+          "household": 0.315434
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.48624,
+        "socKWh": 10.945803,
+        "totalLoadKWh": 1.48624,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 92.334194,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.197415,
+          "household": 0.235142
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.432557,
+        "socKWh": 9.493115,
+        "totalLoadKWh": 1.432557,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 85.393333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.464658,
+          "heatpump": 0.683651,
+          "household": 0.165938
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.314246,
+        "socKWh": 11.264267,
+        "totalLoadKWh": 1.314246,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 79.298333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.464658,
+          "heatpump": 0.708971,
+          "household": 0.147203
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.320832,
+        "socKWh": 9.945905,
+        "totalLoadKWh": 1.320832,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 77.217,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.464658,
+          "heatpump": 0.734292,
+          "household": 0.133821
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.33277,
+        "socKWh": 8.617612,
+        "totalLoadKWh": 1.33277,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 80.377333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.464658,
+          "heatpump": 0.759612,
+          "household": 0.128468
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.352738,
+        "socKWh": 7.272362,
+        "totalLoadKWh": 1.352738,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 83.582667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.464658,
+          "heatpump": 0.759612,
+          "household": 0.133821
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.007465,
+        "selfUseKWh": 1.35809,
+        "socKWh": 5.918145,
+        "totalLoadKWh": 1.35809,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.704333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.734292,
+          "household": 0.165938
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.628327,
+        "selfUseKWh": 0.900229,
+        "socKWh": 5.12046,
+        "totalLoadKWh": 0.900229,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 101.555333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.683651,
+          "household": 0.267641
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.735544,
+        "selfUseKWh": 0.951292,
+        "socKWh": 6.033097,
+        "totalLoadKWh": 0.951292,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 110.867333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.60769,
+          "household": 0.428226
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.394391,
+        "selfUseKWh": 1.035916,
+        "socKWh": 8.730531,
+        "totalLoadKWh": 1.035916,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 108.834667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.506408,
+          "household": 0.380051
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.323329,
+        "selfUseKWh": 0.886459,
+        "socKWh": 12.6007,
+        "totalLoadKWh": 0.886459,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.539,
+        "exportKWh": 1.788817,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.430447,
+          "household": 0.272994
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.275784,
+        "selfUseKWh": 0.703441,
+        "socKWh": 16.701354,
+        "totalLoadKWh": 0.703441,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 71.177667,
+        "exportKWh": 5.358801,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.631233,
+          "heatpump": 0.394998,
+          "household": 0.240877
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.213558,
+        "selfUseKWh": 1.267108,
+        "socKWh": 18.305638,
+        "totalLoadKWh": 1.267108,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 43.631,
+        "exportKWh": 5.202055,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.631233,
+          "heatpump": 0.364614,
+          "household": 0.230172
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.730367,
+        "selfUseKWh": 1.226018,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.226018,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 23.951333,
+        "exportKWh": 4.784146,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.631233,
+          "heatpump": 0.354486,
+          "household": 0.240877
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.790514,
+        "selfUseKWh": 1.226596,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.226596,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 15.387333,
+        "exportKWh": 4.500124,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.631233,
+          "heatpump": 0.354486,
+          "household": 0.227495
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.3902,
+        "selfUseKWh": 1.213214,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.213214,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 24.357333,
+        "exportKWh": 3.880551,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.631233,
+          "heatpump": 0.364614,
+          "household": 0.227495
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.556258,
+        "selfUseKWh": 1.223342,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.223342,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 42.697667,
+        "exportKWh": 4.084181,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.394998,
+          "household": 0.240877
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.531591,
+        "selfUseKWh": 0.635876,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.635876,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.634667,
+        "exportKWh": 3.98378,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.445639,
+          "household": 0.267641
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.697061,
+        "selfUseKWh": 0.713281,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.713281,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.062333,
+        "exportKWh": 2.450546,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.506408,
+          "household": 0.326522
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.267031,
+        "selfUseKWh": 0.832931,
+        "socKWh": 18.353678,
+        "totalLoadKWh": 0.832931,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 123.665,
+        "exportKWh": 1.36903,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.557049,
+          "household": 0.401462
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.100823,
+        "selfUseKWh": 0.958511,
+        "socKWh": 17.251588,
+        "totalLoadKWh": 0.958511,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 132.119667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.597562,
+          "household": 0.45499
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.043433,
+        "selfUseKWh": 1.052552,
+        "socKWh": 16.515345,
+        "totalLoadKWh": 1.052552,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 125.626667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.617818,
+          "household": 0.428226
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.046044,
+        "socKWh": 15.46935,
+        "totalLoadKWh": 1.046044,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 106.184667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.648202,
+          "household": 0.374698
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.0229,
+        "socKWh": 14.437771,
+        "totalLoadKWh": 1.0229,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 89.969333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.668459,
+          "household": 0.294405
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.962864,
+        "socKWh": 13.452393,
+        "totalLoadKWh": 0.962864,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 80.878,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.683651,
+          "household": 0.219466
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.903117,
+        "socKWh": 12.526871,
+        "totalLoadKWh": 0.903117,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 70.345806,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.244512,
+          "household": 0.155778
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.674263,
+        "socKWh": 14.439008,
+        "totalLoadKWh": 0.674263,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 71.082258,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.253568,
+          "household": 0.13819
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.665731,
+        "socKWh": 13.770078,
+        "totalLoadKWh": 0.665731,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 74.689032,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.262624,
+          "household": 0.125628
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.662224,
+        "socKWh": 13.106539,
+        "totalLoadKWh": 0.662224,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.846452,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.27168,
+          "household": 0.120602
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.666255,
+        "socKWh": 12.441796,
+        "totalLoadKWh": 0.666255,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 76.09871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.27168,
+          "household": 0.125628
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.422493,
+        "selfUseKWh": 0.67128,
+        "socKWh": 11.943485,
+        "totalLoadKWh": 0.67128,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 81.313871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.262624,
+          "household": 0.155778
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.367267,
+        "selfUseKWh": 0.418402,
+        "socKWh": 12.932233,
+        "totalLoadKWh": 0.418402,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.87129,
+        "exportKWh": 0.080645,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.244512,
+          "household": 0.251255
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.191934,
+        "selfUseKWh": 0.495767,
+        "socKWh": 15.852815,
+        "totalLoadKWh": 0.495767,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.80871,
+        "exportKWh": 3.685677,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.217344,
+          "household": 0.402008
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.40075,
+        "selfUseKWh": 0.619352,
+        "socKWh": 18.114866,
+        "totalLoadKWh": 0.619352,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.06129,
+        "exportKWh": 6.219007,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.18112,
+          "household": 0.356782
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.348983,
+        "selfUseKWh": 0.537902,
+        "socKWh": 18.077075,
+        "totalLoadKWh": 0.537902,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 79.616452,
+        "exportKWh": 6.670399,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.153952,
+          "household": 0.25628
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.554315,
+        "selfUseKWh": 0.410232,
+        "socKWh": 18.303697,
+        "totalLoadKWh": 0.410232,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 57.45,
+        "exportKWh": 7.159681,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.141273,
+          "household": 0.22613
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.455962,
+        "selfUseKWh": 1.189321,
+        "socKWh": 18.358737,
+        "totalLoadKWh": 1.189321,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 26.733548,
+        "exportKWh": 5.208317,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.130406,
+          "household": 0.216079
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.951715,
+        "selfUseKWh": 1.168403,
+        "socKWh": 18.384745,
+        "totalLoadKWh": 1.168403,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 6.355161,
+        "exportKWh": 4.524315,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.126784,
+          "household": 0.22613
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.008602,
+        "selfUseKWh": 1.174831,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.174831,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -0.593548,
+        "exportKWh": 4.073695,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.126784,
+          "household": 0.213567
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.622975,
+        "selfUseKWh": 1.162269,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.162269,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 11.453871,
+        "exportKWh": 4.491008,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.130406,
+          "household": 0.213567
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.820747,
+        "selfUseKWh": 1.165891,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.165891,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 33.022581,
+        "exportKWh": 5.271516,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.141273,
+          "household": 0.22613
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.66141,
+        "selfUseKWh": 0.367403,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.367403,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 59.132903,
+        "exportKWh": 5.219559,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.159385,
+          "household": 0.251255
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.630199,
+        "selfUseKWh": 0.410641,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.410641,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.01,
+        "exportKWh": 4.116035,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.18112,
+          "household": 0.306531
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.557845,
+        "selfUseKWh": 0.487651,
+        "socKWh": 18.357761,
+        "totalLoadKWh": 0.487651,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 108.756129,
+        "exportKWh": 2.333819,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.199232,
+          "household": 0.376883
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.912985,
+        "selfUseKWh": 0.576114,
+        "socKWh": 17.900231,
+        "totalLoadKWh": 0.576114,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 118.460968,
+        "exportKWh": 1.360613,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.213721,
+          "household": 0.427134
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.810574,
+        "selfUseKWh": 0.640855,
+        "socKWh": 17.194306,
+        "totalLoadKWh": 0.640855,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 112.141613,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.220966,
+          "household": 0.402008
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.018979,
+        "selfUseKWh": 0.622974,
+        "socKWh": 16.720132,
+        "totalLoadKWh": 0.622974,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.909032,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.231833,
+          "household": 0.351757
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.583591,
+        "socKWh": 16.121772,
+        "totalLoadKWh": 0.583591,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 84.166452,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.239078,
+          "household": 0.276381
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.515459,
+        "socKWh": 15.580764,
+        "totalLoadKWh": 0.515459,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 75.175806,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.244512,
+          "household": 0.206029
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.450541,
+        "socKWh": 15.105879,
+        "totalLoadKWh": 0.450541,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 66.174667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.074133,
+          "household": 0.149005
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.387522,
+        "socKWh": 16.111877,
+        "totalLoadKWh": 0.387522,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 63.388667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.076879,
+          "household": 0.132182
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.373444,
+        "socKWh": 15.733154,
+        "totalLoadKWh": 0.373444,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 63.696667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.079624,
+          "household": 0.120165
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.364173,
+        "socKWh": 15.365504,
+        "totalLoadKWh": 0.364173,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 64.728667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.08237,
+          "household": 0.115359
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.051289,
+        "selfUseKWh": 0.362112,
+        "socKWh": 15.015441,
+        "totalLoadKWh": 0.362112,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 65.961667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.08237,
+          "household": 0.120165
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.117215,
+        "selfUseKWh": 0.366919,
+        "socKWh": 15.20508,
+        "totalLoadKWh": 0.366919,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 73.872667,
+        "exportKWh": 0.241745,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.079624,
+          "household": 0.149005
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.148719,
+        "selfUseKWh": 0.22863,
+        "socKWh": 17.17338,
+        "totalLoadKWh": 0.22863,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 80.643333,
+        "exportKWh": 4.292237,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.074133,
+          "household": 0.240331
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.693879,
+        "selfUseKWh": 0.314464,
+        "socKWh": 18.243655,
+        "totalLoadKWh": 0.314464,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 84.283,
+        "exportKWh": 5.680017,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.065896,
+          "household": 0.38453
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.767284,
+        "selfUseKWh": 0.450426,
+        "socKWh": 18.078993,
+        "totalLoadKWh": 0.450426,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 82.715,
+        "exportKWh": 6.372571,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.054913,
+          "household": 0.34127
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.874017,
+        "selfUseKWh": 0.396183,
+        "socKWh": 18.121547,
+        "totalLoadKWh": 0.396183,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 65.469333,
+        "exportKWh": 7.314945,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.046676,
+          "household": 0.245138
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.085707,
+        "selfUseKWh": 0.291814,
+        "socKWh": 18.353475,
+        "totalLoadKWh": 0.291814,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 34.647,
+        "exportKWh": 6.678295,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.042832,
+          "household": 0.216298
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.961412,
+        "selfUseKWh": 1.190637,
+        "socKWh": 18.384725,
+        "totalLoadKWh": 1.190637,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 1.507667,
+        "exportKWh": 4.130941,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.039538,
+          "household": 0.206685
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.442546,
+        "selfUseKWh": 1.177729,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.177729,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -25.748667,
+        "exportKWh": 2.775364,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.038439,
+          "household": 0.216298
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.496932,
+        "selfUseKWh": 1.186244,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.186244,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -27.525,
+        "exportKWh": 2.388329,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.038439,
+          "household": 0.204281
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.120958,
+        "selfUseKWh": 1.174228,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.174228,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -12.193,
+        "exportKWh": 2.868602,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.039538,
+          "household": 0.204281
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.339819,
+        "selfUseKWh": 1.175326,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.175326,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 18.163333,
+        "exportKWh": 4.626886,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.042832,
+          "household": 0.216298
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.205827,
+        "selfUseKWh": 0.25913,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.25913,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 46.864,
+        "exportKWh": 5.710711,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.048324,
+          "household": 0.240331
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.999366,
+        "selfUseKWh": 0.288655,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.288655,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 77.321667,
+        "exportKWh": 4.705709,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.054913,
+          "household": 0.293204
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.006458,
+        "selfUseKWh": 0.348117,
+        "socKWh": 18.357432,
+        "totalLoadKWh": 0.348117,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.679,
+        "exportKWh": 3.788165,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.060405,
+          "household": 0.360496
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.585669,
+        "selfUseKWh": 0.420901,
+        "socKWh": 17.817923,
+        "totalLoadKWh": 0.420901,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 113.005,
+        "exportKWh": 1.053084,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.064798,
+          "household": 0.408563
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.64921,
+        "selfUseKWh": 0.47336,
+        "socKWh": 17.51986,
+        "totalLoadKWh": 0.47336,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.104,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.066994,
+          "household": 0.38453
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.141865,
+        "selfUseKWh": 0.451524,
+        "socKWh": 17.57858,
+        "totalLoadKWh": 0.451524,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 86.448667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.070289,
+          "household": 0.336463
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.406752,
+        "socKWh": 17.168371,
+        "totalLoadKWh": 0.406752,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 75.915333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.072486,
+          "household": 0.264364
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.33685,
+        "socKWh": 16.805308,
+        "totalLoadKWh": 0.33685,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 69.433333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.074133,
+          "household": 0.197071
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.271204,
+        "socKWh": 16.509486,
+        "totalLoadKWh": 0.271204,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 62.828065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.056294,
+          "household": 0.152392
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.373069,
+        "socKWh": 15.744795,
+        "totalLoadKWh": 0.373069,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 61.827419,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.058379,
+          "household": 0.135186
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.357949,
+        "socKWh": 15.381176,
+        "totalLoadKWh": 0.357949,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 61.928065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.060464,
+          "household": 0.122897
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.347744,
+        "socKWh": 15.029605,
+        "totalLoadKWh": 0.347744,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 65.852258,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.062549,
+          "household": 0.117981
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.01576,
+        "selfUseKWh": 0.344913,
+        "socKWh": 14.687571,
+        "totalLoadKWh": 0.344913,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 67.420323,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.164384,
+          "heatpump": 0.062549,
+          "household": 0.122897
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.789589,
+        "selfUseKWh": 0.349829,
+        "socKWh": 14.697015,
+        "totalLoadKWh": 0.349829,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 70.998065,
+        "exportKWh": 0.050553,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.060464,
+          "household": 0.152392
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.845744,
+        "selfUseKWh": 0.212856,
+        "socKWh": 16.392745,
+        "totalLoadKWh": 0.212856,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 77.883548,
+        "exportKWh": 3.218475,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.056294,
+          "household": 0.245793
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.494054,
+        "selfUseKWh": 0.302087,
+        "socKWh": 18.166687,
+        "totalLoadKWh": 0.302087,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 81.115806,
+        "exportKWh": 5.687586,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.050039,
+          "household": 0.393269
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.621445,
+        "selfUseKWh": 0.443308,
+        "socKWh": 18.066081,
+        "totalLoadKWh": 0.443308,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 81.119032,
+        "exportKWh": 5.878874,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.041699,
+          "household": 0.349026
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.651603,
+        "selfUseKWh": 0.390725,
+        "socKWh": 18.247219,
+        "totalLoadKWh": 0.390725,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 68.76,
+        "exportKWh": 7.512697,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.035444,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.870157,
+        "selfUseKWh": 0.286153,
+        "socKWh": 18.283132,
+        "totalLoadKWh": 0.286153,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 43.961613,
+        "exportKWh": 6.866573,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.032525,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.756448,
+        "selfUseKWh": 1.185246,
+        "socKWh": 18.382931,
+        "totalLoadKWh": 1.185246,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 13.405484,
+        "exportKWh": 4.684531,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.030023,
+          "household": 0.211382
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.243004,
+        "selfUseKWh": 1.172912,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.172912,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -8.509677,
+        "exportKWh": 3.394389,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.029189,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 9.297174,
+        "selfUseKWh": 1.18191,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.18191,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": -13.793226,
+        "exportKWh": 3.001413,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.029189,
+          "household": 0.208924
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.915227,
+        "selfUseKWh": 1.16962,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.16962,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 0.017742,
+        "exportKWh": 2.912541,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.931507,
+          "heatpump": 0.030023,
+          "household": 0.208924
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.122604,
+        "selfUseKWh": 1.170454,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.170454,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 20.880968,
+        "exportKWh": 4.974743,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.032525,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.97222,
+        "selfUseKWh": 0.253739,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.253739,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 49.21871,
+        "exportKWh": 5.55392,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.036695,
+          "household": 0.245793
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.836408,
+        "selfUseKWh": 0.282488,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.282488,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 74.073871,
+        "exportKWh": 4.518244,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.041699,
+          "household": 0.299867
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.81397,
+        "selfUseKWh": 0.341567,
+        "socKWh": 18.357763,
+        "totalLoadKWh": 0.341567,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 92.333548,
+        "exportKWh": 2.919213,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.045869,
+          "household": 0.36869
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.299043,
+        "selfUseKWh": 0.414559,
+        "socKWh": 18.005593,
+        "totalLoadKWh": 0.414559,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 106.315806,
+        "exportKWh": 1.714095,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.049205,
+          "household": 0.417848
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.243027,
+        "selfUseKWh": 0.467053,
+        "socKWh": 17.180604,
+        "totalLoadKWh": 0.467053,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 101.997742,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.050873,
+          "household": 0.393269
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.064812,
+        "selfUseKWh": 0.444142,
+        "socKWh": 17.078632,
+        "totalLoadKWh": 0.444142,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.410323,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.053375,
+          "household": 0.34411
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.397485,
+        "socKWh": 16.667585,
+        "totalLoadKWh": 0.397485,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 74.205484,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.055043,
+          "household": 0.270372
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.325415,
+        "socKWh": 16.315144,
+        "totalLoadKWh": 0.325415,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 67.812258,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.056294,
+          "household": 0.20155
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.257844,
+        "socKWh": 16.03196,
+        "totalLoadKWh": 0.257844,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 64.78129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.056294,
+          "household": 0.152392
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.482658,
+        "socKWh": 15.607835,
+        "totalLoadKWh": 0.482658,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 64.469677,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.058379,
+          "household": 0.135186
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.467538,
+        "socKWh": 15.134627,
+        "totalLoadKWh": 0.467538,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 61.958065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.060464,
+          "household": 0.122897
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.457333,
+        "socKWh": 14.673467,
+        "totalLoadKWh": 0.457333,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 66.90129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.062549,
+          "household": 0.117981
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.454502,
+        "socKWh": 14.217903,
+        "totalLoadKWh": 0.454502,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 68.475806,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.273973,
+          "heatpump": 0.062549,
+          "household": 0.122897
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.077256,
+        "selfUseKWh": 0.459418,
+        "socKWh": 13.784904,
+        "totalLoadKWh": 0.459418,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.12,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.060464,
+          "household": 0.152392
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.347056,
+        "selfUseKWh": 0.212856,
+        "socKWh": 14.172631,
+        "totalLoadKWh": 0.212856,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 83.674194,
+        "exportKWh": 0.268241,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.056294,
+          "household": 0.245793
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.470574,
+        "selfUseKWh": 0.302087,
+        "socKWh": 16.419699,
+        "totalLoadKWh": 0.302087,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.734839,
+        "exportKWh": 3.934058,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.050039,
+          "household": 0.393269
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.889036,
+        "selfUseKWh": 0.443308,
+        "socKWh": 17.95596,
+        "totalLoadKWh": 0.443308,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.134516,
+        "exportKWh": 5.283579,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.041699,
+          "household": 0.349026
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.779328,
+        "selfUseKWh": 0.390725,
+        "socKWh": 18.156533,
+        "totalLoadKWh": 0.390725,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 77.375484,
+        "exportKWh": 6.276505,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.035444,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.878448,
+        "selfUseKWh": 0.286153,
+        "socKWh": 18.329556,
+        "totalLoadKWh": 0.286153,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 53.883548,
+        "exportKWh": 6.388506,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.032525,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.801083,
+        "selfUseKWh": 1.075657,
+        "socKWh": 18.383723,
+        "totalLoadKWh": 1.075657,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 27.341613,
+        "exportKWh": 4.881068,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.030023,
+          "household": 0.211382
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.307086,
+        "selfUseKWh": 1.063323,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.063323,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 9.190645,
+        "exportKWh": 4.220568,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.029189,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 8.362527,
+        "selfUseKWh": 1.072321,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.072321,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 2.178065,
+        "exportKWh": 3.995909,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.029189,
+          "household": 0.208924
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.963513,
+        "selfUseKWh": 1.060031,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.060031,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 9.596129,
+        "exportKWh": 3.514977,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.821918,
+          "heatpump": 0.030023,
+          "household": 0.208924
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 7.136458,
+        "selfUseKWh": 1.060865,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 1.060865,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 29.966452,
+        "exportKWh": 4.803418,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.032525,
+          "household": 0.221214
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.011366,
+        "selfUseKWh": 0.253739,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.253739,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 54.447419,
+        "exportKWh": 4.84817,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.036695,
+          "household": 0.245793
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.130658,
+        "selfUseKWh": 0.282488,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.282488,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 78.124839,
+        "exportKWh": 3.527773,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.041699,
+          "household": 0.299867
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.871886,
+        "selfUseKWh": 0.341567,
+        "socKWh": 18.367566,
+        "totalLoadKWh": 0.341567,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.83,
+        "exportKWh": 1.94827,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.045869,
+          "household": 0.36869
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.867745,
+        "selfUseKWh": 0.414559,
+        "socKWh": 17.550552,
+        "totalLoadKWh": 0.414559,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.571613,
+        "exportKWh": 0.217666,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.049205,
+          "household": 0.417848
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.201128,
+        "selfUseKWh": 0.467053,
+        "socKWh": 17.543437,
+        "totalLoadKWh": 0.467053,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 105.717419,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.050873,
+          "household": 0.393269
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.444142,
+        "socKWh": 17.088877,
+        "totalLoadKWh": 0.444142,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 84.93,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.053375,
+          "household": 0.34411
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.397485,
+        "socKWh": 16.673896,
+        "totalLoadKWh": 0.397485,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 76.336774,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.055043,
+          "household": 0.270372
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.325415,
+        "socKWh": 16.321454,
+        "totalLoadKWh": 0.325415,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 67.362581,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.056294,
+          "household": 0.20155
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.257844,
+        "socKWh": 16.038271,
+        "totalLoadKWh": 0.257844,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 69.686333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.499726,
+          "heatpump": 0.169887,
+          "household": 0.160858
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.830471,
+        "socKWh": 14.6303,
+        "totalLoadKWh": 0.830471,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 71.612667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.499726,
+          "heatpump": 0.176179,
+          "household": 0.142697
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.818602,
+        "socKWh": 13.807247,
+        "totalLoadKWh": 0.818602,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.816667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.499726,
+          "heatpump": 0.182471,
+          "household": 0.129724
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.811921,
+        "socKWh": 12.992821,
+        "totalLoadKWh": 0.811921,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 74.646667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.499726,
+          "heatpump": 0.188763,
+          "household": 0.124535
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.813024,
+        "socKWh": 12.18021,
+        "totalLoadKWh": 0.813024,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 76.521667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.499726,
+          "heatpump": 0.188763,
+          "household": 0.129724
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.818213,
+        "socKWh": 11.363942,
+        "totalLoadKWh": 0.818213,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 78.814333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.182471,
+          "household": 0.160858
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.077653,
+        "selfUseKWh": 0.343329,
+        "socKWh": 10.866599,
+        "totalLoadKWh": 0.343329,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.035333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.169887,
+          "household": 0.259448
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.347702,
+        "selfUseKWh": 0.429335,
+        "socKWh": 11.17057,
+        "totalLoadKWh": 0.429335,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 100.852333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.151011,
+          "household": 0.415117
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.373178,
+        "selfUseKWh": 0.566128,
+        "socKWh": 13.209075,
+        "totalLoadKWh": 0.566128,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.951333,
+        "exportKWh": 0.617837,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.125842,
+          "household": 0.368416
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.529698,
+        "selfUseKWh": 0.494259,
+        "socKWh": 16.448187,
+        "totalLoadKWh": 0.494259,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 89.443667,
+        "exportKWh": 4.120343,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.106966,
+          "household": 0.264637
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.259334,
+        "selfUseKWh": 0.371603,
+        "socKWh": 18.185998,
+        "totalLoadKWh": 0.371603,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 78.428,
+        "exportKWh": 5.166522,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.596164,
+          "heatpump": 0.098157,
+          "household": 0.233503
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.152241,
+        "selfUseKWh": 0.927825,
+        "socKWh": 18.354875,
+        "totalLoadKWh": 0.927825,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 58.599333,
+        "exportKWh": 5.492987,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.596164,
+          "heatpump": 0.090606,
+          "household": 0.223125
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.671335,
+        "selfUseKWh": 0.909896,
+        "socKWh": 18.384104,
+        "totalLoadKWh": 0.909896,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 46.156,
+        "exportKWh": 5.378734,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.596164,
+          "heatpump": 0.08809,
+          "household": 0.233503
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.7275,
+        "selfUseKWh": 0.917757,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.917757,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 36.989667,
+        "exportKWh": 5.007418,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.596164,
+          "heatpump": 0.08809,
+          "household": 0.220531
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 6.316817,
+        "selfUseKWh": 0.904785,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.904785,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 37.736667,
+        "exportKWh": 4.395419,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.596164,
+          "heatpump": 0.090606,
+          "household": 0.220531
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 5.478671,
+        "selfUseKWh": 0.907302,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.907302,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 54.339667,
+        "exportKWh": 4.200207,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.098157,
+          "household": 0.233503
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.695104,
+        "selfUseKWh": 0.33166,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.33166,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 72.485667,
+        "exportKWh": 3.349739,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.110741,
+          "household": 0.259448
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.719928,
+        "selfUseKWh": 0.370189,
+        "socKWh": 18.38535,
+        "totalLoadKWh": 0.370189,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 90.381667,
+        "exportKWh": 1.439272,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.125842,
+          "household": 0.316527
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.856615,
+        "selfUseKWh": 0.442369,
+        "socKWh": 18.353256,
+        "totalLoadKWh": 0.442369,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.913667,
+        "exportKWh": 0.403535,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.138426,
+          "household": 0.389172
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.200022,
+        "selfUseKWh": 0.527599,
+        "socKWh": 17.803571,
+        "totalLoadKWh": 0.527599,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 123.785667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.148494,
+          "household": 0.441062
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.589556,
+        "socKWh": 17.258207,
+        "totalLoadKWh": 0.589556,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 110.382333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.153527,
+          "household": 0.415117
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.568645,
+        "socKWh": 16.681721,
+        "totalLoadKWh": 0.568645,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 97.242,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.161078,
+          "household": 0.363227
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.524305,
+        "socKWh": 16.140788,
+        "totalLoadKWh": 0.524305,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 81.199333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.166112,
+          "household": 0.285393
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.451505,
+        "socKWh": 15.661983,
+        "totalLoadKWh": 0.451505,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 74.569,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.169887,
+          "household": 0.212748
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.382634,
+        "socKWh": 15.253522,
+        "totalLoadKWh": 0.382634,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 77.419677,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.727671,
+          "heatpump": 0.71997,
+          "household": 0.172711
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.620352,
+        "socKWh": 10.416062,
+        "totalLoadKWh": 1.620352,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 82.578065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.727671,
+          "heatpump": 0.746636,
+          "household": 0.153211
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.627518,
+        "socKWh": 8.791232,
+        "totalLoadKWh": 1.627518,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 79.5,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.727671,
+          "heatpump": 0.773301,
+          "household": 0.139283
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.640255,
+        "socKWh": 7.155753,
+        "totalLoadKWh": 1.640255,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 80.768065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.727671,
+          "heatpump": 0.799967,
+          "household": 0.133711
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.661349,
+        "socKWh": 5.502314,
+        "totalLoadKWh": 1.661349,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 85.649032,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.727671,
+          "heatpump": 0.799967,
+          "household": 0.139283
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.666921,
+        "socKWh": 3.837482,
+        "totalLoadKWh": 1.666921,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 89.041935,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 0.03731,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.773301,
+          "household": 0.172711
+        },
+        "meteredImportKWh": 0.03731,
+        "pvKWh": 0,
+        "selfUseKWh": 0.908702,
+        "socKWh": 2.635762,
+        "totalLoadKWh": 0.946012,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 97.755161,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 0.685132,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.71997,
+          "household": 0.278565
+        },
+        "meteredImportKWh": 0.685132,
+        "pvKWh": 0.053785,
+        "selfUseKWh": 0.313403,
+        "socKWh": 2.076333,
+        "totalLoadKWh": 0.998535,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 107.996129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 0.372915,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.639973,
+          "household": 0.445705
+        },
+        "meteredImportKWh": 0.372915,
+        "pvKWh": 1.057143,
+        "selfUseKWh": 0.712763,
+        "socKWh": 2.175577,
+        "totalLoadKWh": 1.085678,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 110.555161,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.533311,
+          "household": 0.395563
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.746845,
+        "selfUseKWh": 0.928874,
+        "socKWh": 3.356012,
+        "totalLoadKWh": 0.928874,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 104.334194,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.453314,
+          "household": 0.284137
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.578311,
+        "selfUseKWh": 0.737451,
+        "socKWh": 5.750395,
+        "totalLoadKWh": 0.737451,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 87.879677,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.368219,
+          "heatpump": 0.415983,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.153246,
+        "selfUseKWh": 1.034911,
+        "socKWh": 8.596419,
+        "totalLoadKWh": 1.034911,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 68.458065,
+        "exportKWh": 0.083882,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.368219,
+          "heatpump": 0.383984,
+          "household": 0.239566
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.6596,
+        "selfUseKWh": 0.991769,
+        "socKWh": 11.883501,
+        "totalLoadKWh": 0.991769,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 54.810968,
+        "exportKWh": 0.672229,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.368219,
+          "heatpump": 0.373318,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.714933,
+        "selfUseKWh": 0.992246,
+        "socKWh": 15.098869,
+        "totalLoadKWh": 0.992246,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 50.737097,
+        "exportKWh": 1.816392,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.368219,
+          "heatpump": 0.373318,
+          "household": 0.236781
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 4.309286,
+        "selfUseKWh": 0.978318,
+        "socKWh": 17.05545,
+        "totalLoadKWh": 0.978318,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 50.405806,
+        "exportKWh": 2.058245,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.368219,
+          "heatpump": 0.383984,
+          "household": 0.236781
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.691428,
+        "selfUseKWh": 0.988984,
+        "socKWh": 17.923292,
+        "totalLoadKWh": 0.988984,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 62.407742,
+        "exportKWh": 2.124876,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.415983,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 3.018117,
+        "selfUseKWh": 0.666692,
+        "socKWh": 18.276256,
+        "totalLoadKWh": 0.666692,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 78.30129,
+        "exportKWh": 0.831162,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.469314,
+          "household": 0.278565
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.487198,
+        "selfUseKWh": 0.747879,
+        "socKWh": 18.301072,
+        "totalLoadKWh": 0.747879,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.869032,
+        "exportKWh": 0.012159,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.533311,
+          "household": 0.33985
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.143111,
+        "selfUseKWh": 0.873161,
+        "socKWh": 17.806809,
+        "totalLoadKWh": 0.873161,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 123.132581,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.586642,
+          "household": 0.417848
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.00449,
+        "socKWh": 16.865996,
+        "totalLoadKWh": 1.00449,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 134.765806,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.629307,
+          "household": 0.473561
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.102868,
+        "socKWh": 15.800019,
+        "totalLoadKWh": 1.102868,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 127.107742,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.65064,
+          "household": 0.445705
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.096344,
+        "socKWh": 14.701228,
+        "totalLoadKWh": 1.096344,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 106.907419,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.682638,
+          "household": 0.389992
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.07263,
+        "socKWh": 13.619706,
+        "totalLoadKWh": 1.07263,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.914839,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.703971,
+          "household": 0.306422
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.010393,
+        "socKWh": 12.585974,
+        "totalLoadKWh": 1.010393,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 83.96871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.71997,
+          "household": 0.228424
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 0.948394,
+        "socKWh": 11.614331,
+        "totalLoadKWh": 0.948394,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 85.665333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 1.889826,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.885479,
+          "heatpump": 1.197415,
+          "household": 0.18287
+        },
+        "meteredImportKWh": 1.889826,
+        "pvKWh": 0,
+        "selfUseKWh": 0.375938,
+        "socKWh": 2.250048,
+        "totalLoadKWh": 2.265765,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 86.459,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 2.199621,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.885479,
+          "heatpump": 1.241764,
+          "household": 0.162223
+        },
+        "meteredImportKWh": 2.199621,
+        "pvKWh": 0,
+        "selfUseKWh": 0.089846,
+        "socKWh": 2.078666,
+        "totalLoadKWh": 2.289467,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 87.369667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 2.241766,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.885479,
+          "heatpump": 1.286113,
+          "household": 0.147476
+        },
+        "meteredImportKWh": 2.241766,
+        "pvKWh": 0,
+        "selfUseKWh": 0.077302,
+        "socKWh": 2.001734,
+        "totalLoadKWh": 2.319068,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 87.857667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 2.320072,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.885479,
+          "heatpump": 1.330461,
+          "household": 0.141577
+        },
+        "meteredImportKWh": 2.320072,
+        "pvKWh": 0,
+        "selfUseKWh": 0.037445,
+        "socKWh": 1.93975,
+        "totalLoadKWh": 2.357518,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 90.913,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 2.363417,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.885479,
+          "heatpump": 1.330461,
+          "household": 0.147476
+        },
+        "meteredImportKWh": 2.363417,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.363417,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 97.015333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 1.468983,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.286113,
+          "household": 0.18287
+        },
+        "meteredImportKWh": 1.468983,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.468983,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 110.674,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 1.492367,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.197415,
+          "household": 0.294952
+        },
+        "meteredImportKWh": 1.492367,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.492367,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 119.003333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 1.498998,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.064369,
+          "household": 0.471923
+        },
+        "meteredImportKWh": 1.498998,
+        "pvKWh": 0.037293,
+        "selfUseKWh": 0.037293,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.536292,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 122.270667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 0.556729,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.886974,
+          "household": 0.418831
+        },
+        "meteredImportKWh": 0.556729,
+        "pvKWh": 0.838292,
+        "selfUseKWh": 0.749076,
+        "socKWh": 1.963311,
+        "totalLoadKWh": 1.305806,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 112.474,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.753928,
+          "household": 0.300851
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.0642,
+        "selfUseKWh": 1.054779,
+        "socKWh": 2.559547,
+        "totalLoadKWh": 1.054779,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.484333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.210411,
+          "heatpump": 0.69184,
+          "household": 0.265456
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.546359,
+        "selfUseKWh": 1.167707,
+        "socKWh": 3.77256,
+        "totalLoadKWh": 1.167707,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 75.014333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.210411,
+          "heatpump": 0.638621,
+          "household": 0.253658
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.933086,
+        "selfUseKWh": 1.102691,
+        "socKWh": 5.354991,
+        "totalLoadKWh": 1.102691,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 61.416333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.210411,
+          "heatpump": 0.620882,
+          "household": 0.265456
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.986948,
+        "selfUseKWh": 1.096749,
+        "socKWh": 7.162479,
+        "totalLoadKWh": 1.096749,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 52.297,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.210411,
+          "heatpump": 0.620882,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.636802,
+        "selfUseKWh": 1.082002,
+        "socKWh": 8.779114,
+        "totalLoadKWh": 1.082002,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 56.655,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.210411,
+          "heatpump": 0.638621,
+          "household": 0.250709
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.2319,
+        "selfUseKWh": 1.099741,
+        "socKWh": 10.016586,
+        "totalLoadKWh": 1.099741,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 69.285667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.69184,
+          "household": 0.265456
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.178415,
+        "selfUseKWh": 0.957296,
+        "socKWh": 10.61363,
+        "totalLoadKWh": 0.957296,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.858333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.780537,
+          "household": 0.294952
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.113947,
+        "selfUseKWh": 1.075489,
+        "socKWh": 10.008743,
+        "totalLoadKWh": 1.075489,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 111.488667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.886974,
+          "household": 0.359841
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.246815,
+        "socKWh": 8.837239,
+        "totalLoadKWh": 1.246815,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 137.710667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.975672,
+          "household": 0.442427
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.418099,
+        "socKWh": 7.483371,
+        "totalLoadKWh": 1.418099,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 148.099,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 0.026168,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.04663,
+          "household": 0.501418
+        },
+        "meteredImportKWh": 0.026168,
+        "pvKWh": 0,
+        "selfUseKWh": 1.52188,
+        "socKWh": 5.991107,
+        "totalLoadKWh": 1.548047,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 138.607333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 0.331469,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.082108,
+          "household": 0.471923
+        },
+        "meteredImportKWh": 0.331469,
+        "pvKWh": 0,
+        "selfUseKWh": 1.222562,
+        "socKWh": 4.638589,
+        "totalLoadKWh": 1.554031,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 117.959667,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 0.63751,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.135327,
+          "household": 0.412932
+        },
+        "meteredImportKWh": 0.63751,
+        "pvKWh": 0,
+        "selfUseKWh": 0.910749,
+        "socKWh": 3.615304,
+        "totalLoadKWh": 1.548259,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 98.903333,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 0.86252,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.170806,
+          "household": 0.324447
+        },
+        "meteredImportKWh": 0.86252,
+        "pvKWh": 0,
+        "selfUseKWh": 0.632733,
+        "socKWh": 2.883498,
+        "totalLoadKWh": 1.495253,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 88.59,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 1.024858,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.197415,
+          "household": 0.24186
+        },
+        "meteredImportKWh": 1.024858,
+        "pvKWh": 0,
+        "selfUseKWh": 0.414418,
+        "socKWh": 2.38986,
+        "totalLoadKWh": 1.439275,
+        "windKWh": 0
+      }
+    ],
+    [
+      {
+        "avgPrice": 93.873226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 0,
+        "importKWh": 2.7119,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.955616,
+          "heatpump": 1.563254,
+          "household": 0.193029
+        },
+        "meteredImportKWh": 2.7119,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.7119,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 93.174516,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 1,
+        "importKWh": 2.748005,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.955616,
+          "heatpump": 1.621152,
+          "household": 0.171236
+        },
+        "meteredImportKWh": 2.748005,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.748005,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.613226,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 2,
+        "importKWh": 2.790336,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.955616,
+          "heatpump": 1.679051,
+          "household": 0.155669
+        },
+        "meteredImportKWh": 2.790336,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.790336,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 94.899032,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 3,
+        "importKWh": 2.842008,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.955616,
+          "heatpump": 1.736949,
+          "household": 0.149442
+        },
+        "meteredImportKWh": 2.842008,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.842008,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 99.04871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 4,
+        "importKWh": 2.848234,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.955616,
+          "heatpump": 1.736949,
+          "household": 0.155669
+        },
+        "meteredImportKWh": 2.848234,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 2.848234,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 105.038387,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 5,
+        "importKWh": 1.87208,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.679051,
+          "household": 0.193029
+        },
+        "meteredImportKWh": 1.87208,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.87208,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 118.451935,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 6,
+        "importKWh": 1.874592,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.563254,
+          "household": 0.311338
+        },
+        "meteredImportKWh": 1.874592,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.874592,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 128.086129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 7,
+        "importKWh": 1.8877,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.389559,
+          "household": 0.498141
+        },
+        "meteredImportKWh": 1.8877,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.8877,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 132.389677,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 8,
+        "importKWh": 1.423877,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.157966,
+          "household": 0.4421
+        },
+        "meteredImportKWh": 1.423877,
+        "pvKWh": 0.176189,
+        "selfUseKWh": 0.176189,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.600066,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 120.934516,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 9,
+        "importKWh": 0.179879,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.984271,
+          "household": 0.317565
+        },
+        "meteredImportKWh": 0.179879,
+        "pvKWh": 1.212179,
+        "selfUseKWh": 1.121957,
+        "socKWh": 1.961658,
+        "totalLoadKWh": 1.301836,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 102.028065,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 10,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.140274,
+          "heatpump": 0.903214,
+          "household": 0.280204
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.834499,
+        "selfUseKWh": 1.323692,
+        "socKWh": 2.307001,
+        "totalLoadKWh": 1.323692,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 82.977742,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 11,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.140274,
+          "heatpump": 0.833736,
+          "household": 0.267751
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.130256,
+        "selfUseKWh": 1.24176,
+        "socKWh": 3.013809,
+        "totalLoadKWh": 1.24176,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 67.13129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 12,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.140274,
+          "heatpump": 0.810576,
+          "household": 0.280204
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 2.183968,
+        "selfUseKWh": 1.231054,
+        "socKWh": 3.928225,
+        "totalLoadKWh": 1.231054,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 58.335484,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 13,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.140274,
+          "heatpump": 0.810576,
+          "household": 0.264637
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.905688,
+        "selfUseKWh": 1.215487,
+        "socKWh": 4.68311,
+        "totalLoadKWh": 1.215487,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 58.781613,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 14,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0.140274,
+          "heatpump": 0.833736,
+          "household": 0.264637
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 1.449168,
+        "selfUseKWh": 1.238647,
+        "socKWh": 5.096791,
+        "totalLoadKWh": 1.238647,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 71.206129,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 15,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 0.903214,
+          "household": 0.280204
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0.368442,
+        "selfUseKWh": 1.183418,
+        "socKWh": 4.674031,
+        "totalLoadKWh": 1.183418,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 91.76871,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 16,
+        "importKWh": 0,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.01901,
+          "household": 0.311338
+        },
+        "meteredImportKWh": 0,
+        "pvKWh": 0,
+        "selfUseKWh": 1.330348,
+        "socKWh": 3.463157,
+        "totalLoadKWh": 1.330348,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 117.534194,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 17,
+        "importKWh": 0.576267,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.157966,
+          "household": 0.379832
+        },
+        "meteredImportKWh": 0.576267,
+        "pvKWh": 0,
+        "selfUseKWh": 0.961532,
+        "socKWh": 2.227738,
+        "totalLoadKWh": 1.537798,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 143.550323,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 18,
+        "importKWh": 1.673325,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.273763,
+          "household": 0.467007
+        },
+        "meteredImportKWh": 1.673325,
+        "pvKWh": 0,
+        "selfUseKWh": 0.067444,
+        "socKWh": 1.938797,
+        "totalLoadKWh": 1.740769,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 155.341613,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 19,
+        "importKWh": 1.895674,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.3664,
+          "household": 0.529274
+        },
+        "meteredImportKWh": 1.895674,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.895674,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 145.064516,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 20,
+        "importKWh": 1.910859,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.412719,
+          "household": 0.498141
+        },
+        "meteredImportKWh": 1.910859,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.910859,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 126.602581,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 21,
+        "importKWh": 1.918069,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.482197,
+          "household": 0.435873
+        },
+        "meteredImportKWh": 1.918069,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.918069,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 105.170968,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 22,
+        "importKWh": 1.870987,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.528515,
+          "household": 0.342472
+        },
+        "meteredImportKWh": 1.870987,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.870987,
+        "windKWh": 0
+      },
+      {
+        "avgPrice": 96.832581,
+        "exportKWh": 0,
+        "gridChargedKWh": 0,
+        "hour": 23,
+        "importKWh": 1.818551,
+        "load": {
+          "bwwp": 0,
+          "ev": 0,
+          "heatpump": 1.563254,
+          "household": 0.255297
+        },
+        "meteredImportKWh": 1.818551,
+        "pvKWh": 0,
+        "selfUseKWh": 0,
+        "socKWh": 1.9353,
+        "totalLoadKWh": 1.818551,
+        "windKWh": 0
+      }
+    ]
+  ],
+  "effectivePrice": {
+    "byConsumer": {
+      "bwwp": 0,
+      "ev": 6.610657,
+      "heatpump": 9.990144,
+      "household": 4.410618
+    },
+    "coverage": {
+      "bwwp": {
+        "consumptionKWh": 0,
+        "effectiveCt": 0,
+        "gridKWh": 0,
+        "gridPriceCt": 0,
+        "pvCoveredKWh": 0,
+        "pvSharePct": 0
+      },
+      "ev": {
+        "consumptionKWh": 2000,
+        "effectiveCt": 6.610657,
+        "gridKWh": 550.888095,
+        "gridPriceCt": 24,
+        "pvCoveredKWh": 1449.111905,
+        "pvSharePct": 72.455595
+      },
+      "heatpump": {
+        "consumptionKWh": 5480,
+        "effectiveCt": 9.990144,
+        "gridKWh": 2281.082817,
+        "gridPriceCt": 24,
+        "pvCoveredKWh": 3198.917183,
+        "pvSharePct": 58.374401
+      },
+      "household": {
+        "consumptionKWh": 2400,
+        "effectiveCt": 4.410618,
+        "gridKWh": 441.061773,
+        "gridPriceCt": 24,
+        "pvCoveredKWh": 1958.938227,
+        "pvSharePct": 81.622426
+      }
+    },
+    "overallCt": 0.341615
+  },
+  "gasSavings": {
+    "bySource": {
+      "biomassKWh": 446.3,
+      "coalKWh": 3303.8,
+      "gasKWh": 249.22,
+      "hydroKWh": 223.15,
+      "otherKWh": 148.77,
+      "solarKWh": 10431.25,
+      "windKWh": 2486.38
+    },
+    "co2SavedKg": 4160.72,
+    "costSavedEUR": 1907,
+    "gasDirectKWh": 17869.57,
+    "gasForElectricityKWh": 533.21,
+    "gasSavedKWh": 17336.35,
+    "heatpumpElectricKWh": 5480,
+    "jaz": 3,
+    "monthly": [
+      {
+        "electricKWh": 1007.21,
+        "gasDirectKWh": 3284.38,
+        "gasForElectricityKWh": 163.56,
+        "gasSavedKWh": 3120.82,
+        "month": 1,
+        "usefulHeatKWh": 3021.63,
+        "zeroGasSharePct": 62.95
+      },
+      {
+        "electricKWh": 848.12,
+        "gasDirectKWh": 2765.6,
+        "gasForElectricityKWh": 78.42,
+        "gasSavedKWh": 2687.18,
+        "month": 2,
+        "usefulHeatKWh": 2544.35,
+        "zeroGasSharePct": 76.54
+      },
+      {
+        "electricKWh": 736.35,
+        "gasDirectKWh": 2401.14,
+        "gasForElectricityKWh": 30.41,
+        "gasSavedKWh": 2370.73,
+        "month": 3,
+        "usefulHeatKWh": 2209.04,
+        "zeroGasSharePct": 88.47
+      },
+      {
+        "electricKWh": 406.85,
+        "gasDirectKWh": 1326.68,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 1326.68,
+        "month": 4,
+        "usefulHeatKWh": 1220.55,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 150.36,
+        "gasDirectKWh": 490.31,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 490.31,
+        "month": 5,
+        "usefulHeatKWh": 451.09,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 44.12,
+        "gasDirectKWh": 143.86,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 143.86,
+        "month": 6,
+        "usefulHeatKWh": 132.35,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 34.62,
+        "gasDirectKWh": 112.88,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 112.88,
+        "month": 7,
+        "usefulHeatKWh": 103.85,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 34.62,
+        "gasDirectKWh": 112.88,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 112.88,
+        "month": 8,
+        "usefulHeatKWh": 103.85,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 101.1,
+        "gasDirectKWh": 329.68,
+        "gasForElectricityKWh": 0,
+        "gasSavedKWh": 329.68,
+        "month": 9,
+        "usefulHeatKWh": 303.3,
+        "zeroGasSharePct": 100
+      },
+      {
+        "electricKWh": 442.74,
+        "gasDirectKWh": 1443.73,
+        "gasForElectricityKWh": 3.59,
+        "gasSavedKWh": 1440.15,
+        "month": 10,
+        "usefulHeatKWh": 1328.23,
+        "zeroGasSharePct": 96.58
+      },
+      {
+        "electricKWh": 712.6,
+        "gasDirectKWh": 2323.68,
+        "gasForElectricityKWh": 84.09,
+        "gasSavedKWh": 2239.59,
+        "month": 11,
+        "usefulHeatKWh": 2137.79,
+        "zeroGasSharePct": 70.62
+      },
+      {
+        "electricKWh": 961.32,
+        "gasDirectKWh": 3134.74,
+        "gasForElectricityKWh": 173.16,
+        "gasSavedKWh": 2961.58,
+        "month": 12,
+        "usefulHeatKWh": 2883.96,
+        "zeroGasSharePct": 59.83
+      }
+    ],
+    "usefulHeatKWh": 16440,
+    "zeroGasSharePct": 76.87
+  },
+  "gridMix": {
+    "heatpump": {
+      "biomass": 0.06,
+      "coal": 0.44416,
+      "gas": 0.10519,
+      "hydro": 0.03,
+      "other": 0.02,
+      "solar": 0.006384,
+      "wind": 0.334266
+    },
+    "overall": {
+      "biomass": 0.06,
+      "coal": 0.442921,
+      "gas": 0.105645,
+      "hydro": 0.03,
+      "other": 0.02,
+      "solar": 0.005958,
+      "wind": 0.335476
+    },
+    "withoutPv": {
+      "biomass": 0.06,
+      "coal": 0.496867,
+      "gas": 0.085145,
+      "hydro": 0.03,
+      "other": 0.02,
+      "solar": 0.060877,
+      "wind": 0.247111
+    }
+  },
+  "inputs": {
+    "batteryDegradationPct": 0.01,
+    "batteryLifetimeYears": 13,
+    "batteryReplacementCostEUR": 3000,
+    "capacityKWh": 19.353,
+    "car": {
+      "annualKm": 15000,
+      "dieselEurPerL": 2.15,
+      "dieselLPer100km": 5.5,
+      "dieselMaintenanceCtPerKm": 10,
+      "dieselOtherNebenkostenEUR": 1000,
+      "dieselVehicleTaxEUR": 200,
+      "evElectricCtPerKwh": 30,
+      "evKwhPer100km": 18,
+      "evMaintenanceCtPerKm": 6,
+      "evOtherNebenkostenEUR": 900,
+      "evVehicleTaxEUR": 0
+    },
+    "chargeMode": "morning",
+    "commissioningYear": 2025,
+    "consumers": {
+      "bwwp": {
+        "annualKWh": 480,
+        "enabled": false
+      },
+      "ev": {
+        "annualKWh": 2000,
+        "enabled": true,
+        "pvShare": 0.8
+      },
+      "heatpump": {
+        "annualKWh": 5000,
+        "enabled": true
+      },
+      "household": {
+        "annualKWh": 2400,
+        "enabled": true
+      }
+    },
+    "dischargeEvening": true,
+    "dischargeMode": "windows",
+    "dischargeMorning": true,
+    "discountRatePct": 3,
+    "efficiency": 0.95,
+    "eveningEnd": 23,
+    "eveningStart": 17,
+    "exportScheme": "fixed",
+    "feedInCt": 7.2,
+    "heatpumpElectricCt": 24,
+    "heatpumpJaz": 3,
+    "horizonYears": 20,
+    "importFixedCt": 24,
+    "importScheme": "fixed",
+    "inverterLifetimeYears": 13,
+    "inverterReplacementCostEUR": 1500,
+    "investmentEUR": 32000,
+    "location": "boizenburg",
+    "marketMarginCt": 1,
+    "maxPowerKW": 6,
+    "maxSOC": 0.95,
+    "minSOC": 0.1,
+    "morningEnd": 12,
+    "morningStart": 5,
+    "omPercentPerYear": 1.5,
+    "orientation": "east_west",
+    "peakKWp": 22,
+    "priceEscalationPct": 2,
+    "priceYear": "2025",
+    "pvDegradationPct": 0.005,
+    "standbyWattage": 5,
+    "startSOC": 0.5,
+    "tiltDeg": 35,
+    "windCount": 1,
+    "windEnabled": false,
+    "windHubHeightM": 10,
+    "windSpeedMeanMs": 6,
+    "windTurbineId": "skywind_ng"
+  },
+  "monthly": [
+    {
+      "exportKWh": 0,
+      "gridChargedKWh": 0,
+      "importKWh": 972.091597,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 1007.210637,
+        "household": 232.790989
+      },
+      "meteredImportKWh": 962.415097,
+      "month": 1,
+      "monthKey": "jan",
+      "netEUR": -230.979623,
+      "pvKWh": 447.945628,
+      "selfConsumptionKWh": 437.773042,
+      "totalLoadKWh": 1409.86464,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 21.028966,
+      "gridChargedKWh": 0,
+      "importKWh": 503.004109,
+      "load": {
+        "bwwp": 0,
+        "ev": 153.424658,
+        "heatpump": 848.116339,
+        "household": 204.777711
+      },
+      "meteredImportKWh": 503.004109,
+      "month": 2,
+      "monthKey": "feb",
+      "netEUR": -119.206901,
+      "pvKWh": 748.368843,
+      "selfConsumptionKWh": 703.314599,
+      "totalLoadKWh": 1206.318708,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 496.955102,
+      "gridChargedKWh": 0,
+      "importKWh": 188.115651,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 736.348223,
+        "household": 212.548294
+      },
+      "meteredImportKWh": 188.115651,
+      "month": 3,
+      "monthKey": "mar",
+      "netEUR": -9.366989,
+      "pvKWh": 1458.154598,
+      "selfConsumptionKWh": 930.643879,
+      "totalLoadKWh": 1118.759531,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1122.060948,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 164.383562,
+        "heatpump": 406.84834,
+        "household": 191.979104
+      },
+      "meteredImportKWh": 0,
+      "month": 4,
+      "monthKey": "apr",
+      "netEUR": 80.788388,
+      "pvKWh": 2120.570286,
+      "selfConsumptionKWh": 763.211006,
+      "totalLoadKWh": 763.211006,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1872.842821,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 150.362076,
+        "household": 186.232791
+      },
+      "meteredImportKWh": 0,
+      "month": 5,
+      "monthKey": "may",
+      "netEUR": 134.844683,
+      "pvKWh": 2781.869777,
+      "selfConsumptionKWh": 506.457881,
+      "totalLoadKWh": 506.457881,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1878.828025,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 164.383562,
+        "heatpump": 44.117397,
+        "household": 172.3894
+      },
+      "meteredImportKWh": 0,
+      "month": 6,
+      "monthKey": "jun",
+      "netEUR": 135.275618,
+      "pvKWh": 2960.645185,
+      "selfConsumptionKWh": 380.890358,
+      "totalLoadKWh": 380.890358,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1949.523272,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 34.617911,
+        "household": 182.184252
+      },
+      "meteredImportKWh": 0,
+      "month": 7,
+      "monthKey": "jul",
+      "netEUR": 140.365676,
+      "pvKWh": 2940.421019,
+      "selfConsumptionKWh": 386.665177,
+      "totalLoadKWh": 386.665177,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1677.369925,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 34.617911,
+        "household": 182.184252
+      },
+      "meteredImportKWh": 0,
+      "month": 8,
+      "monthKey": "aug",
+      "netEUR": 120.770635,
+      "pvKWh": 2451.949581,
+      "selfConsumptionKWh": 386.665177,
+      "totalLoadKWh": 386.665177,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 1187.160376,
+      "gridChargedKWh": 0,
+      "importKWh": 0,
+      "load": {
+        "bwwp": 0,
+        "ev": 164.383562,
+        "heatpump": 101.101626,
+        "household": 186.102193
+      },
+      "meteredImportKWh": 0,
+      "month": 9,
+      "monthKey": "sep",
+      "netEUR": 85.475547,
+      "pvKWh": 1692.174016,
+      "selfConsumptionKWh": 451.58738,
+      "totalLoadKWh": 451.58738,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 235.567299,
+      "gridChargedKWh": 0,
+      "importKWh": 33.956093,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 442.744245,
+        "household": 206.475486
+      },
+      "meteredImportKWh": 33.956093,
+      "month": 10,
+      "monthKey": "oct",
+      "netEUR": 8.811383,
+      "pvKWh": 1042.003085,
+      "selfConsumptionKWh": 785.126652,
+      "totalLoadKWh": 819.082745,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 0,
+      "gridChargedKWh": 0,
+      "importKWh": 567.429093,
+      "load": {
+        "bwwp": 0,
+        "ev": 164.383562,
+        "heatpump": 712.595054,
+        "household": 211.568809
+      },
+      "meteredImportKWh": 567.429093,
+      "month": 11,
+      "monthKey": "nov",
+      "netEUR": -136.182982,
+      "pvKWh": 527.017244,
+      "selfConsumptionKWh": 521.118332,
+      "totalLoadKWh": 1088.547425,
+      "windKWh": 0
+    },
+    {
+      "exportKWh": 0,
+      "gridChargedKWh": 0,
+      "importKWh": 1018.112642,
+      "load": {
+        "bwwp": 0,
+        "ev": 169.863014,
+        "heatpump": 961.320241,
+        "household": 230.766719
+      },
+      "meteredImportKWh": 1018.112642,
+      "month": 12,
+      "monthKey": "dec",
+      "netEUR": -244.347034,
+      "pvKWh": 349.07207,
+      "selfConsumptionKWh": 343.837332,
+      "totalLoadKWh": 1361.949974,
+      "windKWh": 0
+    }
+  ],
+  "opportunityCosts": {
+    "car": {
+      "annualKm": 11111,
+      "coverage": {
+        "dynamic": false,
+        "effectiveCt": 6.61,
+        "gridKWh": 550.89,
+        "gridPriceCt": 24,
+        "pvCoveredKWh": 1449.11,
+        "pvSharePct": 72.46
+      },
+      "diesel": {
+        "annualKm": 11111,
+        "deltaVsEvEUR": 1926.11,
+        "energyCostEUR": 1313.88,
+        "label": "Diesel",
+        "maintenanceEUR": 1111.1,
+        "mode": "diesel",
+        "otherNebenkostenEUR": 1000,
+        "primaryEnergy": 611.11,
+        "totalEUR": 3624.98,
+        "vehicleTaxEUR": 200
+      },
+      "ev": {
+        "annualKm": 11111,
+        "deltaVsEvEUR": 0,
+        "energyCostEUR": 132.21,
+        "label": "E-Auto",
+        "maintenanceEUR": 666.66,
+        "mode": "ev",
+        "otherNebenkostenEUR": 900,
+        "primaryEnergy": 1999.98,
+        "totalEUR": 1698.87,
+        "vehicleTaxEUR": 0
+      }
+    },
+    "heating": {
+      "coverage": {
+        "dynamic": false,
+        "effectiveCt": 9.99,
+        "gridKWh": 2281.08,
+        "gridPriceCt": 24,
+        "pvCoveredKWh": 3198.92,
+        "pvSharePct": 58.37
+      },
+      "gas": {
+        "chimneySweepEUR": 200,
+        "deltaVsHeatpumpEUR": 1940.06,
+        "energyCostEUR": 1793.48,
+        "gridFeeEUR": 326.09,
+        "label": "Erdgas",
+        "mode": "gas",
+        "otherNebenkostenEUR": 120,
+        "primaryEnergyKWh": 16304.35,
+        "totalEUR": 2439.57,
+        "usefulHeatKWh": 15000
+      },
+      "heatpump": {
+        "chimneySweepEUR": 0,
+        "deltaVsHeatpumpEUR": 0,
+        "energyCostEUR": 499.51,
+        "gridFeeEUR": 0,
+        "label": "Wärmepumpe",
+        "mode": "heatpump",
+        "otherNebenkostenEUR": 0,
+        "primaryEnergyKWh": 5000,
+        "totalEUR": 499.51,
+        "usefulHeatKWh": 15000
+      },
+      "heatpumpElectricKWh": 5000,
+      "jaz": 3,
+      "oil": {
+        "chimneySweepEUR": 200,
+        "deltaVsHeatpumpEUR": 1994.61,
+        "energyCostEUR": 2294.12,
+        "gridFeeEUR": 0,
+        "label": "Heizöl",
+        "mode": "oil",
+        "otherNebenkostenEUR": 0,
+        "primaryEnergyKWh": 17647.06,
+        "totalEUR": 2494.12,
+        "usefulHeatKWh": 15000
+      },
+      "usefulHeatKWh": 15000
+    }
+  },
+  "opportunityInvestment": {
+    "carSavingEUR": 1926.11,
+    "discountedPvPaybackYears": "Infinity",
+    "financeableEvEUR": 28655.65,
+    "financeableHeatpumpEUR": 28863.19,
+    "heatingSavingEUR": 1940.06,
+    "pvPaybackYears": 13.690142
+  },
+  "scenario": [
+    {
+      "exportEUR": 751.776245,
+      "exportScheme": "fixed",
+      "importEUR": 785.527844,
+      "importScheme": "fixed",
+      "key": "fixed_fixed",
+      "label": "Feste Einspeisung (§ 14a/2)",
+      "netEUR": -33.7516
+    },
+    {
+      "exportEUR": 849.684919,
+      "exportScheme": "market",
+      "importEUR": 785.527844,
+      "importScheme": "fixed",
+      "key": "market_fixed",
+      "label": "Direktvermarktung (Marktprämie)",
+      "netEUR": 64.157074
+    },
+    {
+      "exportEUR": 751.776245,
+      "exportScheme": "fixed",
+      "importEUR": 765.037468,
+      "importScheme": "dynamic",
+      "key": "fixed_dynamic",
+      "label": "Dynamischer Bezug (spotbasiert)",
+      "netEUR": -13.261223
+    },
+    {
+      "exportEUR": 751.776245,
+      "exportScheme": "fixed",
+      "importEUR": 689.140311,
+      "importScheme": "dynamic14a",
+      "key": "fixed_dynamic14a",
+      "label": "Dynamisch + § 14a/3",
+      "netEUR": 62.635934
+    }
+  ],
+  "summary": {
+    "exportRevenueEUR": 751.776245,
+    "gridChargedKWh": 0,
+    "importCostEUR": 785.527844,
+    "loadImportKWh": 3282.709185,
+    "marktPraemieCt": 2.250858,
+    "netSelectedEUR": -33.7516,
+    "referenceValueCt": 7.756364,
+    "selfConsumptionKWh": 6597.290815,
+    "selfConsumptionRatePct": 33.797265,
+    "selfSufficiencyPct": 66.774199,
+    "totalExportKWh": 10441.336733,
+    "totalImportKWh": 3273.032685,
+    "totalLoadKWh": 9880,
+    "totalPVKWh": 19520.191331,
+    "totalWindKWh": 0
+  },
+  "tariffCombinations": {
+    "combinations": [
+      {
+        "exportScheme": "fixed",
+        "importScheme": "fixed",
+        "key": "fixed_fixed",
+        "label": "Feste Einspeisung & fester Bezug",
+        "years": [
+          {
+            "exportEUR": 783,
+            "exportKWh": 10874.968939,
+            "importEUR": 785.53,
+            "importKWh": 3273.032685,
+            "netEUR": -2.53,
+            "year": "2023"
+          },
+          {
+            "exportEUR": 731.09,
+            "exportKWh": 10154.040843,
+            "importEUR": 785.79,
+            "importKWh": 3274.142545,
+            "netEUR": -54.7,
+            "year": "2024"
+          },
+          {
+            "exportEUR": 751.78,
+            "exportKWh": 10441.336733,
+            "importEUR": 785.53,
+            "importKWh": 3273.032685,
+            "netEUR": -33.75,
+            "year": "2025"
+          },
+          {
+            "exportEUR": 797.7,
+            "exportKWh": 11079.201729,
+            "importEUR": 785.89,
+            "importKWh": 3274.532685,
+            "netEUR": 11.81,
+            "year": "2026"
+          }
+        ]
+      },
+      {
+        "exportScheme": "market",
+        "importScheme": "fixed",
+        "key": "market_fixed",
+        "label": "Direktvermarktung & fester Bezug",
+        "years": [
+          {
+            "exportEUR": 854.66,
+            "exportKWh": 10874.968939,
+            "importEUR": 785.53,
+            "importKWh": 3273.032685,
+            "netEUR": 69.13,
+            "year": "2023"
+          },
+          {
+            "exportEUR": 836.79,
+            "exportKWh": 10154.040843,
+            "importEUR": 785.79,
+            "importKWh": 3274.142545,
+            "netEUR": 51,
+            "year": "2024"
+          },
+          {
+            "exportEUR": 849.68,
+            "exportKWh": 10441.336733,
+            "importEUR": 785.53,
+            "importKWh": 3273.032685,
+            "netEUR": 64.16,
+            "year": "2025"
+          },
+          {
+            "exportEUR": 860.71,
+            "exportKWh": 11079.201729,
+            "importEUR": 785.89,
+            "importKWh": 3274.532685,
+            "netEUR": 74.83,
+            "year": "2026"
+          }
+        ]
+      },
+      {
+        "exportScheme": "market",
+        "importScheme": "dynamic",
+        "key": "market_dynamic",
+        "label": "Direktvermarktung & dynamischer Bezug (Tibber)",
+        "years": [
+          {
+            "exportEUR": 854.66,
+            "exportKWh": 10874.968939,
+            "importEUR": 785.64,
+            "importKWh": 3273.032685,
+            "netEUR": 69.01,
+            "year": "2023"
+          },
+          {
+            "exportEUR": 836.79,
+            "exportKWh": 10154.040843,
+            "importEUR": 731.8,
+            "importKWh": 3274.142545,
+            "netEUR": 104.99,
+            "year": "2024"
+          },
+          {
+            "exportEUR": 849.68,
+            "exportKWh": 10441.336733,
+            "importEUR": 765.04,
+            "importKWh": 3273.032685,
+            "netEUR": 84.65,
+            "year": "2025"
+          },
+          {
+            "exportEUR": 860.71,
+            "exportKWh": 11079.201729,
+            "importEUR": 798.94,
+            "importKWh": 3274.532685,
+            "netEUR": 61.77,
+            "year": "2026"
+          }
+        ]
+      },
+      {
+        "exportScheme": "market",
+        "importScheme": "dynamic14a",
+        "key": "market_dynamic14a",
+        "label": "Direktvermarktung & dynamisch + §14a/3",
+        "years": [
+          {
+            "exportEUR": 854.66,
+            "exportKWh": 10874.968939,
+            "importEUR": 709.74,
+            "importKWh": 3273.032685,
+            "netEUR": 144.91,
+            "year": "2023"
+          },
+          {
+            "exportEUR": 836.79,
+            "exportKWh": 10154.040843,
+            "importEUR": 655.85,
+            "importKWh": 3274.142545,
+            "netEUR": 180.95,
+            "year": "2024"
+          },
+          {
+            "exportEUR": 849.68,
+            "exportKWh": 10441.336733,
+            "importEUR": 689.14,
+            "importKWh": 3273.032685,
+            "netEUR": 160.54,
+            "year": "2025"
+          },
+          {
+            "exportEUR": 860.71,
+            "exportKWh": 11079.201729,
+            "importEUR": 722.97,
+            "importKWh": 3274.532685,
+            "netEUR": 137.75,
+            "year": "2026"
+          }
+        ]
+      }
+    ],
+    "years": [
+      "2023",
+      "2024",
+      "2025",
+      "2026"
+    ]
+  }
+}

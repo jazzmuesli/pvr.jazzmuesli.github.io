@@ -7,20 +7,8 @@
 // export revenue — instead it avoids import cost, already reflected in the
 // grid-import accounting below.
 
-import { STEPS_PER_DAY, SimResult, monthOfStep, RevenueSummary } from "./types";
-import { SIM_YEAR } from "./types";
+import { SimResult, monthOfStep } from "./types";
 import { importPriceCtPerKWh, TariffScheme, City } from "./tariff";
-import { annualSum } from "./consumers";
-
-const DAYS = 365;
-const dayMonth = new Array<number>(DAYS);
-{
-  const base = new Date(Date.UTC(SIM_YEAR, 0, 1));
-  for (let d = 0; d < DAYS; d++) {
-    const dt = new Date(base.getTime() + d * 86400000);
-    dayMonth[d] = dt.getUTCMonth() + 1;
-  }
-}
 
 const EEG_ANZULEGENDER: Record<number, { le10: number; ge10le40: number; gt40: number }> = {
   2023: { le10: 8.6, ge10le40: 7.5, gt40: 6.2 },
@@ -63,20 +51,17 @@ export interface EconOptions {
 
 export interface MonthlyEcon {
   month: number; pvKWh: number; windKWh: number; loadKWh: number; selfConsumptionKWh: number;
-  importKWh: number; exportKWh: number; marketValueEUR: number; premiumEUR: number;
+  importKWh: number; gridChargedKWh: number; loadImportKWh: number; exportKWh: number; marketValueEUR: number; premiumEUR: number;
   exportRevenueMarketEUR: number; exportRevenueFixedEUR: number;
   importCostFixedEUR: number; importCostDynamicEUR: number; importCost14aEUR: number; netSelectedEUR: number;
 }
-export interface TypicalDayPoint {
-  month: number; hour: number; pvKWh: number; loadKWh: number; selfUseKWh: number; importKWh: number; exportKWh: number;
-}
 export interface EconomicsSummary {
   totalPVKWh: number; totalLoadKWh: number; selfConsumptionKWh: number;
-  totalExportKWh: number; totalImportKWh: number;
+  totalExportKWh: number; totalImportKWh: number; totalChargeGridKWh: number; totalLoadImportKWh: number;
   exportRevenueMarketEUR: number; exportRevenueFixedEUR: number; premiumEUR: number;
   referenceValueCt: number; marktPraemieCt: number;
   importCostFixedEUR: number; importCostDynamicEUR: number; importCost14aEUR: number;
-  netSelectedEUR: number; monthly: MonthlyEcon[]; typicalDay: TypicalDayPoint[];
+  netSelectedEUR: number; monthly: MonthlyEcon[];
 }
 
 export function computeEconomics(result: SimResult, opts: EconOptions): EconomicsSummary {
@@ -86,13 +71,14 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
 
   const monthly: MonthlyEcon[] = [];
   for (let m = 1; m <= 12; m++) monthly.push({
-    month: m, pvKWh: 0, windKWh: 0, loadKWh: 0, selfConsumptionKWh: 0, importKWh: 0, exportKWh: 0,
+    month: m, pvKWh: 0, windKWh: 0, loadKWh: 0, selfConsumptionKWh: 0, importKWh: 0, gridChargedKWh: 0, loadImportKWh: 0, exportKWh: 0,
     marketValueEUR: 0, premiumEUR: 0, exportRevenueMarketEUR: 0, exportRevenueFixedEUR: 0,
     importCostFixedEUR: 0, importCostDynamicEUR: 0, importCost14aEUR: 0, netSelectedEUR: 0,
     pvMarketValueEUR: 0,
   } as MonthlyEcon & { pvMarketValueEUR: number });
 
-  let totalPV = 0, totalLoad = 0, selfConsumption = 0, totalExport = 0, totalImport = 0;
+  let totalPV = 0, totalLoad = 0, selfConsumption = 0, totalExport = 0, totalImport = 0, totalChargeGrid = 0;
+  let totalLoadImport = 0;
   let marketValue = 0, premiumTotal = 0, exportRevFixed = 0, pvMarketValueTotal = 0;
   let importCostFixed = 0, importCostDynamic = 0, importCost14a = 0;
 
@@ -103,7 +89,8 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     const sc = result.directUse[i] + result.directUseWind[i] + result.dischargeToLoadPV[i] + result.dischargeToLoadWind[i];
 
     totalPV += result.pv[i]; totalLoad += result.load[i]; selfConsumption += sc;
-    totalExport += exp; totalImport += imp;
+    totalExport += exp; totalImport += imp; totalChargeGrid += result.chargeGrid[i];
+    totalLoadImport += imp - result.chargeGrid[i] + result.dischargeToLoadGrid[i];
 
     const stepMarket = (exp * result.price[i]) / 1000;
     const stepFixed = exp * (opts.feedInCt / 100);
@@ -122,10 +109,11 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
     importCostFixed += sImpF; importCostDynamic += sImpD; importCost14a += sImp14;
 
     row.pvKWh += result.pv[i]; row.windKWh += result.wind[i]; row.loadKWh += result.load[i]; row.selfConsumptionKWh += sc;
-    // Cap monthly self-consumption at monthly generation
-    const monthGen = row.pvKWh + row.windKWh;
-    if (row.selfConsumptionKWh > monthGen) row.selfConsumptionKWh = monthGen;
-    row.importKWh += imp; row.exportKWh += exp; row.marketValueEUR += stepMarket;
+    row.importKWh += imp; row.gridChargedKWh += result.chargeGrid[i];
+    // Import that actually served a load: metered import, minus what went
+    // straight into storage, plus what came back out of storage to serve one.
+    row.loadImportKWh += imp - result.chargeGrid[i] + result.dischargeToLoadGrid[i];
+    row.exportKWh += exp; row.marketValueEUR += stepMarket;
     row.exportRevenueFixedEUR += stepFixed; row.importCostFixedEUR += sImpF;
     row.importCostDynamicEUR += sImpD; row.importCost14aEUR += sImp14;
   }
@@ -172,89 +160,13 @@ export function computeEconomics(result: SimResult, opts: EconOptions): Economic
   const mwSolarAnnualCt = totalPV > 0 ? (pvMarketValueTotal / totalPV) * 1000 * 0.1 : 0;
   const marktPraemieCt = Math.max(0, refCt - mwSolarAnnualCt);
 
-  const typicalDay: TypicalDayPoint[] = [];
-  const acc = new Map<string, { pv: number; load: number; sc: number; imp: number; exp: number }>();
-  for (let i = 0; i < n; i++) {
-    const m = monthForStep(i);
-    const h = Math.floor((i % STEPS_PER_DAY) / (STEPS_PER_DAY / 24));
-    const key = `${m}-${h}`;
-    const a = acc.get(key) ?? { pv: 0, load: 0, sc: 0, imp: 0, exp: 0 };
-    a.pv += result.pv[i]; a.load += result.load[i]; a.sc += result.directUse[i] + result.directUseWind[i] + result.dischargeToLoadPV[i] + result.dischargeToLoadWind[i];
-    a.imp += result.gridImport[i]; a.exp += result.exportTotal[i];
-    acc.set(key, a);
-  }
-  for (let m = 1; m <= 12; m++) {
-    const days = new Date(SIM_YEAR, m, 0).getDate();
-    for (let h = 0; h < 24; h++) {
-      const a = acc.get(`${m}-${h}`) ?? { pv: 0, load: 0, sc: 0, imp: 0, exp: 0 };
-      typicalDay.push({
-        month: m, hour: h, pvKWh: a.pv / days, loadKWh: a.load / days,
-        selfUseKWh: a.sc / days, importKWh: a.imp / days, exportKWh: a.exp / days,
-      });
-    }
-  }
-
-  const totalGeneration = totalPV + annualSum(result.wind);
   return {
-    totalPVKWh: totalPV, totalLoadKWh: totalLoad, selfConsumptionKWh: Math.min(selfConsumption, totalGeneration),
-    totalExportKWh: totalExport, totalImportKWh: totalImport,
+    totalPVKWh: totalPV, totalLoadKWh: totalLoad, selfConsumptionKWh: selfConsumption,
+    totalExportKWh: totalExport, totalImportKWh: totalImport, totalChargeGridKWh: totalChargeGrid,
+    totalLoadImportKWh: totalLoadImport,
     exportRevenueMarketEUR: exportRevMarket, exportRevenueFixedEUR: exportRevFixed, premiumEUR: premiumTotal,
     referenceValueCt: refCt, marktPraemieCt,
     importCostFixedEUR: importCostFixed, importCostDynamicEUR: importCostDynamic, importCost14aEUR: importCost14a,
-    netSelectedEUR: netSelected, monthly, typicalDay,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Legacy export-only comparison (kept for the existing domain tests). Computes
-// the Direktvermarktung (spot + Marktprämie) vs feste Einspeisevergütung value
-// of the exported energy.
-// ---------------------------------------------------------------------------
-export function computeRevenue(result: SimResult, tariff: { feedInEUR: number; commissioningYear: number }, peakKWp: number): RevenueSummary {
-  const refCt = referenceValueCt(tariff.commissioningYear, peakKWp);
-  const monthly: RevenueSummary["monthly"] = [];
-  for (let m = 1; m <= 12; m++) {
-    monthly.push({
-      month: m, pvKWh: 0, windKWh: 0, exportSolarKWh: 0, exportWindKWh: 0,
-      exportBatteryKWh: 0, chargeSolarKWh: 0, chargeWindKWh: 0, chargeGridKWh: 0,
-      exportKWh: 0, marketValueEUR: 0, gridChargeCostEUR: 0, fixedValueEUR: 0, premiumEUR: 0,
-    });
-  }
-  let totalPV = 0, totalWind = 0, totalExport = 0, totalChargeGrid = 0, marketValue = 0, gridCost = 0, premiumTotal = 0;
-  for (let i = 0; i < result.exportTotal.length; i++) {
-    const m = monthForStep(i) - 1;
-    const exp = result.exportTotal[i];
-    const row = monthly[m];
-    totalPV += result.pv[i]; totalWind += result.wind[i]; totalExport += exp; totalChargeGrid += result.chargeGrid[i];
-    const stepValue = (exp * result.price[i]) / 1000;
-    const stepCost = (result.chargeGrid[i] * result.price[i]) / 1000;
-    marketValue += stepValue; gridCost += stepCost;
-    row.pvKWh += result.pv[i]; row.windKWh += result.wind[i]; row.exportSolarKWh += result.exportSolar[i];
-    row.exportWindKWh += result.exportWind[i];
-    row.exportBatteryKWh += result.exportBattery[i]; row.chargeSolarKWh += result.chargeSolar[i];
-    row.chargeWindKWh += result.chargeWind[i]; row.chargeGridKWh += result.chargeGrid[i]; row.exportKWh += exp;
-    row.marketValueEUR += stepValue; row.gridChargeCostEUR += stepCost;
-    row.fixedValueEUR += exp * tariff.feedInEUR;
-  }
-  for (const row of monthly) {
-    let marktPraemieCt = 0;
-    if (row.exportKWh > 0) {
-      const vwapCt = (row.marketValueEUR / row.exportKWh) * 1000 * 0.1;
-      marktPraemieCt = Math.max(0, refCt - vwapCt);
-    }
-    row.premiumEUR = (row.exportKWh * marktPraemieCt) / 100;
-    premiumTotal += row.premiumEUR;
-  }
-  const vwap = totalExport > 0 ? (marketValue / totalExport) * 1000 : 0;
-  const vwapCt = vwap * 0.1;
-  const marktPraemieCt = Math.max(0, refCt - vwapCt);
-  const netMarket = marketValue + premiumTotal - gridCost;
-  const fixedValue = totalExport * tariff.feedInEUR;
-  return {
-    totalPVKWh: totalPV, totalWindKWh: totalWind, totalExportKWh: totalExport, totalChargeGridKWh: totalChargeGrid,
-    marketValueEUR: marketValue, gridChargeCostEUR: gridCost, premiumEUR: premiumTotal,
-    referenceValueCt: refCt, marktPraemieCt, netMarketEUR: netMarket,
-    fixedValueEUR: fixedValue, deltaEUR: netMarket - fixedValue,
-    vwapMarketEURperMWh: vwap, monthly,
+    netSelectedEUR: netSelected, monthly,
   };
 }

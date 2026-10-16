@@ -7,7 +7,19 @@
 //  - the user's Brauchwasserwärmepumpe spec (~40 kWh/month, midday, ~0.6 kW),
 //  - the user's wallbox data (charging mostly 08:00–12:00 on sunny days).
 
-import { STEPS_PER_DAY, TOTAL_STEPS, STEPS_PER_HOUR, monthOfStep, hourOfStep } from "./types";
+import {
+  STEPS_PER_DAY,
+  TOTAL_STEPS,
+  STEPS_PER_HOUR,
+  TOTAL_DAYS,
+  monthOfStep,
+  hourOfStep,
+  DAYS_IN_MONTH,
+} from "./types";
+
+// Re-exported so existing importers keep working; the calendar itself lives in
+// types.ts alongside the step grid it describes.
+export { DAYS_IN_MONTH };
 
 export interface HouseholdConfig {
   enabled: boolean;
@@ -49,6 +61,19 @@ export interface ConsumerConfig {
   bwwp: BwwpConfig;
   ev: EvConfig;
 }
+
+/**
+ * The one default consumer configuration. The UI state, the API defaults and
+ * the test fixtures all read this, instead of each keeping its own copy —
+ * they had already diverged on hot-water demand (400 kWh in the chatbot's
+ * prose, 480 kWh here).
+ */
+export const DEFAULT_CONSUMERS: ConsumerConfig = {
+  household: { enabled: true, annualKWh: 2400 },
+  heatpump: { enabled: true, annualKWh: 5000 },
+  bwwp: { enabled: true, annualKWh: DEFAULT_BWWP_KWH },
+  ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
+};
 
 // ---------------------------------------------------------------------------
 // Normalized 24-hour shapes (mean = 1 over the day).
@@ -106,8 +131,7 @@ function normalizeMean(arr: number[]): number[] {
 // Days per month for the simulated (non-leap) year. Used to day-weight the
 // monthly profiles so the calendar-weighted mean is 1 and the annual total
 // equals the requested consumption exactly (winter months are longer).
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-const YEAR_DAYS = DAYS_IN_MONTH.reduce((a, b) => a + b, 0);
+const YEAR_DAYS = TOTAL_DAYS;
 
 function normalizeDayWeighted(arr: number[]): number[] {
   let wsum = 0;
@@ -281,7 +305,34 @@ export function evLoad(annualKWh: number, pvShare: number): Float64Array {
 }
 
 /** Sum of all enabled consumer profiles (kWh/step). */
+/**
+ * Cache of computed load profiles.
+ *
+ * The four consumer profiles are a pure function of their annual demands, and
+ * `runSimulation` rebuilds them once per dispatch — five times per report, plus
+ * again for `loadByConsumer`. As everywhere else in the domain layer, the cache
+ * stores the series and returns a **copy**, so no caller can mutate a shared
+ * `Float64Array`.
+ */
+const totalLoadCache = new Map<string, Float64Array>();
+const splitLoadCache = new Map<string, ConsumerLoads>();
+
+/** Total demand per step (kWh). */
 export function totalLoad(cfg: ConsumerConfig): Float64Array {
+  const key = loadKey(cfg);
+  const hit = totalLoadCache.get(key);
+  if (hit) return hit.slice();
+  const out = computeTotalLoad(cfg);
+  if (totalLoadCache.size > 64) totalLoadCache.clear();
+  totalLoadCache.set(key, out);
+  return out.slice();
+}
+
+function loadKey(cfg: ConsumerConfig): string {
+  return JSON.stringify(cfg);
+}
+
+function computeTotalLoad(cfg: ConsumerConfig): Float64Array {
   const out = new Float64Array(TOTAL_STEPS);
   if (cfg.household.enabled) addInto(out, householdLoad(cfg.household.annualKWh));
   if (cfg.heatpump.enabled) addInto(out, heatpumpLoad(cfg.heatpump.annualKWh));
@@ -297,7 +348,6 @@ export function totalLoad(cfg: ConsumerConfig): Float64Array {
   return out;
 }
 
-/** Each consumer's load separately (zeros for disabled consumers). */
 export interface ConsumerLoads {
   household: Float64Array;
   heatpump: Float64Array;
@@ -306,6 +356,25 @@ export interface ConsumerLoads {
 }
 
 export function loadByConsumer(cfg: ConsumerConfig): ConsumerLoads {
+  const key = loadKey(cfg);
+  const hit = splitLoadCache.get(key);
+  if (hit) return copyLoads(hit);
+  const out = computeLoadByConsumer(cfg);
+  if (splitLoadCache.size > 64) splitLoadCache.clear();
+  splitLoadCache.set(key, out);
+  return copyLoads(out);
+}
+
+function copyLoads(l: ConsumerLoads): ConsumerLoads {
+  return {
+    household: l.household.slice(),
+    heatpump: l.heatpump.slice(),
+    bwwp: l.bwwp.slice(),
+    ev: l.ev.slice(),
+  };
+}
+
+function computeLoadByConsumer(cfg: ConsumerConfig): ConsumerLoads {
   // Space-heating load of the heat pump.
   const heatpump = cfg.heatpump.enabled
     ? heatpumpLoad(cfg.heatpump.annualKWh)
