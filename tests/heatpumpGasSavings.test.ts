@@ -6,6 +6,7 @@ import {
   DEFAULT_GAS_BOILER_EFFICIENCY,
 } from "../src/calc/heatpumpGasSavings";
 import { heatpumpLoad } from "../src/calc/consumers";
+import { CO2_GAS_DIRECT } from "../src/calc/co2";
 import { TOTAL_STEPS } from "../src/calc/types";
 
 function defaultParams(overrides: Partial<GasSavingsParams> = {}): GasSavingsParams {
@@ -140,10 +141,14 @@ describe("computeGasSavings - efficiency sensitivity", () => {
 });
 
 describe("computeGasSavings - CO2 and cost", () => {
-  it("co2SavedKg = gasSavedKWh × 0.201", () => {
+  it("co2SavedKg = gasSavedKWh x the canonical gas factor", () => {
+    // This module used to hard-code 0.201 kg/kWh (tank-to-burner) while the
+    // CO2 scenario engine used 0.24 (well-to-burner) for the same avoided gas,
+    // so the report showed two CO2 savings 19 % apart with nothing to say
+    // which was which. There is one factor now, in `co2.ts`.
     const load = heatpumpLoad(5000);
     const report = computeGasSavings(load, defaultParams());
-    expect(report.co2SavedKg).toBeCloseTo(report.gasSavedKWh * 0.201, 0);
+    expect(report.co2SavedKg).toBeCloseTo(report.gasSavedKWh * CO2_GAS_DIRECT, 0);
   });
 
   it("costSavedEUR = gasSavedKWh × gasPrice / 100", () => {

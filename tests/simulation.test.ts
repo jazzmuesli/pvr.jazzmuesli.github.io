@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { simulate, computeDispatchFlags } from "../src/calc/index";
-import { computeRevenue, referenceValueCt, feedInTariffCt } from "../src/calc/revenue";
+import { computeEconomics, referenceValueCt, feedInTariffCt } from "../src/calc/revenue";
+import { cityForLocation } from "../src/calc/tariff";
 import { generatePrices, countNonPositive } from "../src/calc/priceModel";
 import { pvProductionPerStep } from "../src/calc/solar";
 import { SimConfig, TOTAL_STEPS, STEPS_PER_DAY } from "../src/calc/types";
@@ -162,35 +163,66 @@ describe("revenue + Marktprämie", () => {
     expect(referenceValueCt(2025, 50)).toBeCloseTo(blended50, 2);
   });
 
+  // These three used to run against `computeRevenue`, a second implementation
+  // of the export/import economics that nothing but this file ever called. It
+  // had drifted: it weighted the Monatsmarktwert by *export* while the live
+  // path weights it by *PV production* (§ 23a EEG is fleet-wide), which made
+  // the two disagree by 3.5 % in ct and 26 % in euros. The function is gone;
+  // the behaviour it was supposed to pin is now pinned on the live path.
+  const econ = (feedInCt = 7.2, marketMarginCt?: number) => ({
+    commissioningYear: 2025,
+    peakKWp: 22,
+    exportScheme: "fixed" as const,
+    feedInCt,
+    importScheme: "fixed" as const,
+    importCity: cityForLocation("hamburg"),
+    importFixedCt: 24,
+    marketMarginCt,
+  });
+
   it("fixed tariff value equals export * tariff", () => {
     const r = simulate({ ...baseConfig(), prices });
-    const rev = computeRevenue(r, { feedInEUR: 0.072, commissioningYear: 2025 }, 22);
-    expect(rev.fixedValueEUR).toBeCloseTo(rev.totalExportKWh * 0.072, 3);
+    const e = computeEconomics(r, econ());
+    expect(e.exportRevenueFixedEUR).toBeCloseTo(e.totalExportKWh * 0.072, 3);
   });
 
   it("Marktprämie floors market revenue at the EEG reference value", () => {
-    // Constant 50 €/MWh -> VWAP_ct = 5 ct < reference -> premium fills the gap.
+    // Constant 50 €/MWh -> production-weighted spot average = 5 ct/kWh, below
+    // the EEG reference value, so the premium fills exactly the gap.
     const flat = new Float64Array(TOTAL_STEPS).fill(50);
     const r = simulate({ ...baseConfig({ capacityKWh: 0 }), prices: flat });
-    const rev = computeRevenue(r, { feedInEUR: 0.072, commissioningYear: 2025 }, 22);
     const ref = referenceValueCt(2025, 22);
-    // net market should equal approx reference * export
-    expect(rev.netMarketEUR).toBeCloseTo((ref / 100) * rev.totalExportKWh, 1);
-    expect(rev.marktPraemieCt).toBeGreaterThan(0);
+    const e = computeEconomics(r, { ...econ(), exportScheme: "market" });
+    expect(e.marktPraemieCt).toBeGreaterThan(0);
+    expect(e.exportRevenueMarketEUR).toBeCloseTo((ref / 100) * e.totalExportKWh, 1);
   });
 
   it("high spot prices yield zero premium and market revenue above the reference", () => {
     const flat = new Float64Array(TOTAL_STEPS).fill(120);
     const r = simulate({ ...baseConfig({ capacityKWh: 0 }), prices: flat });
-    const rev = computeRevenue(r, { feedInEUR: 0.072, commissioningYear: 2025 }, 22);
-    expect(rev.marktPraemieCt).toBe(0);
-    expect(rev.netMarketEUR).toBeGreaterThan((rev.referenceValueCt / 100) * rev.totalExportKWh);
+    const e = computeEconomics(r, { ...econ(), exportScheme: "market" });
+    expect(e.marktPraemieCt).toBe(0);
+    expect(e.exportRevenueMarketEUR).toBeGreaterThan((e.referenceValueCt / 100) * e.totalExportKWh);
+  });
+
+  it("the Direktvermarkter margin reduces market revenue by exactly margin x export", () => {
+    const r = simulate({ ...baseConfig(), prices });
+    const gross = computeEconomics(r, { ...econ(), exportScheme: "market" });
+    const net = computeEconomics(r, { ...econ(), exportScheme: "market", marketMarginCt: 1 });
+    expect(gross.exportRevenueMarketEUR - net.exportRevenueMarketEUR).toBeCloseTo(
+      (gross.totalExportKWh * 1) / 100,
+      3,
+    );
+    // The fixed-tariff arm must not move: the margin is a market-export term.
+    expect(computeEconomics(r, econ()).exportRevenueFixedEUR).toBeCloseTo(
+      computeEconomics(r, econ(7.2, 1)).exportRevenueFixedEUR,
+      9,
+    );
   });
 
   it("monthly breakdown has 12 rows", () => {
     const r = simulate({ ...baseConfig(), prices });
-    const rev = computeRevenue(r, baseConfig().tariff, 22);
-    expect(rev.monthly.length).toBe(12);
+    expect(computeEconomics(r, econ()).monthly.length).toBe(12);
   });
 });
 

@@ -24,6 +24,7 @@ import {
   TariffCombination,
   CO2_EMISSION_FACTORS,
 } from "../calc/report";
+import { monthLabel } from "./monthLabels";
 import { t, fmtEUR as i18nFmtEUR, fmtKWh as i18nFmtKWh, getLocale } from "../i18n";
 
 function el(tag: string, attrs: Record<string, string | number> = {}): SVGElement {
@@ -280,7 +281,7 @@ export function renderMonthlyChart(
       const h = (val / e.max) * plotH;
       const rect = el("rect", { x: cx - barW / 2, y: yTop - h, width: barW, height: h, fill: CONSUMER_COLORS[key], rx: 2, class: "bar", "data-key": key });
       bindTip(rect, () =>
-        `<strong>${d.label}</strong><br>` +
+        `<strong>${monthLabel(d.month)}</strong><br>` +
         `${getConsumerLabel("household")}: <b>${fmtKWh(d.load.household)} kWh</b><br>` +
         `${getConsumerLabel("heatpump")}: ${fmtKWh(d.load.heatpump)} kWh<br>` +
         `${getConsumerLabel("bwwp")}: ${fmtKWh(d.load.bwwp)} kWh<br>` +
@@ -301,7 +302,7 @@ export function renderMonthlyChart(
     haloDot(svg, cx, pvY, 4, COLORS.pv, "pv");
     const pvHit = el("circle", { cx, cy: pvY, r: 11, fill: "transparent", "data-key": "pv" });
     bindTip(pvHit, () => {
-      let tip = `<strong>${d.label}</strong><br>${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b>`;
+      let tip = `<strong>${monthLabel(d.month)}</strong><br>${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b>`;
       if (d.windKWh > 0) tip += `<br>${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b>`;
       return tip;
     });
@@ -313,7 +314,7 @@ export function renderMonthlyChart(
       windPts.push(`${cx},${windY}`);
       haloDot(svg, cx, windY, 3.5, COLORS.wind, "wind");
       const windHit = el("circle", { cx, cy: windY, r: 10, fill: "transparent", "data-key": "wind" });
-      bindTip(windHit, () => `<strong>${d.label}</strong><br>${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b>`);
+      bindTip(windHit, () => `<strong>${monthLabel(d.month)}</strong><br>${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b>`);
       svg.appendChild(windHit);
     }
 
@@ -332,7 +333,7 @@ export function renderMonthlyChart(
     });
     hit.addEventListener("click", () => onSelect(d.month));
     bindTip(hit, () =>
-      `<strong>${d.label}</strong><br>` +
+      `<strong>${monthLabel(d.month)}</strong><br>` +
       `${t("tooltip.pv_yield")}: <b>${fmtKWh(d.pvKWh)} kWh</b><br>` +
       (d.windKWh > 0 ? `${t("tooltip.wind_yield")}: <b>${fmtKWh(d.windKWh)} kWh</b><br>` : "") +
       `${t("tooltip.consumption")}: ${fmtKWh(d.totalLoadKWh)} kWh<br>` +
@@ -343,7 +344,7 @@ export function renderMonthlyChart(
     svg.appendChild(hit);
 
     const txt = el("text", { x: cx, y: m.top + plotH + 22, "text-anchor": "middle", fill: COLORS.text, "font-size": 12 });
-    txt.textContent = d.label;
+    txt.textContent = monthLabel(d.month);
     svg.appendChild(txt);
   });
 

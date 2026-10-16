@@ -184,10 +184,19 @@ describe("Excel export — live formulas reproduce the SimReport", () => {
     expect(evalCell(hf, sid, aut)).toBeCloseTo(report.summary.selfSufficiencyPct, 1);
   });
 
-  it("Aggregate: grid import formula = load − self-consumption", () => {
+  it("Aggregate: grid import is the real identity, not a residual", () => {
+    // The sheet used to show `MAX(0, load − self-use)`, which is only correct
+    // when the battery never charges from the grid. It disagreed with the
+    // simulation by the battery's inherited state of charge — silently, because
+    // the formula's cached result came from the report and HyperFormula is the
+    // only thing that ever compared the two.
     const sid = sheetId("Aggregat");
     const addr = addrByLabel(hf, sid, "Netz-Import");
-    expect(evalCell(hf, sid, addr)).toBeCloseTo(report.summary.totalImportKWh, 1);
+    expect(evalCell(hf, sid, addr)).toBeCloseTo(report.summary.loadImportKWh, 1);
+    // …and the sheet's own cells now close the annual energy balance.
+    const load = evalCell(hf, sid, addrByLabel(hf, sid, "Gesamtverbrauch"));
+    const self = evalCell(hf, sid, addrByLabel(hf, sid, "Eigenverbrauch"));
+    expect(self + evalCell(hf, sid, addr)).toBeCloseTo(load, 1);
   });
 
   it("Summary: amortisation formula = investment / annual benefit", () => {

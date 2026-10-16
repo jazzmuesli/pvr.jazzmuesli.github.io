@@ -9,7 +9,7 @@
 import { simulate } from "./simulation";
 import { computeEconomics, monthForStep, EconOptions } from "./revenue";
 import { getYearPrices, PRICE_YEARS } from "./priceData";
-import { monthOfStep, hourOfStep, STEPS_PER_DAY, TOTAL_STEPS, SimConfig, SimResult, Orientation, DischargeMode, parseChargeMode, parseDischargeMode } from "./types";
+import { monthOfStep, hourOfStep, STEPS_PER_DAY, TOTAL_STEPS, SimConfig, SimResult } from "./types";
 import { cityForLocation, importPriceArray, TariffScheme } from "./tariff";
 import {
   loadByConsumer,
@@ -40,6 +40,18 @@ import {
   DEFAULT_GAS_BOILER_EFFICIENCY,
 } from "./heatpumpGasSavings";
 import { electricityMixForStep } from "./electricityMix";
+import {
+  CoreParams,
+  defaultCoreParams,
+  paramsFromQuery,
+  asOrientation,
+  asChargeMode,
+  asDischargeMode,
+  asExportScheme,
+  asImportScheme,
+} from "../domain/params";
+import { consumerParamsFromQuery, carParamsFromQuery } from "../domain/consumers";
+import { DEFAULT_CONSUMERS } from "./consumers";
 import { windProductionPerStep, WIND_TURBINE_MAP, DEFAULT_WIND_TURBINE, WIND_LOCATIONS } from "./wind";
 
 // ---- Domain types shared with the UI ----------------------------------------
@@ -55,14 +67,30 @@ export interface ConsumerBreakdown {
 }
 
 export interface MonthlyChartDatum {
+  /** 1-based month. The display label belongs to the i18n layer, not here —
+   *  this field used to carry hard-coded German abbreviations, so an English
+   *  user saw "Mär/Mai/Okt/Dez" on the monthly chart while the hourly chart
+   *  beside it was correctly translated. */
   month: number;
-  label: string;
+  /** ISO-ish key (`"jan"`, `"feb"`, …) for looking the label up in the
+   *  translation catalogue. */
+  monthKey: string;
   pvKWh: number;
   windKWh: number;
   load: ConsumerBreakdown;
   totalLoadKWh: number;
   selfConsumptionKWh: number;
+  /**
+   * Grid import that served a load this month (kWh). Together with
+   * `selfConsumptionKWh` this closes the month's energy balance exactly:
+   * `selfConsumptionKWh + importKWh === totalLoadKWh`. It is what the charts
+   * draw and what the Excel export reproduces.
+   */
   importKWh: number;
+  /** Metered import, i.e. what the import tariff is charged on (kWh). */
+  meteredImportKWh: number;
+  /** Of which bought to charge the battery and stored (kWh). */
+  gridChargedKWh: number;
   exportKWh: number;
   netEUR: number;
 }
@@ -74,14 +102,23 @@ export interface DayChartDatum {
   load: ConsumerBreakdown;
   totalLoadKWh: number;
   selfUseKWh: number;
+  /** Grid import that served a load this hour (kWh); `selfUse + import = load`. */
   importKWh: number;
+  /** Metered grid import for this hour (kWh), including battery purchases. */
+  meteredImportKWh: number;
+  /** Of which bought to charge the battery (kWh). */
+  gridChargedKWh: number;
   exportKWh: number;
   avgPrice: number;
   socKWh: number;
 }
 
 export interface ScenarioDatum {
+  /** Stable identifier so callers never have to match on the display label. */
+  key: string;
   label: string;
+  exportScheme: "fixed" | "market";
+  importScheme: "fixed" | "dynamic" | "dynamic14a";
   netEUR: number;
   exportEUR: number;
   importEUR: number;
@@ -117,208 +154,64 @@ export interface TariffCombinationReport {
 
 // ---- Input parameters ------------------------------------------------------
 
-export interface SimParams {
-  // PV
-  peakKWp: number;
-  tiltDeg: number;
-  orientation: Orientation;
-  location: string;
-  // Battery
-  capacityKWh: number;
-  maxPowerKW: number;
-  minSOC: number;
-  maxSOC: number;
-  efficiency: number;
-  startSOC: number;
-  chargeMode: "morning" | "cheapest" | "gridNegative";
-  /** How the daily discharge window is chosen: fixed clock windows or the
-   *  `capacityKWh / maxPowerKW` most expensive hours of the day. */
-  dischargeMode: DischargeMode;
-  dischargeEvening: boolean;
-  dischargeMorning: boolean;
-  eveningStart: number;
-  eveningEnd: number;
-  morningStart: number;
-  morningEnd: number;
-  // Tariff
-  feedInCt: number;
-  commissioningYear: number;
-  priceYear: string;
-  // Consumers
+/**
+ * The simulation's input contract.
+ *
+ * Every scalar is inherited from the registry in `domain/params.ts`, so this
+ * type cannot drift from the defaults, the URL keys or the SPA state. Only the
+ * nested groups are declared here.
+ */
+export interface SimParams extends CoreParams {
+  // Consumers (registry: domain/consumers.ts)
   consumers: ConsumerConfig;
-  // Export / import scheme
-  exportScheme: "fixed" | "market";
-  importScheme: "fixed" | "dynamic" | "dynamic14a";
-  importFixedCt: number;
-  // Cost — a single total, independent of kWp / kWh size.
-  investmentEUR: number;
-  // Economic parameters
-  horizonYears: number;           // Analysis period (default 20)
-  discountRatePct: number;        // Discount rate for NPV (default 3%)
-  priceEscalationPct: number;     // Electricity price escalation (default 2%)
-  omPercentPerYear: number;       // O&M as % of investment/year (default 1.5%)
-  inverterLifetimeYears: number;  // Inverter lifespan (default 13)
-  inverterReplacementCostEUR: number; // Inverter replacement cost (default 1500)
-  batteryLifetimeYears: number;   // Battery lifespan (default 13)
-  batteryReplacementCostEUR: number; // Battery replacement cost (default 300 * capacityKWh)
-  batteryDegradationPct: number;  // Annual battery degradation (default 0.01 = 1%)
-  pvDegradationPct: number;       // Annual PV degradation (default 0.005 = 0.5%)
-  standbyWattage: number;         // Battery standby consumption (default 5W)
-  // Heating: JAZ of the heat pump and its electricity price (for the
-  // fossil-fuelled alternative cost comparison in `heating`).
-  heatpumpJaz: number;
-  heatpumpElectricCt: number;
-  // Opportunity-cost comparison inputs (heating + EV vs. diesel). The defaults
-  // are realistic for a German household; the heat-pump electricity comes from
-  // the heat-pump consumer above.
+  // Opportunity-cost comparison inputs (heating + EV vs. diesel).
   car: CarParams;
-  // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
-  marketMarginCt: number;
-  // Kleinwindkraftanlage (Expert-Modus)
-  windEnabled: boolean;
-  windCount: number;
-  windHubHeightM: number;
-  windTurbineId: string;
-  windSpeedMeanMs: number;
+  /**
+   * The heat pump's electricity price in ct/kWh. A heat pump is a grid
+   * consumer, so this is simply the import tariff — which is why it is derived
+   * in the codec rather than listed in the registry. An explicit `wpc` override
+   * still wins, for callers who model a dedicated heat-pump tariff.
+   */
+  heatpumpElectricCt: number;
 }
 
-export const DEFAULT_SIM_PARAMS: SimParams = {
-  peakKWp: 10,
-  tiltDeg: 35,
-  orientation: "south",
-  location: "hamburg",
-  capacityKWh: 10,
-  maxPowerKW: 5,
-  minSOC: 0.1,
-  maxSOC: 0.9,
-  efficiency: 0.95,
-  startSOC: 0.5,
-  chargeMode: "morning",
-  dischargeMode: "windows",
-  dischargeEvening: true,
-  dischargeMorning: false,
-  eveningStart: 17,
-  eveningEnd: 21,
-  morningStart: 6,
-  morningEnd: 9,
-  feedInCt: 7.2,
-  commissioningYear: 2025,
-  priceYear: "2025",
-  // Economic parameters
-  horizonYears: 20,
-  discountRatePct: 3,
-  priceEscalationPct: 2,
-  omPercentPerYear: 1.5,
-  inverterLifetimeYears: 13,
-  inverterReplacementCostEUR: 1500,
-  batteryLifetimeYears: 13,
-  batteryReplacementCostEUR: 3000,
-  batteryDegradationPct: 0.01,
-  pvDegradationPct: 0.005,
-  standbyWattage: 5,
-  // Consumers
-  consumers: {
-    household: { enabled: true, annualKWh: 2400 },
-    heatpump: { enabled: true, annualKWh: 5000 },
-    bwwp: { enabled: true, annualKWh: 480 },
-    ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
-  },
-  exportScheme: "fixed",
-  importScheme: "fixed",
-  importFixedCt: 24,
-  investmentEUR: 32000,
-  // Heating: JAZ of the heat pump and its electricity price (for the
-  // fossil-fuelled alternative cost comparison in `heating`).
-  heatpumpJaz: 3,
-  heatpumpElectricCt: 24,
-  // Opportunity-cost comparison inputs (heating + EV vs. diesel). The defaults
-  // are realistic for a German household; the heat-pump electricity comes from
-  // the heat-pump consumer above.
-  car: { ...DEFAULT_CAR_PARAMS },
-  marketMarginCt: 1,
-  windEnabled: false,
-  windCount: 1,
-  windHubHeightM: 10,
-  windTurbineId: "skywind_ng",
-  windSpeedMeanMs: 4.8,
-};
+/**
+ * The one default configuration.
+ *
+ * This used to be a second, hand-maintained copy of the defaults which
+ * disagreed with the SPA's on eight fields, so `/api?` and the app answered
+ * "what does this system cost" with two different systems. There is one now.
+ */
+export function defaultSimParams(): SimParams {
+  const core = defaultCoreParams();
+  return {
+    ...core,
+    consumers: JSON.parse(JSON.stringify(DEFAULT_CONSUMERS)) as ConsumerConfig,
+    car: { ...DEFAULT_CAR_PARAMS },
+    heatpumpElectricCt: core.importFixedCt,
+  };
+}
 
-// Parse URL-style query parameters into SimParams. Mirrors the names used by
-// the SPA URL so the same link works for the `/api` endpoint and the app.
+export const DEFAULT_SIM_PARAMS: SimParams = defaultSimParams();
+
+/**
+ * Parse URL-style query parameters into SimParams. The scalar list, the keys
+ * and the defaults all come from the registry, so this reader and the
+ * share-link writer in `ui/url.ts` cannot disagree about what exists.
+ */
 export function simParamsFromQuery(q: URLSearchParams): SimParams {
-  const p = { ...DEFAULT_SIM_PARAMS };
-  const num = (key: string, def: number) => {
-    const v = q.get(key);
-    if (v === null || v === "") return def;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : def;
-  };
-  const str = (key: string, def: string) => {
-    const v = q.get(key);
-    return v === null || v === "" ? def : v;
-  };
-  p.peakKWp = num("kwp", p.peakKWp);
-  p.tiltDeg = num("tilt", p.tiltDeg);
-  p.orientation = (str("o", p.orientation) as Orientation) ?? p.orientation;
-  p.location = str("loc", p.location);
-  p.capacityKWh = num("cap", p.capacityKWh);
-  p.maxPowerKW = num("pwr", p.maxPowerKW);
-  p.minSOC = num("minsoc", p.minSOC);
-  p.maxSOC = num("maxsoc", p.maxSOC);
-  p.efficiency = num("eff", p.efficiency);
-  p.startSOC = num("soc0", p.startSOC);
-  p.chargeMode = parseChargeMode(str("charge", ""), p.chargeMode);
-  p.dischargeMode = parseDischargeMode(str("dsp", ""), p.dischargeMode);
-  p.dischargeEvening = str("de", p.dischargeEvening ? "1" : "0") === "1";
-  p.dischargeMorning = str("dm", p.dischargeMorning ? "1" : "0") === "1";
-  p.eveningStart = num("evs", p.eveningStart);
-  p.eveningEnd = num("eve", p.eveningEnd);
-  p.morningStart = num("mns", p.morningStart);
-  p.morningEnd = num("mne", p.morningEnd);
-  p.feedInCt = num("fi", p.feedInCt);
-  p.commissioningYear = num("yr", p.commissioningYear);
-  p.priceYear = str("py", p.priceYear);
-  p.consumers.household.enabled = str("hh", p.consumers.household.enabled ? "1" : "0") === "1";
-  p.consumers.household.annualKWh = num("hk", p.consumers.household.annualKWh);
-  p.consumers.heatpump.enabled = str("wp", p.consumers.heatpump.enabled ? "1" : "0") === "1";
-  p.consumers.heatpump.annualKWh = num("wk", p.consumers.heatpump.annualKWh);
-  p.consumers.bwwp.enabled = str("bw", p.consumers.bwwp.enabled ? "1" : "0") === "1";
-  p.consumers.bwwp.annualKWh = num("bwk", p.consumers.bwwp.annualKWh ?? 480);
-  p.consumers.ev.enabled = str("ev", p.consumers.ev.enabled ? "1" : "0") === "1";
-  p.consumers.ev.annualKWh = num("ek", p.consumers.ev.annualKWh);
-  p.consumers.ev.pvShare = num("es", p.consumers.ev.pvShare);
-  p.exportScheme = (str("ex", p.exportScheme) as SimParams["exportScheme"]) ?? p.exportScheme;
-  p.importScheme = (str("im", p.importScheme) as SimParams["importScheme"]) ?? p.importScheme;
-  p.importFixedCt = num("ict", p.importFixedCt);
-  p.investmentEUR = num("inv", p.investmentEUR);
-  // Economic / lifecycle-cashflow parameters.
-  p.horizonYears = num("hor", p.horizonYears);
-  p.discountRatePct = num("d", p.discountRatePct);
-  p.priceEscalationPct = num("esc", p.priceEscalationPct);
-  p.omPercentPerYear = num("om", p.omPercentPerYear);
-  p.inverterLifetimeYears = num("invlife", p.inverterLifetimeYears);
-  p.inverterReplacementCostEUR = num("invrep", p.inverterReplacementCostEUR);
-  p.batteryLifetimeYears = num("batlife", p.batteryLifetimeYears);
-  p.batteryReplacementCostEUR = num("batrep", p.batteryReplacementCostEUR);
-  p.batteryDegradationPct = num("batdeg", p.batteryDegradationPct);
-  p.pvDegradationPct = num("pvdeg", p.pvDegradationPct);
-  p.standbyWattage = num("stdby", p.standbyWattage);
-  p.heatpumpJaz = num("jaz", p.heatpumpJaz);
-  // The heat pump pays the Strompreis by default; an explicit `wpc` override
-  // (its own cheaper WP tariff) still wins if present in the query string.
-  p.heatpumpElectricCt = q.get("wpc") !== null ? num("wpc", p.heatpumpElectricCt) : p.importFixedCt;
-  // Opportunity-cost (EV vs. diesel) inputs.
-  p.car.annualKm = num("km", p.car.annualKm);
-  p.car.dieselEurPerL = num("dl", p.car.dieselEurPerL);
-  p.car.evElectricCtPerKwh = num("ec", p.car.evElectricCtPerKwh);
-  // Direktvermarkter-Marge.
-  p.marketMarginCt = num("mm", p.marketMarginCt);
-  // Kleinwindkraftanlage.
-  p.windEnabled = str("wen", p.windEnabled ? "1" : "0") === "1";
-  p.windCount = num("wc", p.windCount);
-  p.windHubHeightM = num("wh", p.windHubHeightM);
-  p.windTurbineId = str("wt", p.windTurbineId);
-  p.windSpeedMeanMs = num("wsm", p.windSpeedMeanMs);
+  const base = defaultSimParams();
+  const scalars = paramsFromQuery(base as unknown as Record<string, unknown>, q);
+  const p = { ...base, ...(scalars as CoreParams) } as SimParams;
+  p.orientation = asOrientation(p.orientation);
+  p.chargeMode = asChargeMode(p.chargeMode);
+  p.dischargeMode = asDischargeMode(p.dischargeMode);
+  p.exportScheme = asExportScheme(p.exportScheme);
+  p.importScheme = asImportScheme(p.importScheme);
+  p.consumers = consumerParamsFromQuery(base.consumers, q);
+  p.car = carParamsFromQuery(base.car, q);
+  const wpc = Number(q.get("wpc"));
+  p.heatpumpElectricCt = q.get("wpc") !== null && Number.isFinite(wpc) ? wpc : p.importFixedCt;
   return p;
 }
 
@@ -386,44 +279,24 @@ export interface GridMix {
  * imports), so its factor (0.62) is a blended value between hard coal (~0.82)
  * and cleaner dispatchable sources rather than pure lignite (~1.0).
  */
-export const CO2_EMISSION_FACTORS: GridMixShares = {
-  wind: 0.011,   // lifecycle (turbine manufacture + O&M)
-  solar: 0.045,  // lifecycle (module manufacture)
-  gas: 0.38,     // CCGT electricity output (~0.35–0.40 kg/kWh_el)
-  coal: 0.62,    // blended residual fossil/dispatchable bucket
-  biomass: 0.23, // lifecycle for biomass electricity
-  hydro: 0.006,  // lifecycle
-  other: 0.35,   // waste incineration, geothermal, misc.
-};
+// Every CO2 emission factor now lives in `co2.ts`. These names stay re-exported
+// here because they are part of this module's public surface, but there is now
+// exactly one definition of each number -- and one place to change it.
+export {
+  CO2_EMISSION_FACTORS,
+  CO2_GAS_DIRECT,
+  CO2_DIESEL,
+  CO2_DIESEL_PER_LITRE,
+  co2ForGasKWh,
+  co2Intensity,
+} from "./co2";
 
-/**
- * CO2 emission factor for natural gas burned directly for heating, on a
- * well-to-burner basis. Direct combustion is ≈ 0.201 kg CO₂/kWh; adding the
- * ~15–20 % upstream (extraction, transport, methane leakage, in CO₂-equiv.)
- * gives ≈ 0.24 kg CO₂/kWh — consistent with the well-to-wheel diesel factor.
- */
-export const CO2_GAS_DIRECT = 0.24; // kg CO₂/kWh (German gas, well-to-burner)
-
-/**
- * CO2 emission factor for diesel on a *well-to-wheel* basis, **per litre of
- * fuel** (the physically meaningful unit, since a car burns litres, not the
- * EV's kWh). Tank-to-wheel combustion is ≈ 2.64 kg CO₂/litre; adding the ~20 %
- * upstream well-to-tank emissions (extraction, refining, transport) gives
- * ≈ 3.17 kg CO₂/litre.
- *
- * NOTE: diesel CO2 must be computed from the diesel car's *own* consumption
- * (litres/100 km, ~5.5 l), NOT from the EV's 17 kWh/100 km. A diesel burns
- * ~55 kWh of chemical energy per 100 km, so charging the diesel with the EV's
- * 17 kWh/100 km silently erased the drivetrain-efficiency gap and made the EV
- * look dirtier than diesel — which is physically wrong.
- */
-export const CO2_DIESEL_PER_L = 3.17; // kg CO₂/litre diesel (well-to-wheel)
-
-/**
- * Legacy per-kWh diesel factor, kept for the UI tooltip only. Diesel's lower
- * heating value is ≈ 9.8 kWh/litre, so 3.17 kg/L ÷ 9.8 kWh/L ≈ 0.32 kg/kWh.
- */
-export const CO2_DIESEL = CO2_DIESEL_PER_L / 9.8; // ≈ 0.323 kg CO₂/kWh diesel
+// Local aliases so the bodies below read unchanged.
+import {
+  CO2_GAS_DIRECT as GAS_DIRECT,
+  CO2_DIESEL_PER_LITRE as DIESEL_PER_LITRE,
+  co2Intensity,
+} from "./co2";
 
 /** Gas heating: useful heat / boiler efficiency. */
 export const GAS_HEAT_KWH_PER_KWH_USEFUL = 1 / DEFAULT_GAS_BOILER_EFFICIENCY; // ~1.087
@@ -509,7 +382,24 @@ export interface SimSummary {
   totalLoadKWh: number;
   selfConsumptionKWh: number;
   totalExportKWh: number;
+  /**
+   * Metered grid import (kWh) — what the import tariff is charged on, and the
+   * figure the whole cashflow model is priced from.
+   */
   totalImportKWh: number;
+  /**
+   * Grid import that served a load (kWh). Metered import, minus what went
+   * straight into the battery, plus what came back out of it to serve a load.
+   * Together with `selfConsumptionKWh` this closes the annual energy balance
+   * exactly: `selfConsumptionKWh + loadImportKWh === totalLoadKWh`.
+   *
+   * The two differ only when the battery is charged from the grid, and the
+   * difference is worth publishing rather than hiding in a residual — the
+   * residual used to swallow it silently.
+   */
+  loadImportKWh: number;
+  /** Portion of the metered import that went straight into the battery (kWh). */
+  gridChargedKWh: number;
   exportRevenueEUR: number;
   importCostEUR: number;
   netSelectedEUR: number;
@@ -521,7 +411,15 @@ export interface SimSummary {
   selfSufficiencyPct: number;
 }
 
-function toSimConfig(p: SimParams): SimConfig {
+/**
+ * Translate the flat public parameter set into the engine's `SimConfig`.
+ *
+ * Exported so that tests (and any future consumer) can drive the raw dispatch
+ * without re-implementing this wiring. It used to be private, which is why a
+ * dozen test files each grew their own hand-rolled copy of `runSimulation`'s
+ * setup — and each of those copies could drift from the real one.
+ */
+export function toSimConfig(p: SimParams): SimConfig {
   const hasBattery = p.capacityKWh > 0;
   // Compute wind production if enabled.
   let wind: Float64Array | undefined;
@@ -585,6 +483,8 @@ interface DayAccumulator {
   load: ConsumerBreakdown;
   selfUseKWh: number;
   importKWh: number;
+  meteredImportKWh: number;
+  gridChargedKWh: number;
   exportKWh: number;
   avgPrice: number;
   socKWh: number;
@@ -599,6 +499,8 @@ function emptyDay(hour: number): DayAccumulator {
     load: { household: 0, heatpump: 0, bwwp: 0, ev: 0 },
     selfUseKWh: 0,
     importKWh: 0,
+    meteredImportKWh: 0,
+    gridChargedKWh: 0,
     exportKWh: 0,
     avgPrice: 0,
     socKWh: 0,
@@ -621,7 +523,9 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
     d.load.bwwp += loads.bwwp[i];
     d.load.ev += loads.ev[i];
     d.selfUseKWh += result.directUse[i] + result.directUseWind[i] + result.dischargeToLoadPV[i] + result.dischargeToLoadWind[i];
-    d.importKWh += result.gridImport[i];
+    d.importKWh += result.gridImport[i] - result.chargeGrid[i] + result.dischargeToLoadGrid[i];
+    d.meteredImportKWh += result.gridImport[i];
+    d.gridChargedKWh += result.chargeGrid[i];
     d.exportKWh += result.exportTotal[i];
     d.avgPrice += result.price[i];
     d.socKWh += result.soc[i];
@@ -645,6 +549,8 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
         totalLoadKWh: load.household + load.heatpump + load.bwwp + load.ev,
         selfUseKWh: (d.selfUseKWh / n) * stepsPerHour,
         importKWh: (d.importKWh / n) * stepsPerHour,
+        meteredImportKWh: (d.meteredImportKWh / n) * stepsPerHour,
+        gridChargedKWh: (d.gridChargedKWh / n) * stepsPerHour,
         exportKWh: (d.exportKWh / n) * stepsPerHour,
         avgPrice: d.avgPrice / n,
         socKWh: d.socKWh / n,
@@ -653,35 +559,49 @@ function dailyAll(result: SimResult, loads: ConsumerLoads): DayChartDatum[][] {
   );
 }
 
-function scenarioVariants(
-  result: SimResult,
-  base: SimParams,
-  city: ReturnType<typeof cityForLocation>,
-  prices: ReturnType<typeof getYearPrices>,
-): ScenarioDatum[] {
-  const variants: { label: string; exportScheme: "fixed" | "market"; importScheme: SimParams["importScheme"] }[] = [
-    { label: "Feste Einspeisung (§ 14a/2)", exportScheme: "fixed", importScheme: "fixed" },
-    { label: "Direktvermarktung (Marktprämie)", exportScheme: "market", importScheme: "fixed" },
-    { label: "Dynamischer Bezug (spotbasiert)", exportScheme: "fixed", importScheme: "dynamic" },
-    { label: "Dynamisch + § 14a/3", exportScheme: "fixed", importScheme: "dynamic14a" },
-  ];
-  const imp = importPriceArray(base.importScheme, city, prices, base.importFixedCt);
-  return variants.map((v) => {
+/**
+ * The four export/import scheme combinations the scenario chart compares.
+ *
+ * This used to carry its own hand-rolled import-cost loop that always used the
+ * *base* import scheme, so all four bars showed the fixed-tariff number under
+ * four different labels. `computeEconomics` already prices all three import
+ * schemes and the selected net in a single pass over the same dispatch, so the
+ * variants now simply read those numbers — one implementation, not two.
+ */
+export const SCENARIO_VARIANTS: {
+  key: string;
+  label: string;
+  exportScheme: "fixed" | "market";
+  importScheme: SimParams["importScheme"];
+}[] = [
+  { key: "fixed_fixed", label: "Feste Einspeisung (§ 14a/2)", exportScheme: "fixed", importScheme: "fixed" },
+  { key: "market_fixed", label: "Direktvermarktung (Marktprämie)", exportScheme: "market", importScheme: "fixed" },
+  { key: "fixed_dynamic", label: "Dynamischer Bezug (spotbasiert)", exportScheme: "fixed", importScheme: "dynamic" },
+  { key: "fixed_dynamic14a", label: "Dynamisch + § 14a/3", exportScheme: "fixed", importScheme: "dynamic14a" },
+];
+
+function scenarioVariants(result: SimResult, base: SimParams): ScenarioDatum[] {
+  return SCENARIO_VARIANTS.map((v) => {
     const econ = computeEconomics(result, {
       commissioningYear: base.commissioningYear,
       peakKWp: base.peakKWp,
       exportScheme: v.exportScheme,
       feedInCt: base.feedInCt,
       importScheme: v.importScheme,
-      importCity: city,
+      importCity: cityForLocation(base.location),
       importFixedCt: base.importFixedCt,
       marketMarginCt: base.marketMarginCt,
     });
     const exportEUR = v.exportScheme === "market" ? econ.exportRevenueMarketEUR : econ.exportRevenueFixedEUR;
-    let importEUR = 0;
-    for (let i = 0; i < result.load.length; i++) importEUR += (result.gridImport[i] * imp[i]) / 100;
+    const importEUR =
+      v.importScheme === "fixed" ? econ.importCostFixedEUR
+      : v.importScheme === "dynamic" ? econ.importCostDynamicEUR
+      : econ.importCost14aEUR;
     return {
+      key: v.key,
       label: v.label,
+      exportScheme: v.exportScheme,
+      importScheme: v.importScheme,
       netEUR: exportEUR - importEUR,
       exportEUR,
       importEUR,
@@ -840,7 +760,11 @@ function computeCo2Analysis(
 ): Co2Analysis {
   const hpEnabled = p.consumers.heatpump.enabled;
   const evEnabled = p.consumers.ev.enabled;
-  const hpKWh = hpEnabled ? p.consumers.heatpump.annualKWh : 0;
+  // The heat pump's *dispatched* load, which — when the BWWP is disabled —
+  // also carries the hot-water demand. Using `p.consumers.heatpump.annualKWh`
+  // here instead understated the gas the heat pump replaced by 9.6 % and made
+  // this module disagree with `computeGasSavings`, which reads the same load.
+  const hpKWh = annualSum(loads.heatpump);
   const jaz = p.heatpumpJaz;
   const evKWh = evEnabled ? p.consumers.ev.annualKWh : 0;
   // Annual distance for the car comparison. When the EV is enabled, the
@@ -860,14 +784,14 @@ function computeCo2Analysis(
   // Gas heating: useful heat / boiler efficiency
   const usefulHeatKWh = hpKWh * jaz;
   const gasForHeatKWh = usefulHeatKWh / DEFAULT_GAS_BOILER_EFFICIENCY;
-  const gasHeatCo2Kg = gasForHeatKWh * CO2_GAS_DIRECT;
+  const gasHeatCo2Kg = gasForHeatKWh * GAS_DIRECT;
 
   // Diesel car: annual km × litres per 100 km × emission factor per litre.
   // Uses the diesel car's OWN consumption (p.car.dieselLPer100km, ~5.5 l), not
   // the EV's kWh/100 km, so the drivetrain-efficiency gap is preserved and the
   // EV comes out cleaner than diesel even on grid electricity.
   const dieselLitres = annualKm * p.car.dieselLPer100km / 100;
-  const dieselCo2Kg = dieselLitres * CO2_DIESEL_PER_L;
+  const dieselCo2Kg = dieselLitres * DIESEL_PER_LITRE;
 
   // Grid electricity CO2: use the actual grid import from simulation
   // weighted by the hourly mix (per-step integration for accuracy)
@@ -876,16 +800,7 @@ function computeCo2Analysis(
     for (let i = 0; i < TOTAL_STEPS; i++) {
       const gi = gridImportArr[i];
       if (gi <= 0) continue;
-      const mix = electricityMixForStep(i);
-      co2 += gi * (
-        mix.wind * CO2_EMISSION_FACTORS.wind +
-        mix.solar * CO2_EMISSION_FACTORS.solar +
-        mix.gas * CO2_EMISSION_FACTORS.gas +
-        mix.coal * CO2_EMISSION_FACTORS.coal +
-        mix.biomass * CO2_EMISSION_FACTORS.biomass +
-        mix.hydro * CO2_EMISSION_FACTORS.hydro +
-        mix.other * CO2_EMISSION_FACTORS.other
-      );
+      co2 += gi * co2Intensity(electricityMixForStep(i));
     }
     return co2;
   };
@@ -1092,15 +1007,8 @@ function computeCo2Analysis(
   }
 
   function computeGridCo2_fromKWh(totalGridKWh: number): number {
-    // Use the withoutPv mix (average grid intensity)
-    const avgCo2 = gridMix.withoutPv.wind * CO2_EMISSION_FACTORS.wind +
-      gridMix.withoutPv.solar * CO2_EMISSION_FACTORS.solar +
-      gridMix.withoutPv.gas * CO2_EMISSION_FACTORS.gas +
-      gridMix.withoutPv.coal * CO2_EMISSION_FACTORS.coal +
-      gridMix.withoutPv.biomass * CO2_EMISSION_FACTORS.biomass +
-      gridMix.withoutPv.hydro * CO2_EMISSION_FACTORS.hydro +
-      gridMix.withoutPv.other * CO2_EMISSION_FACTORS.other;
-    return totalGridKWh * avgCo2;
+    // Average grid intensity, from the all-grid (no PV) mix.
+    return totalGridKWh * co2Intensity(gridMix.withoutPv);
   }
 }
 
@@ -1144,20 +1052,26 @@ export function runSimulation(p: SimParams): SimReport {
     const s = monthlySums[i];
     return {
       month: i + 1,
-      label: MONTH_LABELS[i],
+      monthKey: MONTH_KEYS[i],
       pvKWh: r.pvKWh,
       windKWh: r.windKWh,
       load: { household: s.household, heatpump: s.heatpump, bwwp: s.bwwp, ev: s.ev },
       totalLoadKWh: r.loadKWh,
       selfConsumptionKWh: r.selfConsumptionKWh,
-      importKWh: r.loadKWh - r.selfConsumptionKWh,
+      // Straight from the dispatch, not a residual. The old residual
+      // (load − self-consumption) silently disagreed with the daily chart and
+      // with the tariff table, and hid both the grid-charged battery energy
+      // and the state of charge the battery inherited at 00:00.
+      importKWh: r.loadImportKWh,
+      meteredImportKWh: r.importKWh,
+      gridChargedKWh: r.gridChargedKWh,
       exportKWh: r.exportKWh,
       netEUR: r.netSelectedEUR,
     };
   });
 
   const daily = dailyAll(result, loads);
-  const scenario = scenarioVariants(result, p, city, prices);
+  const scenario = scenarioVariants(result, p);
 
   // Heating cost comparison (heat pump vs. heating oil vs. gas) for the same
   // useful heat output. The heat pump's electricity consumption is taken from
@@ -1273,19 +1187,18 @@ export function runSimulation(p: SimParams): SimReport {
     financeableEvEUR: financeable(carSavingEUR),
   };
 
-  const totalPVKWh = annualSum(result.pv);
+  // Every annual total below is read out of `econ`, which summed them in the
+  // same single pass that produced the monthly rows. The report used to
+  // re-derive them from a second, independent sweep, and define grid import as
+  // the residual load − self-consumption, which disagreed with the dispatch
+  // whenever the battery charged from the grid.
+  const totalPVKWh = econ.totalPVKWh;
   const totalWindKWh = annualSum(result.wind);
   const totalGenerationKWh = totalPVKWh + totalWindKWh;
-  const totalLoadKWh = annualSum(result.load);
-  // Self-consumption = all generation that covers load (direct + battery-discharged).
-  // Cap at total generation to avoid phantom self-consumption from initial battery SOC.
-  const selfConsumptionKWh = Math.min(
-    totalGenerationKWh,
-    annualSum(result.directUse) + annualSum(result.directUseWind) + annualSum(result.dischargeToLoadPV) + annualSum(result.dischargeToLoadWind),
-  );
-  // Netz-Import is the residual so that Eigenverbrauch + Netz-Import = Verbrauch.
-  // This includes both direct grid import and grid-charged battery discharge.
-  const totalImportKWh = Math.max(0, totalLoadKWh - selfConsumptionKWh);
+  const totalLoadKWh = econ.totalLoadKWh;
+  const selfConsumptionKWh = econ.selfConsumptionKWh;
+  const totalImportKWh = econ.totalImportKWh;
+  const gridChargedKWh = econ.totalChargeGridKWh;
 
   // Gas savings analysis: compare heat pump electricity vs. direct gas heating.
   // Pass the simulation dispatch (gridImport, totalLoad) so the HP's PV/grid
@@ -1312,8 +1225,10 @@ export function runSimulation(p: SimParams): SimReport {
     totalWindKWh,
     totalLoadKWh,
     selfConsumptionKWh,
-    totalExportKWh: annualSum(result.exportTotal),
+    totalExportKWh: econ.totalExportKWh,
     totalImportKWh,
+    loadImportKWh: econ.totalLoadImportKWh,
+    gridChargedKWh,
     exportRevenueEUR: exportEUR,
     importCostEUR,
     netSelectedEUR: econ.netSelectedEUR,
@@ -1361,9 +1276,10 @@ function calculatePresentValueOfSavings(
   return round2(presentValue);
 }
 
-const MONTH_LABELS = [
-  "Jan", "Feb", "Mär", "Apr", "Mai", "Jun",
-  "Jul", "Aug", "Sep", "Okt", "Nov", "Dez",
+/** Translation keys for the twelve months. Paired with `i18n`'s `month.*`. */
+const MONTH_KEYS = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec",
 ];
 
 // Re-export so consumers do not need to import the underlying modules.

@@ -1,229 +1,162 @@
+/**
+ * The SPA's application state.
+ *
+ * `AppState` is `CoreParams` plus the two nested parameter groups (`consumers`
+ * and `car`) plus one UI flag. There is no second list of scalars, and no
+ * second list of defaults: both come from `domain/params.ts`.
+ */
+
 import { DischargeMode, SimConfig } from "../calc/types";
 import { LOCATIONS, DEFAULT_LOCATION } from "../calc/solar";
-import { ConsumerConfig, totalLoad } from "../calc/consumers";
+import { ConsumerConfig, totalLoad, DEFAULT_CONSUMERS } from "../calc/consumers";
 import { TariffScheme } from "../calc/tariff";
 import { SimParams } from "../calc/report";
 import { CarParams, DEFAULT_CAR_PARAMS } from "../calc/car";
+import {
+  CoreParams,
+  defaultCoreParams,
+  applyExpertDefaults,
+  asChargeMode,
+  asDischargeMode,
+  asExportScheme,
+  asImportScheme,
+  asOrientation,
+} from "../domain/params";
 
-export type Orientation = "south" | "east" | "west" | "east_west";
+export type Orientation = CoreParams["orientation"];
+export type ImportScheme = TariffScheme;
 
-export interface AppState {
+export interface AppState extends CoreParams {
+  /** Not part of the simulation; drives which controls are visible. */
   expertMode: boolean;
-  peakKWp: number;
-  tiltDeg: number;
-  orientation: Orientation;
-  location: string;
-  capacityKWh: number;
-  maxPowerKW: number;
-  minSOC: number;
-  maxSOC: number;
-  efficiency: number;
-  startSOC: number;
-  chargeMode: "morning" | "cheapest" | "gridNegative";
-  /** "windows" = fixed morning/evening clock ranges, "peak" = the
-   *  capacity/maxPower most expensive hours of each day. */
-  dischargeMode: DischargeMode;
-  dischargeEvening: boolean;
-  dischargeMorning: boolean;
-  eveningStart: number;
-  eveningEnd: number;
-  morningStart: number;
-  morningEnd: number;
-  feedInCt: number; // ct/kWh
-  commissioningYear: number;
-  priceYear: string;
-  // Verbraucher
   consumers: ConsumerConfig;
-  // Einspeisung (Export)
-  exportScheme: "fixed" | "market";
-  // Stromtarif (Import)
-  importScheme: TariffScheme;
-  importFixedCt: number; // ct/kWh
-  // Investition: eine einzige Gesamtinvestition (€), unabhängig von kWp/kWh.
-  investmentEUR: number;
-  // Ökonomische Parameter (Lebensdauer-Cashflow).
-  horizonYears: number;
-  discountRatePct: number;
-  priceEscalationPct: number;
-  omPercentPerYear: number;
-  inverterLifetimeYears: number;
-  inverterReplacementCostEUR: number;
-  batteryLifetimeYears: number;
-  batteryReplacementCostEUR: number;
-  batteryDegradationPct: number;
-  pvDegradationPct: number;
-  standbyWattage: number;
-  // Heizung: JAZ der Wärmepumpe und ihr Strompreis (ct/kWh) für den
-  // Kostenvergleich mit Heizöl / Gas.
-  heatpumpJaz: number;
-  heatpumpElectricCt: number;
-  // Opportunitätskosten: E-Auto vs. Diesel (jährliche Fahrleistung u. a.).
   car: CarParams;
-  // Direktvermarkter-Marge in ct/kWh (only applied when exportScheme === "market").
-  marketMarginCt: number;
-  // Kleinwindkraftanlage (nur im Expert-Modus)
-  windEnabled: boolean;
-  /** Anzahl der Windkraftanlagen */
-  windCount: number;
-  /** Nabenhöhe in Metern (0–15 m) */
-  windHubHeightM: number;
-  /** ID der Windkraftanlage aus dem Katalog */
-  windTurbineId: string;
-  /** Mittlere jährliche Windgeschwindigkeit bei 10m Höhe in m/s */
-  windSpeedMeanMs: number;
 }
 
+/** The one default configuration. `/api?` with no query returns exactly this. */
 export const DEFAULT_STATE: AppState = {
+  ...defaultCoreParams(),
   expertMode: false,
-  peakKWp: 22,
-  tiltDeg: 35,
-  orientation: "east_west",
-  location: "boizenburg",
-  capacityKWh: 19.353,
-  maxPowerKW: 6,
-  minSOC: 0.1,
-  maxSOC: 0.95,
-  efficiency: 0.95,
-  startSOC: 0.5,
-  chargeMode: "morning",
-  dischargeMode: "windows",
-  dischargeEvening: true,
-  dischargeMorning: true,
-  eveningStart: 17,
-  eveningEnd: 23,
-  morningStart: 5,
-  morningEnd: 12,
-  feedInCt: 7.2,
-  commissioningYear: 2025,
-  priceYear: "2025",
-  consumers: {
-    household: { enabled: true, annualKWh: 2400 },
-    heatpump: { enabled: true, annualKWh: 5000 },
-    bwwp: { enabled: true, annualKWh: 480 },
-    ev: { enabled: true, annualKWh: 2000, pvShare: 0.8 },
-  },
-  exportScheme: "fixed",
-  importScheme: "fixed",
-  importFixedCt: 24,
-  investmentEUR: 32000,
-  horizonYears: 20,
-  discountRatePct: 3,
-  priceEscalationPct: 2,
-  omPercentPerYear: 1.5,
-  inverterLifetimeYears: 13,
-  inverterReplacementCostEUR: 1500,
-  batteryLifetimeYears: 13,
-  batteryReplacementCostEUR: 3000,
-  batteryDegradationPct: 0.01,
-  pvDegradationPct: 0.005,
-  standbyWattage: 5,
-  heatpumpJaz: 3,
-  heatpumpElectricCt: 24,
+  consumers: JSON.parse(JSON.stringify(DEFAULT_CONSUMERS)) as ConsumerConfig,
   car: { ...DEFAULT_CAR_PARAMS },
-  marketMarginCt: 1,
-  windEnabled: false,
-  windCount: 1,
-  windHubHeightM: 10,
-  windTurbineId: "skywind_ng",
-  windSpeedMeanMs: 6.0,
 };
 
-/** Map the UI state onto the pure simulation parameters. */
+/** Rehydrate a parsed object (URL, storage) into a complete, well-typed state. */
+export function coerceState(raw: Record<string, unknown>): AppState {
+  const base = DEFAULT_STATE;
+  const state: AppState = { ...base, consumers: { ...base.consumers }, car: { ...base.car } };
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === "consumers" || key === "car") continue;
+    if (key === "expertMode") {
+      state.expertMode = value === true || value === "1" || value === "true";
+      continue;
+    }
+    if (!(key in base)) continue;
+    switch (key) {
+      case "orientation":
+        state.orientation = asOrientation(value);
+        break;
+      case "chargeMode":
+        state.chargeMode = asChargeMode(value);
+        break;
+      case "dischargeMode":
+        state.dischargeMode = asDischargeMode(value);
+        break;
+      case "importScheme":
+        state.importScheme = asImportScheme(value);
+        break;
+      case "exportScheme":
+        state.exportScheme = asExportScheme(value);
+        break;
+      case "dischargeEvening":
+      case "dischargeMorning":
+      case "windEnabled":
+        (state as unknown as Record<string, unknown>)[key] = value === true || value === "1" || value === "true";
+        break;
+      default: {
+        // Only numeric fields are coerced; enums and free strings (`priceYear`,
+        // `windTurbineId`, `location`) must survive as the strings they are.
+        if (typeof value === "string" && typeof base[key as keyof AppState] === "number") {
+          const n = Number(value);
+          if (Number.isFinite(n)) (state as unknown as Record<string, unknown>)[key] = n;
+        } else if (typeof base[key as keyof AppState] === "string") {
+          (state as unknown as Record<string, unknown>)[key] = String(value);
+        } else if (typeof value === "number") {
+          (state as unknown as Record<string, unknown>)[key] = value;
+        }
+      }
+    }
+  }
+  return state;
+}
+
+/**
+ * Map the UI state onto the pure simulation parameters.
+ *
+ * Two things happen here and nowhere else:
+ *  1. the simple-mode derivations (see `applyExpertDefaults`), and
+ *  2. the one genuinely derived simulation input — the heat pump's electricity
+ *     price, which is the import tariff, because a heat pump is just a grid
+ *     consumer. `SimParams.heatpumpElectricCt` stays available for API callers
+ *     who set it explicitly.
+ */
 export function toSimParams(s: AppState): SimParams {
-  // In simple mode, derive sensible battery defaults from capacity.
-  const cap = s.capacityKWh;
-  const maxPowerKW = s.expertMode ? s.maxPowerKW : Math.min(cap * 0.33, 20);
-  const minSOC = s.expertMode ? s.minSOC : 0.1;
-  const maxSOC = s.expertMode ? s.maxSOC : 0.95;
-  const efficiency = s.expertMode ? s.efficiency : 0.95;
-  const startSOC = s.expertMode ? s.startSOC : 0.5;
-  const chargeMode = s.expertMode ? s.chargeMode : "morning";
-  const dischargeMode = s.expertMode ? s.dischargeMode : "windows";
-  const dischargeEvening = s.expertMode ? s.dischargeEvening : true;
-  const dischargeMorning = s.expertMode ? s.dischargeMorning : true;
-  const eveningStart = s.expertMode ? s.eveningStart : 17;
-  const eveningEnd = s.expertMode ? s.eveningEnd : 23;
-  const morningStart = s.expertMode ? s.morningStart : 5;
-  const morningEnd = s.expertMode ? s.morningEnd : 12;
+  const core = applyExpertDefaults(s, s.expertMode);
+  const { expertMode: _expertMode, ...rest } = core;
   return {
-    peakKWp: s.peakKWp,
-    tiltDeg: s.tiltDeg,
-    orientation: s.orientation,
-    location: s.location,
-    capacityKWh: cap,
-    maxPowerKW,
-    minSOC,
-    maxSOC,
-    efficiency,
-    startSOC,
-    chargeMode,
-    dischargeMode,
-    dischargeEvening,
-    dischargeMorning,
-    eveningStart,
-    eveningEnd,
-    morningStart,
-    morningEnd,
-    feedInCt: s.feedInCt,
-    commissioningYear: s.commissioningYear,
-    priceYear: s.priceYear,
+    ...rest,
+    orientation: asOrientation(rest.orientation),
+    chargeMode: asChargeMode(rest.chargeMode),
+    dischargeMode: asDischargeMode(rest.dischargeMode),
+    exportScheme: asExportScheme(rest.exportScheme),
+    importScheme: asImportScheme(rest.importScheme),
     consumers: s.consumers,
-    exportScheme: s.exportScheme,
-    importScheme: s.importScheme,
-    importFixedCt: s.importFixedCt,
-    investmentEUR: s.investmentEUR,
-    horizonYears: s.horizonYears,
-    discountRatePct: s.discountRatePct,
-    priceEscalationPct: s.priceEscalationPct,
-    omPercentPerYear: s.omPercentPerYear,
-    inverterLifetimeYears: s.inverterLifetimeYears,
-    inverterReplacementCostEUR: s.inverterReplacementCostEUR,
-    batteryLifetimeYears: s.batteryLifetimeYears,
-    batteryReplacementCostEUR: s.batteryReplacementCostEUR,
-    batteryDegradationPct: s.batteryDegradationPct,
-    pvDegradationPct: s.pvDegradationPct,
-    standbyWattage: s.standbyWattage,
-    heatpumpJaz: s.heatpumpJaz,
+    // The opportunity-cost module compares the EV against diesel over the same
+    // distance, so when the EV is on, the distance comes from its energy use
+    // (kWh x 100 / kWh-per-100km) rather than from a separate input.
+    car: {
+      ...s.car,
+      annualKm: s.consumers.ev.enabled && s.consumers.ev.annualKWh > 0
+        ? Math.round((s.consumers.ev.annualKWh * 100) / s.car.evKwhPer100km)
+        : s.car.annualKm,
+    },
     heatpumpElectricCt: s.importFixedCt,
-    car: { ...s.car },
-    marketMarginCt: s.marketMarginCt,
-    windEnabled: s.windEnabled,
-    windCount: s.windCount,
-    windHubHeightM: s.windHubHeightM,
-    windTurbineId: s.windTurbineId,
-    windSpeedMeanMs: s.windSpeedMeanMs,
   };
 }
 
+/** Convenience for the control panel's live hints. */
 export function toSimConfig(s: AppState): SimConfig {
-  const hasBattery = s.capacityKWh > 0;
+  const p = toSimParams(s);
+  const hasBattery = p.capacityKWh > 0;
   return {
     pv: {
-      peakKWp: s.peakKWp,
-      tiltDeg: s.tiltDeg,
-      orientation: s.orientation,
-      location: s.location in LOCATIONS ? s.location : DEFAULT_LOCATION,
+      peakKWp: p.peakKWp,
+      tiltDeg: p.tiltDeg,
+      orientation: p.orientation,
+      location: p.location in LOCATIONS ? p.location : DEFAULT_LOCATION,
     },
     battery: {
-      capacityKWh: s.capacityKWh,
-      maxPowerKW: s.maxPowerKW,
-      minSOC: s.minSOC,
-      maxSOC: s.maxSOC,
-      efficiency: s.efficiency,
-      startSOC: s.startSOC,
-      chargeMode: s.chargeMode,
-      dischargeMode: s.dischargeMode,
-      dischargeEvening: hasBattery && s.dischargeEvening,
-      dischargeMorning: hasBattery && s.dischargeMorning,
-      eveningStart: s.eveningStart,
-      eveningEnd: s.eveningEnd,
-      morningStart: s.morningStart,
-      morningEnd: s.morningEnd,
+      capacityKWh: p.capacityKWh,
+      maxPowerKW: p.maxPowerKW,
+      minSOC: p.minSOC,
+      maxSOC: p.maxSOC,
+      efficiency: p.efficiency,
+      startSOC: p.startSOC,
+      chargeMode: p.chargeMode,
+      dischargeMode: p.dischargeMode,
+      dischargeEvening: hasBattery && p.dischargeEvening,
+      dischargeMorning: hasBattery && p.dischargeMorning,
+      eveningStart: p.eveningStart,
+      eveningEnd: p.eveningEnd,
+      morningStart: p.morningStart,
+      morningEnd: p.morningEnd,
     },
     tariff: {
-      feedInEUR: s.feedInCt / 100,
-      commissioningYear: s.commissioningYear,
+      feedInEUR: p.feedInCt / 100,
+      commissioningYear: p.commissioningYear,
     },
-    load: totalLoad(s.consumers),
+    load: totalLoad(p.consumers),
   };
 }
+
+export type { DischargeMode };

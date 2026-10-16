@@ -14,6 +14,7 @@
 // with high renewable share, improving gas savings vs. a fixed tariff.
 
 import { TOTAL_STEPS, monthOfStep } from "./types";
+import { co2ForGasKWh } from "./co2";
 import {
   electricityMixForStep,
 } from "./electricityMix";
@@ -181,7 +182,11 @@ export function computeGasSavings(
   const totalGasForElecKWh = monthlyGasForElec.reduce((a, b) => a + b, 0);
   const totalGasSavedKWh = totalGasDirectKWh - totalGasForElecKWh;
 
-  const co2SavedKg = totalGasSavedKWh * 0.201;
+  // The single canonical gas factor (well-to-burner). This module used to
+  // hard-code 0.201 (tank-to-burner) while the CO2 scenarios used 0.24, so
+  // the report displayed two different CO2 savings for the same avoided gas,
+  // 19 % apart, with no way to tell which was which.
+  const co2SavedKg = totalGasSavedKWh * co2ForGasKWh();
   const costSavedEUR = (totalGasSavedKWh * gasPriceCtPerKWh) / 100;
 
   // Monthly rows

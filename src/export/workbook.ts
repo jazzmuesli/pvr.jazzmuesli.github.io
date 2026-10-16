@@ -26,6 +26,7 @@ import type { SimReport } from "../calc/report";
 import { averageNetzentgeltCt, cityForLocation } from "../calc/tariff";
 import type { TariffScheme } from "../calc/tariff";
 import { t } from "../i18n";
+import { monthLabel } from "../ui/monthLabels";
 
 /** Round to 2 decimals (mirrors the calc modules' `round2`). */
 function r2(v: number): number {
@@ -307,7 +308,7 @@ function buildPvSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   for (const m of report.monthly) {
     const sharePct = annualPV > 0 ? (m.pvKWh / annualPV) * 100 : 0;
     const lc = ws.getCell(rowIdx, 1);
-    lc.value = m.label;
+    lc.value = monthLabel(m.month);
     lc.border = THIN_BORDER;
     const sc = ws.getCell(rowIdx, 2);
     sc.value = r2(sharePct);
@@ -515,13 +516,24 @@ function buildAggregateSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   s.calib([
     { key: "pvYear", label: t("excel.pv_yield"), value: r2(sum.totalPVKWh), unit: "kWh", comment: t("excel.comment.pv_yield") },
     { key: "selfCons", label: t("excel.self_consumption"), value: r2(sum.selfConsumptionKWh), unit: "kWh", note: t("excel.self_consumption_note"), comment: t("excel.comment.self_consumption") },
+    { key: "gridCharged", label: t("excel.grid_charged_kwh"), value: r2(sum.gridChargedKWh), unit: "kWh", note: t("excel.grid_charged_note") },
     { key: "export", label: t("excel.grid_export"), value: r2(sum.totalExportKWh), unit: "kWh", comment: t("excel.comment.grid_export") },
     { key: "exportRev", label: t("excel.export_revenue"), value: r2(sum.exportRevenueEUR), unit: "€", comment: t("excel.comment.export_revenue") },
     { key: "importCost", label: t("excel.import_cost"), value: r2(sum.importCostEUR), unit: "€", comment: t("excel.comment.import_cost") },
   ]);
 
   s.section(t("excel.calculation"));
-  s.formula("importKWh", t("excel.net_import"), `=${s.addr.load}-${s.addr.selfCons}`, r2(sum.totalImportKWh), "kWh", t("excel.net_import_formula"));
+  // The real identity, not the residual: load − self-use + grid-charged. The
+  // residual disagreed with the simulation by the battery's inherited state of
+  // charge — a number a reader could see in the sheet but not explain.
+  s.formula(
+    "importKWh",
+    t("excel.net_import"),
+    `=${s.addr.load}-${s.addr.selfCons}+${s.addr.gridCharged}`,
+    r2(sum.loadImportKWh),
+    "kWh",
+    t("excel.net_import_formula"),
+  );
   s.formula("selfConsRate", t("excel.self_consumption_rate"), `=IF(${s.addr.pvYear}=0,0,${s.addr.selfCons}/${s.addr.pvYear}*100)`, r2(sum.selfConsumptionRatePct), "%", t("excel.self_consumption_rate_formula"));
   s.formula("selfSuff", t("excel.autarky"), `=IF(${s.addr.load}=0,0,${s.addr.selfCons}/${s.addr.load}*100)`, r2(sum.selfSufficiencyPct), "%", t("excel.autarky_formula"));
   s.formula("netEUR", t("excel.net_balance"), `=${s.addr.exportRev}-${s.addr.importCost}`, r2(sum.netSelectedEUR), "€", t("excel.net_balance_formula"), "result");
@@ -643,7 +655,7 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
     const fallback =
       col === 2 ? r2(sum.totalLoadKWh)
       : col === 4 ? r2(sum.selfConsumptionKWh)
-      : r2(sum.totalImportKWh);
+      : r2(sum.loadImportKWh);
     cell.value = {
       formula: `SUM(${colLetter}${firstConsRow}:${colLetter}${lastConsRow})`,
       result: fallback,
@@ -670,7 +682,7 @@ function buildGesamtSheet(wb: ExcelJS.Workbook, report: SimReport): void {
   ]);
   // Self-consumption and import tie back to the consumer-table totals.
   s.formula("selfCons", t("excel.self_consumption_total"), `=${selfTotalAddr}`, r2(sum.selfConsumptionKWh), "kWh", t("excel.self_consumption_total_note"));
-  s.formula("importKWh", t("excel.grid_import_total"), `=${gridTotalAddr}`, r2(sum.totalImportKWh), "kWh", t("excel.grid_import_total_note"));
+  s.formula("importKWh", t("excel.grid_import_total"), `=${gridTotalAddr}`, r2(sum.loadImportKWh), "kWh", t("excel.grid_import_total_note"));
   s.formula("load", t("excel.total_consumption_label"), `=${loadTotalAddr}`, r2(sum.totalLoadKWh), "kWh", t("excel.total_consumption_note"));
 
   s.section(t("excel.summary_controls"));
@@ -722,6 +734,7 @@ function buildExampleDaysSheet(
   const headers: string[] = [t("excel.hour"), t("excel.pv_kwh"), t("excel.load_kwh")];
   consumerCols.forEach((c) => headers.push(c.label));
   const idxSelf = headers.push(t("excel.self_use_kwh"));
+  const idxCharged = headers.push(t("excel.grid_charged_kwh"));
   const idxGrid = headers.push(t("excel.grid_import_kwh2"));
   const idxExport = headers.push(t("excel.grid_export_kwh"));
   const idxPrice = headers.push(t("excel.avg_price"));
@@ -763,6 +776,7 @@ function buildExampleDaysSheet(
         2: r2(d.pvKWh),
         [idxLoad]: r2(d.totalLoadKWh),
         [idxSelf]: r2(d.selfUseKWh),
+        [idxCharged]: r2(d.gridChargedKWh),
         [idxExport]: r2(d.exportKWh),
         [idxPrice]: r2(d.avgPrice),
         [idxNet]: r2(averageNetzentgeltCt(scheme, city, monthIndex, d.hour)),
@@ -781,10 +795,16 @@ function buildExampleDaysSheet(
         cell.border = THIN_BORDER;
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
       }
-      // Grid import = MAX(0, load − self-use) as a live formula (grey).
+      // Grid import as a live formula (grey). It is the real identity —
+      // load − self-use + grid-charged — rather than the residual
+      // `MAX(0, load − self-use)`, which disagreed with the simulation by the
+      // battery's inherited state of charge whenever BWWP routing or grid
+      // charging was in play. With the correction column visible, the sheet
+      // *shows* the reader why the number is what it is.
       const ec = ws.getCell(rowIdx, idxGrid);
       ec.value = {
-        formula: `MAX(0,${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx})`,
+        formula:
+          `${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx}+${colLetter(idxCharged)}${rowIdx}`,
         result: r2(d.importKWh),
       } as ExcelJS.CellFormulaValue;
       ec.numFmt = NUM_FMT;
@@ -801,7 +821,7 @@ function buildExampleDaysSheet(
     tl.value = t("excel.day_total");
     tl.font = { bold: true };
     tl.border = THIN_BORDER;
-    const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport];
+    const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxCharged, idxGrid, idxExport];
     for (const col of sumCols) {
       const L = colLetter(col);
       const cell = ws.getCell(rowIdx, col);
@@ -860,6 +880,7 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
   const headers: string[] = [t("excel.month"), t("excel.pv_kwh"), t("excel.consumption_kwh")];
   consumerCols.forEach((c) => headers.push(c.label));
   const idxSelf = headers.push(t("excel.self_use_kwh"));
+  const idxCharged = headers.push(t("excel.grid_charged_kwh"));
   const idxGrid = headers.push(t("excel.grid_import_kwh2"));
   const idxExport = headers.push(t("excel.grid_export_kwh"));
   const idxPrice = headers.push(t("excel.avg_price"));
@@ -894,13 +915,14 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
     const avgPrice = day.length > 0 ? day.reduce((a, d) => a + d.avgPrice, 0) / day.length : 0;
 
     const lc = ws.getCell(rowIdx, 1);
-    lc.value = mo.label;
+    lc.value = monthLabel(mo.month);
     lc.border = THIN_BORDER;
 
     const calib: Record<number, number> = {
       2: r2(mo.pvKWh),
       [idxLoad]: r2(mo.totalLoadKWh),
       [idxSelf]: r2(mo.selfConsumptionKWh),
+      [idxCharged]: r2(mo.gridChargedKWh),
       [idxExport]: r2(mo.exportKWh),
       [idxPrice]: r2(avgPrice),
       [idxNet]: r2(averageNetzentgeltCt(scheme, city, m)),
@@ -918,10 +940,11 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
       cell.border = THIN_BORDER;
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COLOR.calibFill } };
     }
-    // Grid import = MAX(0, consumption − self-consumption) as a live formula.
+    // Grid import = consumption − self-consumption + grid-charged, live.
     const ec = ws.getCell(rowIdx, idxGrid);
     ec.value = {
-      formula: `MAX(0,${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx})`,
+      formula:
+        `${colLetter(idxLoad)}${rowIdx}-${colLetter(idxSelf)}${rowIdx}+${colLetter(idxCharged)}${rowIdx}`,
       result: r2(mo.importKWh),
     } as ExcelJS.CellFormulaValue;
     ec.numFmt = NUM_FMT;
@@ -937,7 +960,7 @@ function buildMonthlySheet(wb: ExcelJS.Workbook, report: SimReport): void {
   tl.value = t("excel.year");
   tl.font = { bold: true };
   tl.border = THIN_BORDER;
-  const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxGrid, idxExport, idxNetto];
+  const sumCols = [2, idxLoad, ...consumerCols.map((_, i) => 4 + i), idxSelf, idxCharged, idxGrid, idxExport, idxNetto];
   for (const col of sumCols) {
     const L = colLetter(col);
     const cell = ws.getCell(rowIdx, col);

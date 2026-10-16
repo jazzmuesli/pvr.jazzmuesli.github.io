@@ -366,7 +366,7 @@ describe("plausibility: self-consumption ≤ generation", () => {
     expect(r.summary.totalExportKWh).toBeGreaterThanOrEqual(0);
   });
 
-  it("wind-only: import + self-consumption ≈ load (within rounding)", () => {
+  it("wind-only: load-served import + self-consumption = load exactly", () => {
     const r = runSimulation(params({
       peakKWp: 0,
       windEnabled: true,
@@ -374,8 +374,13 @@ describe("plausibility: self-consumption ≤ generation", () => {
       windHubHeightM: 10,
       windTurbineId: "skywind_ng",
     }));
-    const sum = r.summary.selfConsumptionKWh + r.summary.totalImportKWh;
-    expect(sum).toBeCloseTo(r.summary.totalLoadKWh, 0);
+    // `loadImportKWh`, not the metered import: the battery drains the state of
+    // charge it inherited at 00:00, and that energy was paid for in a previous
+    // year, so it is metered import but not import that served this year's load.
+    // The old `totalImportKWh` residual happened to absorb it, which is why
+    // this assertion used to pass with a tolerance instead of being exact.
+    expect(r.summary.selfConsumptionKWh + r.summary.loadImportKWh)
+      .toBeCloseTo(r.summary.totalLoadKWh, 6);
   });
 
   it("wind-only: amortisation payback > 5 years for 1500€ investment", () => {

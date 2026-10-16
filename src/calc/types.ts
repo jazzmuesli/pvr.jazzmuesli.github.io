@@ -12,12 +12,35 @@ export const TOTAL_STEPS = 365 * STEPS_PER_DAY;
 /** Number of 15-minute steps per hour. */
 export const STEPS_PER_HOUR = STEPS_PER_DAY / 24;
 
-/** 1-based month (1..12) for a given 15-minute step index. */
+/**
+ * The one calendar. `monthOfStep`, the annual load profiles, the wind
+ * climatology and anything that re-integrates the 12 typical-day cells all
+ * used to keep their own copy — four arrays of the same twelve integers, which
+ * is the kind of duplication that survives exactly until one of them is wrong.
+ */
+export const DAYS_IN_MONTH: readonly number[] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+/** Total days in the simulated (non-leap) year. */
+export const TOTAL_DAYS = 365;
+
+/** 1-based month index for each day of the year (365 entries). */
+const DAY_MONTH: Uint8Array = (() => {
+  const out = new Uint8Array(TOTAL_DAYS);
+  const base = Date.UTC(SIM_YEAR, 0, 1);
+  for (let d = 0; d < TOTAL_DAYS; d++) {
+    out[d] = new Date(base + d * 86400000).getUTCMonth() + 1;
+  }
+  return out;
+})();
+
+/**
+ * 1-based month (1..12) for a given 15-minute step index.
+ *
+ * Backed by a lookup table rather than constructing two `Date`s per call: this
+ * sits on the hottest path in the program and is invoked on the order of a
+ * million times per report.
+ */
 export function monthOfStep(i: number): number {
-  const day = Math.floor(i / STEPS_PER_DAY);
-  const base = new Date(Date.UTC(SIM_YEAR, 0, 1));
-  const dt = new Date(base.getTime() + day * 86400000);
-  return dt.getUTCMonth() + 1;
+  return DAY_MONTH[Math.floor(i / STEPS_PER_DAY)];
 }
 
 /** Local hour (0..23) for a given 15-minute step index. */
@@ -166,6 +189,14 @@ export interface SimResult {
   dischargeToLoadPV: Float64Array;
   /** Portion of dischargeToLoad that originated from wind (kWh). */
   dischargeToLoadWind: Float64Array;
+  /**
+   * Portion of `dischargeToLoad` that came out of the grid — either bought in
+   * this run (`chargeGrid`) or inherited from the battery's state of charge at
+   * 00:00. It served a load, so it counts towards "energy drawn from the grid
+   * to serve load", but it is *not* self-consumption: no generation of ours
+   * produced it. This is why the report never needs a self-consumption cap.
+   */
+  dischargeToLoadGrid: Float64Array;
   /** Energy exported directly from PV per step (kWh). */
   exportSolar: Float64Array;
   /** Energy exported directly from wind per step (kWh). */
