@@ -50,6 +50,16 @@ export interface ConsumerConfig {
   ev: EvConfig;
 }
 
+/**
+ * The consumer axes of the model, derived from the config shape so adding a
+ * consumer to `ConsumerConfig` automatically extends every registry-driven
+ * iteration (breakdowns, charts, the report) instead of silently dropping it.
+ */
+export type ConsumerKey = keyof ConsumerConfig;
+
+/** Canonical display/iteration order of the consumers. */
+export const CONSUMER_ORDER: ConsumerKey[] = ["household", "heatpump", "bwwp", "ev"];
+
 // ---------------------------------------------------------------------------
 // Normalized 24-hour shapes (mean = 1 over the day).
 // ---------------------------------------------------------------------------
